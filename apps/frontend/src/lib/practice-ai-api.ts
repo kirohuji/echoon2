@@ -40,11 +40,7 @@ export async function streamFeedback(
   while (true) {
     const { done, value } = await reader.read()
     if (done) break
-    const chunk = decoder.decode(value, { stream: true })
-    // Vercel AI SDK text stream：每个 chunk 是原始文本
-    // 过滤掉 "0:" 前缀（data stream 格式）和换行
-    const cleaned = chunk.replace(/^\d+:/gm, '').replace(/^"(.*)"$/gm, '$1')
-    onChunk(cleaned)
+    onChunk(decoder.decode(value, { stream: true }))
   }
 }
 
@@ -68,8 +64,6 @@ export async function streamTeaching(
   while (true) {
     const { done, value } = await reader.read()
     if (done) break
-    const chunk = decoder.decode(value, { stream: true })
-    const cleaned = chunk.replace(/^\d+:/gm, '').replace(/^"(.*)"$/gm, '$1')
-    onChunk(cleaned)
+    onChunk(decoder.decode(value, { stream: true }))
   }
 }

@@ -854,8 +854,8 @@ export function PracticePage() {
                             )}
                           </div>
                           <p className="text-xs text-muted-foreground leading-relaxed">{v.meaning}</p>
-                          {v.example && (
-                            <p className="text-xs italic text-muted-foreground/70 mt-1">{v.example}</p>
+                          {(v as any).example && (
+                            <p className="text-xs italic text-muted-foreground/70 mt-1">{(v as any).example}</p>
                           )}
                         </div>
                         <Button

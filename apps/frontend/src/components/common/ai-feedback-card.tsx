@@ -1,7 +1,19 @@
 import { CheckCircle2, ChevronDown, ChevronUp, Lightbulb, Mic2, ThumbsDown, ThumbsUp, Trophy, Pencil } from 'lucide-react'
 import { useState } from 'react'
 import { cn } from '@/lib/cn'
-import type { AiFeedback } from '@/lib/practice-ai-api'
+
+type AiFeedback = {
+  score: number
+  level: string
+  summary: string
+  strengths: string[]
+  improvements: string[]
+  languageNotes: string[]
+  pronunciationNotes: string[] | null
+  revisedAnswer: string
+  keywordsUsed: string[]
+  keywordsMissed: string[]
+}
 
 type AiFeedbackCardProps = {
   feedback: AiFeedback
