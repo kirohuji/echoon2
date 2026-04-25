@@ -11,7 +11,7 @@ function getOrCreateDeviceId(): string {
 }
 
 const instance = axios.create({
-  baseURL: '/api/v1/guide-exam',
+  baseURL: import.meta.env.VITE_API_BASE_URL || '/api/v1/guide-exam',
   timeout: 15000,
   headers: { 'Content-Type': 'application/json' },
 })
