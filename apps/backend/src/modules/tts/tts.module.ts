@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { MulterModule } from '@nestjs/platform-express';
 import { PrismaModule } from '../../common/prisma/prisma.module';
 import { TtsController } from './tts.controller';
 import { TtsService } from './tts.service';
@@ -7,7 +8,7 @@ import { MinimaxTtsProvider } from './providers/minimax-tts.provider';
 import { CartesiaTtsProvider } from './providers/cartesia-tts.provider';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, MulterModule.register()],
   controllers: [TtsController],
   providers: [
     TtsService,

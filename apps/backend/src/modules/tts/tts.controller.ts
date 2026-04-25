@@ -9,7 +9,11 @@ import {
   Param,
   Post,
   Res,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
 import type { Response } from 'express';
 import * as fs from 'node:fs';
 import { TtsService } from './tts.service';
@@ -19,13 +23,11 @@ import { SynthesizeQuestionDto, SynthesizeTextDto } from './dto/synthesize.dto';
 export class TtsController {
   constructor(private readonly ttsService: TtsService) {}
 
-  /** 获取所有支持的 Provider/Model/参数 schema */
   @Get('params-schema')
   getParamsSchema() {
     return this.ttsService.getParamsSchema();
   }
 
-  /** 根据题目 ID + TTS 配置生成/获取持久化音频 */
   @Post('synthesize-question')
   @HttpCode(HttpStatus.OK)
   synthesizeQuestion(@Body() dto: SynthesizeQuestionDto) {
@@ -33,14 +35,12 @@ export class TtsController {
     return this.ttsService.synthesizeQuestion(dto);
   }
 
-  /** 短文本即时预听（不缓存，仅用于设置页预览） */
   @Post('synthesize-text')
   @HttpCode(HttpStatus.OK)
   synthesizeText(@Body() dto: SynthesizeTextDto) {
     return this.ttsService.synthesizeText(dto);
   }
 
-  /** 流式返回已缓存的音频文件 */
   @Get('audio/:id')
   async getAudio(@Param('id') id: string, @Res() res: Response) {
     const { audioPath, mimeType } = await this.ttsService.getAudioFile(id);
@@ -48,11 +48,24 @@ export class TtsController {
     res.setHeader('Accept-Ranges', 'bytes');
     const stat = fs.statSync(audioPath);
     res.setHeader('Content-Length', stat.size);
-    const stream = fs.createReadStream(audioPath);
-    stream.pipe(res);
+    fs.createReadStream(audioPath).pipe(res);
   }
 
-  /** 清除指定题目的全部音频缓存 */
+  /**
+   * 上传用户录音 → Whisper 转写，返回文本 + 词时间戳。
+   * 若未配置 WHISPER_INFERENCE_URL，仅返回音频 Base64（可供前端播放）。
+   */
+  @Post('transcribe-recording')
+  @HttpCode(HttpStatus.OK)
+  @UseInterceptors(FileInterceptor('audio', {
+    storage: memoryStorage(),
+    limits: { fileSize: 1024 * 1024 * 50 }, // 50 MB
+  }))
+  async transcribeRecording(@UploadedFile() file: Express.Multer.File) {
+    if (!file) throw new BadRequestException('未收到音频文件');
+    return this.ttsService.transcribeRecording(file.buffer, file.originalname || 'recording.webm');
+  }
+
   @Delete('question/:questionId/cache')
   clearCache(@Param('questionId') questionId: string) {
     return this.ttsService.clearQuestionAudioCache(questionId);

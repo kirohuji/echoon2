@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import {
   ArrowLeft, ArrowRight, Star, Eye, EyeOff, Languages, ChevronLeft, ChevronRight,
   Plus, Minus, SlidersHorizontal, Mic2, Loader2, AlertCircle, RotateCcw,
+  Send, Mic, MessageSquare,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -12,11 +13,14 @@ import { Progress } from '@/components/ui/progress'
 import { Skeleton } from '@/components/ui/skeleton'
 import { AudioPlayer } from '@/components/common/audio-player'
 import { TtsSettingsDialog } from '@/components/common/tts-settings-dialog'
+import { VoiceRecorder } from '@/components/common/voice-recorder'
+import { AiFeedbackCard } from '@/components/common/ai-feedback-card'
 import { getTopicQuestions, recordAction, type Question, type TopicQuestionsResult } from '@/features/practice/api'
 import { addFavorite as apiFavorite, removeFavorite as apiUnfavorite } from '@/features/assets/api'
 import { useAssetsStore, useWordsStore } from '@/stores/assets.store'
 import { usePreferencesStore } from '@/stores/preferences.store'
 import { synthesizeQuestion, getAudioUrl, type TtsWordTimestamp } from '@/lib/tts-api'
+import { getAiFeedback, type AiFeedback } from '@/lib/practice-ai-api'
 import { cn } from '@/lib/cn'
 
 // ---------- 音频状态 ----------
@@ -122,6 +126,15 @@ export function PracticePage() {
   const [questionAudio, setQuestionAudio] = useState<AudioState>({ status: 'idle' })
   const [answerAudio, setAnswerAudio]     = useState<AudioState>({ status: 'idle' })
 
+  // 用户作答
+  const [answerTab, setAnswerTab]   = useState<'text' | 'voice'>('text')
+  const [textAnswer, setTextAnswer] = useState('')
+  const [voiceAnswer, setVoiceAnswer] = useState('')       // 录音转写结果
+  const [isVoiceMode, setIsVoiceMode] = useState(false)
+  const [feedbackLoading, setFeedbackLoading] = useState(false)
+  const [feedback, setFeedback]     = useState<AiFeedback | null>(null)
+  const [feedbackError, setFeedbackError] = useState('')
+
   const currentQuestion: Question | undefined = topicData?.questions[currentIndex]
 
   // 加载题目
@@ -138,6 +151,11 @@ export function PracticePage() {
   useEffect(() => {
     setQuestionAudio({ status: 'idle' })
     setAnswerAudio({ status: 'idle' })
+    setTextAnswer('')
+    setVoiceAnswer('')
+    setFeedback(null)
+    setFeedbackError('')
+    setIsVoiceMode(false)
   }, [currentIndex, currentQuestion?.questionId])
 
   // TTS 配置变更时也重置
@@ -172,6 +190,28 @@ export function PracticePage() {
       })
     }
   }, [currentQuestion, ttsBackend])
+
+  const handleSubmitFeedback = useCallback(async (isVoice: boolean) => {
+    if (!currentQuestion) return
+    const answer = isVoice ? voiceAnswer : textAnswer
+    if (!answer.trim()) return
+    setFeedbackLoading(true)
+    setFeedbackError('')
+    setFeedback(null)
+    setIsVoiceMode(isVoice)
+    try {
+      const result = await getAiFeedback({
+        questionId: currentQuestion.questionId,
+        userAnswer: answer.trim(),
+        isVoice,
+      })
+      setFeedback(result)
+    } catch (e: any) {
+      setFeedbackError(e?.response?.data?.message || e?.message || 'AI 评分失败，请检查 DEEPSEEK_API_KEY 配置')
+    } finally {
+      setFeedbackLoading(false)
+    }
+  }, [currentQuestion, textAnswer, voiceAnswer])
 
   const goToQuestion = useCallback(
     (index: number) => {
@@ -398,6 +438,118 @@ export function PracticePage() {
               ttsBackend={ttsBackend}
               onGenerate={() => handleGenerateAudio('answer')}
             />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* 用户作答 + AI 评分 */}
+      {currentQuestion && (
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2">
+              <MessageSquare className="size-4 text-primary" />
+              <CardTitle className="text-base">我的作答</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Tab: 文字 / 录音 */}
+            <div className="flex gap-1 rounded-xl bg-muted p-1">
+              {(['text', 'voice'] as const).map((tab) => (
+                <button
+                  key={tab}
+                  type="button"
+                  onClick={() => setAnswerTab(tab)}
+                  className={cn(
+                    'flex flex-1 items-center justify-center gap-1.5 rounded-lg py-1.5 text-sm font-medium transition-all',
+                    answerTab === tab
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground',
+                  )}
+                >
+                  {tab === 'text' ? <><MessageSquare className="size-3.5" />文字作答</> : <><Mic className="size-3.5" />录音作答</>}
+                </button>
+              ))}
+            </div>
+
+            {/* 文字输入 */}
+            {answerTab === 'text' && (
+              <div className="space-y-3">
+                <textarea
+                  className="min-h-[120px] w-full resize-none rounded-xl border border-border bg-muted/30 px-4 py-3 text-sm leading-relaxed placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  placeholder="用英语回答这道题目，尽量使用关键词和完整句子…"
+                  value={textAnswer}
+                  onChange={(e) => setTextAnswer(e.target.value)}
+                />
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">{textAnswer.length} 字符</span>
+                  <Button
+                    size="sm"
+                    disabled={!textAnswer.trim() || feedbackLoading}
+                    onClick={() => handleSubmitFeedback(false)}
+                    className="gap-1.5"
+                  >
+                    {feedbackLoading
+                      ? <><Loader2 className="size-3.5 animate-spin" />评分中…</>
+                      : <><Send className="size-3.5" />AI 评分</>
+                    }
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* 录音输入 */}
+            {answerTab === 'voice' && (
+              <div className="space-y-3">
+                <VoiceRecorder
+                  onTranscribed={(text) => setVoiceAnswer(text)}
+                />
+                {voiceAnswer && (
+                  <div className="flex items-center justify-between border-t border-border/50 pt-3">
+                    <span className="text-xs text-muted-foreground">转写完成，可提交 AI 评分</span>
+                    <Button
+                      size="sm"
+                      disabled={feedbackLoading}
+                      onClick={() => handleSubmitFeedback(true)}
+                      className="gap-1.5"
+                    >
+                      {feedbackLoading
+                        ? <><Loader2 className="size-3.5 animate-spin" />评分中…</>
+                        : <><Send className="size-3.5" />AI 评分</>
+                      }
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 错误提示 */}
+            {feedbackError && (
+              <div className="flex items-center gap-2 rounded-xl bg-destructive/10 p-3 text-sm text-destructive">
+                <AlertCircle className="size-4 shrink-0" />
+                {feedbackError}
+              </div>
+            )}
+
+            {/* AI 评分结果 */}
+            {feedback && (
+              <div className="border-t border-border/50 pt-4">
+                <div className="mb-3 flex items-center gap-2">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">AI 评分反馈</span>
+                  {isVoiceMode && (
+                    <Badge variant="secondary" className="text-[10px]">
+                      <Mic className="mr-1 size-2.5" />语音作答
+                    </Badge>
+                  )}
+                  <button
+                    className="ml-auto flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"
+                    onClick={() => handleSubmitFeedback(isVoiceMode)}
+                  >
+                    <RotateCcw className="size-3" />重新评分
+                  </button>
+                </div>
+                <AiFeedbackCard feedback={feedback} />
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
