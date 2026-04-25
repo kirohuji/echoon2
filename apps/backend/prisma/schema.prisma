@@ -52,6 +52,7 @@ model QuestionItem {
   practiceProgresses   PracticeProgress[]
   mockPaperQuestions   MockPaperQuestion[]
   vocabularyWords      VocabularyWord[]
+  questionAudios       QuestionAudio[]
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
   @@index([topicId, difficulty])
@@ -200,4 +201,30 @@ model MembershipPlan {
   features  String[]
   sortOrder Int      @default(0)
   @@map("membership_plan")
+}
+
+// ---- TTS 音频缓存域 ----
+
+enum TtsProvider {
+  minimax
+  cartesia
+}
+
+/// 题目音频缓存：同一题目 + 相同配置只生成一次，之后直接复用
+model QuestionAudio {
+  id             String      @id @default(cuid())
+  question       QuestionItem @relation(fields: [questionId], references: [id])
+  questionId     String
+  /// provider+model+voiceId+params 的 SHA1 哈希，保证唯一性
+  configHash     String
+  provider       TtsProvider
+  model          String
+  voiceId        String?
+  mimeType       String
+  audioPath      String
+  wordTimestamps Json?
+  createdAt      DateTime    @default(now())
+  @@unique([questionId, configHash])
+  @@index([questionId])
+  @@map("question_audio")
 }

@@ -8,6 +8,7 @@ import { AssetsModule } from './modules/assets/assets.module';
 import { MockExamModule } from './modules/mock-exam/mock-exam.module';
 import { ProfileModule } from './modules/profile/profile.module';
 import { MembershipModule } from './modules/membership/membership.module';
+import { TtsModule } from './modules/tts/tts.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { MembershipModule } from './modules/membership/membership.module';
     MockExamModule,
     ProfileModule,
     MembershipModule,
+    TtsModule,
   ],
 })
 export class AppModule {}

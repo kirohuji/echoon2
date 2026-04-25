@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { cn } from '@/lib/cn'
 import { Play, Square } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { usePreferencesStore } from '@/stores/preferences.store'
 
 interface InteractiveSpeechBlockProps {
   text: string
@@ -24,6 +25,7 @@ export function InteractiveSpeechBlock({
   className,
   showPlayButton = true,
 }: InteractiveSpeechBlockProps) {
+  const { tts } = usePreferencesStore()
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentWordIndex, setCurrentWordIndex] = useState(-1)
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null)
@@ -55,7 +57,13 @@ export function InteractiveSpeechBlock({
       window.speechSynthesis.cancel()
       const utterance = new SpeechSynthesisUtterance(text)
       utterance.lang = lang
-      utterance.rate = 0.9
+      utterance.rate = tts.rate
+      utterance.pitch = tts.pitch
+      utterance.volume = tts.volume
+      if (tts.voiceURI) {
+        const voice = window.speechSynthesis.getVoices().find((v) => v.voiceURI === tts.voiceURI)
+        if (voice) utterance.voice = voice
+      }
 
       let wordIdx = 0
       utterance.onboundary = (event) => {
