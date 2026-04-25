@@ -5,12 +5,21 @@ export class GetFeedbackDto {
   @IsNotEmpty()
   questionId: string;
 
-  /** 用户作答文本 */
   @IsString()
   @IsNotEmpty()
   userAnswer: string;
 
-  /** 是否为语音作答（影响是否提供发音反馈） */
   @IsOptional()
   isVoice?: boolean;
+}
+
+export class GetTeachingDto {
+  @IsString()
+  @IsNotEmpty()
+  questionId: string;
+
+  /** 用户当前草稿（可为空字符串，表示尚未作答） */
+  @IsOptional()
+  @IsString()
+  userDraft?: string;
 }

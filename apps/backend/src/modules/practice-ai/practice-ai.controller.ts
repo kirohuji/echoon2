@@ -1,18 +1,29 @@
-import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
+import { Body, Controller, Post, Res } from '@nestjs/common';
+import { Response } from 'express';
 import { PracticeAiService } from './practice-ai.service';
-import { GetFeedbackDto } from './dto/get-feedback.dto';
+import { GetFeedbackDto, GetTeachingDto } from './dto/get-feedback.dto';
 
 @Controller('practice-ai')
 export class PracticeAiController {
-  constructor(private readonly practiceAiService: PracticeAiService) {}
+  constructor(private readonly service: PracticeAiService) {}
 
-  /**
-   * 提交用户作答，获取 AI 结构化评分反馈。
-   * 支持文字作答和语音转文字作答，isVoice=true 时额外生成发音建议。
-   */
+  /** 流式 AI 评分反馈（text/event-stream → markdown 文本流） */
   @Post('feedback')
-  @HttpCode(HttpStatus.OK)
-  getFeedback(@Body() dto: GetFeedbackDto) {
-    return this.practiceAiService.getFeedback(dto);
+  async streamFeedback(@Body() dto: GetFeedbackDto, @Res() res: Response) {
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    res.setHeader('Transfer-Encoding', 'chunked');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('X-Accel-Buffering', 'no');
+    await this.service.streamFeedback(dto, res as any);
+  }
+
+  /** 流式 AI 教学指导（text/event-stream → markdown 文本流） */
+  @Post('teach')
+  async streamTeaching(@Body() dto: GetTeachingDto, @Res() res: Response) {
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    res.setHeader('Transfer-Encoding', 'chunked');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('X-Accel-Buffering', 'no');
+    await this.service.streamTeaching(dto, res as any);
   }
 }

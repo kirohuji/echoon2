@@ -1,18 +1,4 @@
-import { post } from './request'
 import instance from './request'
-
-export type AiFeedback = {
-  score: number
-  level: string
-  summary: string
-  strengths: string[]
-  improvements: string[]
-  languageNotes: string[]
-  pronunciationNotes: string[] | null
-  revisedAnswer: string
-  keywordsUsed: string[]
-  keywordsMissed: string[]
-}
 
 export type TranscribeRecordingResult = {
   audioBase64: string
@@ -31,9 +17,59 @@ export const transcribeRecording = (audioBlob: Blob, filename = 'recording.webm'
   }) as any
 }
 
-/** 提交用户作答获取 AI 结构化评分 */
-export const getAiFeedback = (payload: {
-  questionId: string
-  userAnswer: string
-  isVoice?: boolean
-}): Promise<AiFeedback> => post('/practice-ai/feedback', payload)
+const API_BASE = (import.meta as any).env?.VITE_API_BASE ?? 'http://localhost:3000'
+
+/**
+ * 流式 AI 评分反馈 —— 返回 ReadableStream<string>
+ * 后端用 Vercel AI SDK pipeTextStreamToResponse，响应为 chunked plain text
+ */
+export async function streamFeedback(
+  payload: { questionId: string; userAnswer: string; isVoice?: boolean },
+  onChunk: (delta: string) => void,
+  signal?: AbortSignal,
+) {
+  const res = await fetch(`${API_BASE}/practice-ai/feedback`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+    signal,
+  })
+  if (!res.ok) throw new Error(`AI 评分失败 ${res.status}`)
+  const reader = res.body!.getReader()
+  const decoder = new TextDecoder()
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+    const chunk = decoder.decode(value, { stream: true })
+    // Vercel AI SDK text stream：每个 chunk 是原始文本
+    // 过滤掉 "0:" 前缀（data stream 格式）和换行
+    const cleaned = chunk.replace(/^\d+:/gm, '').replace(/^"(.*)"$/gm, '$1')
+    onChunk(cleaned)
+  }
+}
+
+/**
+ * 流式 AI 教学指导 —— 返回 ReadableStream<string>
+ */
+export async function streamTeaching(
+  payload: { questionId: string; userDraft?: string },
+  onChunk: (delta: string) => void,
+  signal?: AbortSignal,
+) {
+  const res = await fetch(`${API_BASE}/practice-ai/teach`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+    signal,
+  })
+  if (!res.ok) throw new Error(`教学指导失败 ${res.status}`)
+  const reader = res.body!.getReader()
+  const decoder = new TextDecoder()
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+    const chunk = decoder.decode(value, { stream: true })
+    const cleaned = chunk.replace(/^\d+:/gm, '').replace(/^"(.*)"$/gm, '$1')
+    onChunk(cleaned)
+  }
+}
