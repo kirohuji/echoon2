@@ -135,7 +135,7 @@ export function PracticePage() {
 
   if (error) {
     return (
-      <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-8 text-center text-destructive">
+      <div className="rounded-2xl bg-destructive/10 p-8 text-center text-destructive">
         {error}
       </div>
     )
@@ -205,7 +205,7 @@ export function PracticePage() {
 
       {/* 题目大卡 */}
       {currentQuestion && (
-        <Card className="shadow-sm">
+        <Card>
           <CardHeader className="pb-3">
             <div className="flex items-start justify-between gap-4">
               <div className="flex items-center gap-2 flex-wrap">
@@ -238,7 +238,7 @@ export function PracticePage() {
           </CardHeader>
           <CardContent className="space-y-4">
             {/* 题目内容 */}
-            <div className="rounded-lg bg-muted/50 p-4">
+            <div className="rounded-xl bg-muted/50 p-4">
               <p className="mb-2 text-xs font-medium text-muted-foreground">{t('practice.question')}</p>
               <InteractiveSpeechBlock
                 text={currentQuestion.questionText}
@@ -284,7 +284,7 @@ export function PracticePage() {
                     <><Eye className="h-4 w-4" />{t('practice.showAnswer')}</>
                   )}
                 </Button>
-                <div className={cn('mt-2 relative rounded-lg border p-4', !showAnswer && mode === 'practice' && 'select-none')}>
+                <div className={cn('mt-2 relative rounded-xl bg-muted/30 p-4', !showAnswer && mode === 'practice' && 'select-none')}>
                   {!showAnswer && mode === 'practice' && (
                     <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-muted/80 backdrop-blur-sm z-10">
                       <span className="text-sm text-muted-foreground">点击「显示答案」查看</span>

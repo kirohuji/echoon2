@@ -122,7 +122,7 @@ export function HomePage() {
       />
 
       {/* Hero */}
-      <Card className="overflow-hidden bg-gradient-to-br from-primary/10 via-background to-accent/10">
+      <Card className="overflow-hidden bg-primary/[0.04] dark:bg-primary/[0.08]">
         <CardContent className="p-6">
           <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
             <div>
@@ -192,11 +192,11 @@ export function HomePage() {
             ))}
           </div>
         ) : error ? (
-          <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-8 text-center text-destructive">
+          <div className="rounded-2xl bg-destructive/10 p-8 text-center text-destructive">
             {error}
           </div>
         ) : homeData?.scenicCards.length === 0 ? (
-          <div className="rounded-lg border py-12 text-center text-muted-foreground">
+          <div className="rounded-2xl bg-muted/40 py-12 text-center text-muted-foreground">
             {t('common.empty')}
           </div>
         ) : (
@@ -271,7 +271,7 @@ function ScenicCardItem({
   const { t } = useTranslation()
 
   return (
-    <Card className="group overflow-hidden transition-shadow hover:shadow-md">
+    <Card className="group overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_4px_24px_rgba(0,0,0,0.10)] dark:hover:ring-white/[0.12]">
       <div className="relative h-32 bg-gradient-to-br from-muted to-muted/30">
         {card.coverImage ? (
           <img src={card.coverImage} alt={card.name} className="h-full w-full object-cover" />

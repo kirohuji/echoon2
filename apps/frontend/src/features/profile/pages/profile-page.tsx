@@ -130,7 +130,7 @@ function OverviewTab() {
           ) : (
             <div className="grid grid-cols-3 gap-4">
               {stats.map(({ label, value }) => (
-                <div key={label} className="rounded-lg bg-muted/50 p-3 text-center">
+                <div key={label} className="rounded-xl bg-muted/50 p-3 text-center">
                   <div className="text-2xl font-bold">{value}</div>
                   <div className="text-xs text-muted-foreground mt-1">{label}</div>
                 </div>
@@ -284,7 +284,7 @@ function FavoritesTab() {
 
   if ((data ?? []).length === 0) {
     return (
-      <div className="rounded-lg border py-20 text-center text-muted-foreground">
+      <div className="rounded-2xl bg-muted/40 py-20 text-center text-muted-foreground">
         <Star className="mx-auto mb-3 h-10 w-10 opacity-30" />
         {t('profile.noFavorites')}
       </div>
@@ -319,7 +319,7 @@ function WordsTab() {
 
   if (words.length === 0) {
     return (
-      <div className="rounded-lg border py-20 text-center text-muted-foreground">
+      <div className="rounded-2xl bg-muted/40 py-20 text-center text-muted-foreground">
         <BookMarked className="mx-auto mb-3 h-10 w-10 opacity-30" />
         {t('profile.noWords')}
       </div>
@@ -336,7 +336,7 @@ function WordsTab() {
         {words.map((word) => (
           <div
             key={word}
-            className="flex items-center justify-between rounded-md border bg-card px-3 py-2"
+            className="flex items-center justify-between rounded-xl bg-card px-3 py-2.5 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_2px_8px_rgba(0,0,0,0.04)] dark:ring-1 dark:ring-white/[0.07]"
           >
             <span className="text-sm font-medium">{word}</span>
             <Button
@@ -427,7 +427,7 @@ function SettingsTab() {
               </Button>
             </div>
             {config && (
-              <div className="mt-3 rounded-md bg-muted/50 p-3 text-xs text-muted-foreground space-y-1">
+              <div className="mt-3 rounded-xl bg-muted/50 p-3 text-xs text-muted-foreground space-y-1">
                 <div>省份：{config.province}</div>
                 <div>语种：{config.language}</div>
                 <div>考试类型：{config.examType}</div>
