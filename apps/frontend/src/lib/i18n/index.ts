@@ -6,6 +6,7 @@ const zhCN = {
     nav: {
       library: '题库',
       mock: '模考',
+      words: '生词本',
       member: '会员权益',
       profile: '个人中心',
     },
@@ -172,6 +173,7 @@ const en = {
     nav: {
       library: 'Question Bank',
       mock: 'Mock Exam',
+      words: 'Word Book',
       member: 'Membership',
       profile: 'Profile',
     },

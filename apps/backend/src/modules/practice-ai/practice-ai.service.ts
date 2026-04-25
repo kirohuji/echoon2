@@ -1,9 +1,23 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { createOpenAI } from '@ai-sdk/openai';
-import { streamText } from 'ai';
+import { streamText, generateText } from 'ai';
 import type { Response } from 'express';
 import { PrismaService } from '../../common/prisma/prisma.service';
-import { GetFeedbackDto, GetTeachingDto } from './dto/get-feedback.dto';
+import { GetFeedbackDto, GetTeachingDto, WordEnrichmentDto } from './dto/get-feedback.dto';
+
+export interface WordExampleItem {
+  en: string;
+  zh: string;
+  level: 'basic' | 'intermediate' | 'advanced';
+  note?: string;
+}
+
+export interface WordEnrichmentResult {
+  chineseTranslation: string;
+  meanings: Array<{ partOfSpeech: string; chineseGloss: string }>;
+  examples: WordExampleItem[];
+  memoryTip: string;
+}
 
 @Injectable()
 export class PracticeAiService {
@@ -158,5 +172,52 @@ ${dto.userDraft?.trim() || '（学生尚未开始作答）'}
     });
 
     await this.pipeStream(result.textStream, res);
+  }
+
+  // ======================================================
+  // 3. 单词增强：中文翻译 + 分级例句（返回 JSON）
+  // ======================================================
+  async enrichWord(dto: WordEnrichmentDto): Promise<WordEnrichmentResult> {
+    const provider = this.getProvider();
+
+    const prompt = `You are an English vocabulary teacher helping Chinese learners.
+For the English word "${dto.word}"${dto.englishDefinitions ? `, which has these English meanings:\n${dto.englishDefinitions}` : ''}, provide rich learning material.
+
+Return ONLY valid JSON (no markdown, no code blocks) in this exact format:
+{
+  "chineseTranslation": "简明中文释义（20字以内，覆盖主要词义）",
+  "meanings": [
+    { "partOfSpeech": "noun", "chineseGloss": "该词性的中文说明" }
+  ],
+  "examples": [
+    { "en": "Simple everyday sentence.", "zh": "对应中文翻译。", "level": "basic" },
+    { "en": "Another natural sentence with context.", "zh": "对应中文翻译。", "level": "basic" },
+    { "en": "Intermediate sentence with richer context.", "zh": "对应中文翻译。", "level": "intermediate", "note": "可选学习提示" },
+    { "en": "Advanced usage in professional or academic writing.", "zh": "对应中文翻译。", "level": "advanced" },
+    { "en": "Complex sentence showing nuanced or idiomatic usage.", "zh": "对应中文翻译。", "level": "advanced" }
+  ],
+  "memoryTip": "一句话记忆技巧或词根词缀分析（中文，30字以内）"
+}
+
+Rules:
+- Exactly 5 examples: 2 basic, 1 intermediate, 2 advanced
+- All "zh" must be natural, accurate Chinese translations
+- Use realistic, diverse sentences — avoid repetitive patterns
+- If relevant to travel/tourism/tour guide context, include at least one such example
+- memoryTip must be practical and memorable for Chinese learners`;
+
+    const { text } = await generateText({
+      model: provider('deepseek-chat'),
+      prompt,
+      temperature: 0.3,
+      maxOutputTokens: 900,
+    });
+
+    try {
+      const cleaned = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+      return JSON.parse(cleaned) as WordEnrichmentResult;
+    } catch {
+      return { chineseTranslation: '（数据加载失败）', meanings: [], examples: [], memoryTip: '' };
+    }
   }
 }

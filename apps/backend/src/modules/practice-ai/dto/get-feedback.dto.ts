@@ -23,3 +23,14 @@ export class GetTeachingDto {
   @IsString()
   userDraft?: string;
 }
+
+export class WordEnrichmentDto {
+  @IsString()
+  @IsNotEmpty()
+  word: string;
+
+  /** 来自 dictionaryapi.dev 的英文释义摘要（帮助 AI 生成更准确的例句） */
+  @IsOptional()
+  @IsString()
+  englishDefinitions?: string;
+}

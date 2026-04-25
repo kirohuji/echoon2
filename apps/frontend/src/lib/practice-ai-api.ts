@@ -1,5 +1,7 @@
 import instance from './request'
 
+const API_BASE = (import.meta as any).env?.VITE_API_BASE ?? 'http://localhost:3000'
+
 export type TranscribeRecordingResult = {
   audioBase64: string
   mimeType: string
@@ -7,7 +9,21 @@ export type TranscribeRecordingResult = {
   wordTimestamps: Array<{ text: string; start_time: number; end_time?: number }> | null
 }
 
-/** 上传录音 → Whisper 转写（若未配置 Whisper 则仅返回音频 base64） */
+export interface WordExampleItem {
+  en: string
+  zh: string
+  level: 'basic' | 'intermediate' | 'advanced'
+  note?: string
+}
+
+export interface WordEnrichmentResult {
+  chineseTranslation: string
+  meanings: Array<{ partOfSpeech: string; chineseGloss: string }>
+  examples: WordExampleItem[]
+  memoryTip: string
+}
+
+/** 上传录音 → Whisper 转写 */
 export const transcribeRecording = (audioBlob: Blob, filename = 'recording.webm'): Promise<TranscribeRecordingResult> => {
   const form = new FormData()
   form.append('audio', audioBlob, filename)
@@ -17,12 +33,26 @@ export const transcribeRecording = (audioBlob: Blob, filename = 'recording.webm'
   }) as any
 }
 
-const API_BASE = (import.meta as any).env?.VITE_API_BASE ?? 'http://localhost:3000'
+/** 单词增强：中文释义 + 分级例句（带内存缓存） */
+const _wordCache = new Map<string, WordEnrichmentResult>()
+export async function enrichWord(
+  word: string,
+  englishDefinitions?: string
+): Promise<WordEnrichmentResult> {
+  const key = word.toLowerCase()
+  if (_wordCache.has(key)) return _wordCache.get(key)!
+  const res = await fetch(`${API_BASE}/practice-ai/word-enrichment`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ word: key, englishDefinitions }),
+  })
+  if (!res.ok) throw new Error(`单词增强失败 ${res.status}`)
+  const data: WordEnrichmentResult = await res.json()
+  _wordCache.set(key, data)
+  return data
+}
 
-/**
- * 流式 AI 评分反馈 —— 返回 ReadableStream<string>
- * 后端用 Vercel AI SDK pipeTextStreamToResponse，响应为 chunked plain text
- */
+/** 流式 AI 评分反馈 */
 export async function streamFeedback(
   payload: { questionId: string; userAnswer: string; isVoice?: boolean },
   onChunk: (delta: string) => void,
@@ -44,9 +74,7 @@ export async function streamFeedback(
   }
 }
 
-/**
- * 流式 AI 教学指导 —— 返回 ReadableStream<string>
- */
+/** 流式 AI 教学指导 */
 export async function streamTeaching(
   payload: { questionId: string; userDraft?: string },
   onChunk: (delta: string) => void,

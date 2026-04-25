@@ -103,8 +103,12 @@ export function BindingDialog({ open, onClose, forceOpen = false }: BindingDialo
     : {}
 
   return (
-    <Dialog open={open} onClose={forceOpen ? () => {} : onClose}>
-      <DialogContent onClose={forceOpen ? undefined : onClose} className="w-[480px]">
+    <Dialog open={open} onOpenChange={(v) => { if (!v && !forceOpen) onClose() }}>
+      <DialogContent
+        className="w-[480px]"
+        onInteractOutside={(e) => { if (forceOpen) e.preventDefault() }}
+        onEscapeKeyDown={(e) => { if (forceOpen) e.preventDefault() }}
+      >
         <DialogHeader>
           <DialogTitle>{t('binding.title')}</DialogTitle>
         </DialogHeader>
