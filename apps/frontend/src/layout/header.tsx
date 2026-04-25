@@ -34,10 +34,10 @@ export function Header() {
   const ThemeIcon = theme === 'dark' ? Moon : theme === 'light' ? Sun : Monitor
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="fixed top-0 left-0 right-0 z-40 border-b border-border/50 bg-background/60 backdrop-blur-xl supports-[backdrop-filter]:bg-background/50">
       <div className="mx-auto flex h-14 max-w-[1480px] items-center px-4">
         <Link to="/" className="mr-8 flex items-center gap-2">
-          <span className="text-lg font-bold tracking-tight">导游口试</span>
+          <span className="font-display text-lg font-bold tracking-tight text-foreground">导游口试</span>
         </Link>
 
         <nav className="flex items-center gap-1 flex-1">

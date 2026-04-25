@@ -4,48 +4,103 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 224 71.4% 4.1%;
+    /* ── Cerulean Scholar · 浅色主题 ── */
+    --background: 220 20% 98%;
+    --foreground: 222 47% 8%;
+
     --card: 0 0% 100%;
-    --card-foreground: 224 71.4% 4.1%;
+    --card-foreground: 222 47% 8%;
+
     --popover: 0 0% 100%;
-    --popover-foreground: 224 71.4% 4.1%;
-    --primary: 220.9 39.3% 11%;
-    --primary-foreground: 210 20% 98%;
-    --secondary: 220 14.3% 95.9%;
-    --secondary-foreground: 220.9 39.3% 11%;
-    --muted: 220 14.3% 95.9%;
-    --muted-foreground: 220 8.9% 46.1%;
-    --accent: 220 14.3% 95.9%;
-    --accent-foreground: 220.9 39.3% 11%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 20% 98%;
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 224 71.4% 4.1%;
-    --radius: 0.5rem;
+    --popover-foreground: 222 47% 8%;
+
+    /* 主色：活力 Cerulean 蓝 */
+    --primary: 217 91% 57%;
+    --primary-foreground: 0 0% 100%;
+
+    /* 次要：蓝调浅灰 */
+    --secondary: 220 14% 94%;
+    --secondary-foreground: 222 47% 8%;
+
+    --muted: 220 14% 94%;
+    --muted-foreground: 220 9% 46%;
+
+    /* 成就色：Amber 金（正确答案高亮、连续打卡） */
+    --accent: 38 92% 50%;
+    --accent-foreground: 222 47% 8%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 13% 90%;
+    --input: 220 13% 90%;
+    --ring: 217 91% 57%;
+
+    /* iOS 大圆角 */
+    --radius: 0.875rem;
+
+    /* 语义色扩展 */
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 222 47% 8%;
+    --sidebar-background: 220 20% 97%;
+    --sidebar-foreground: 222 47% 8%;
+    --sidebar-primary: 217 91% 57%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 14% 93%;
+    --sidebar-accent-foreground: 222 47% 8%;
+    --sidebar-border: 220 13% 90%;
+    --sidebar-ring: 217 91% 57%;
   }
 
   .dark {
-    --background: 224 71.4% 4.1%;
-    --foreground: 210 20% 98%;
-    --card: 224 71.4% 4.1%;
-    --card-foreground: 210 20% 98%;
-    --popover: 224 71.4% 4.1%;
-    --popover-foreground: 210 20% 98%;
-    --primary: 210 20% 98%;
-    --primary-foreground: 220.9 39.3% 11%;
-    --secondary: 215 27.9% 16.9%;
-    --secondary-foreground: 210 20% 98%;
-    --muted: 215 27.9% 16.9%;
-    --muted-foreground: 217.9 10.6% 64.9%;
-    --accent: 215 27.9% 16.9%;
-    --accent-foreground: 210 20% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 20% 98%;
-    --border: 215 27.9% 16.9%;
-    --input: 215 27.9% 16.9%;
-    --ring: 216 12.2% 83.9%;
+    /* ── Cerulean Scholar · 深色主题 ── */
+    --background: 222 47% 6%;
+    --foreground: 210 20% 96%;
+
+    --card: 222 47% 9%;
+    --card-foreground: 210 20% 96%;
+
+    --popover: 222 47% 9%;
+    --popover-foreground: 210 20% 96%;
+
+    --primary: 217 91% 65%;
+    --primary-foreground: 222 47% 6%;
+
+    --secondary: 220 20% 14%;
+    --secondary-foreground: 210 20% 96%;
+
+    --muted: 220 20% 14%;
+    --muted-foreground: 218 11% 60%;
+
+    --accent: 38 85% 60%;
+    --accent-foreground: 222 47% 6%;
+
+    --destructive: 0 72% 62%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 20% 16%;
+    --input: 220 20% 16%;
+    --ring: 217 91% 65%;
+
+    --success: 142 71% 55%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 85% 60%;
+    --warning-foreground: 222 47% 6%;
+    --sidebar-background: 222 47% 8%;
+    --sidebar-foreground: 210 20% 96%;
+    --sidebar-primary: 217 91% 65%;
+    --sidebar-primary-foreground: 222 47% 6%;
+    --sidebar-accent: 220 20% 13%;
+    --sidebar-accent-foreground: 210 20% 96%;
+    --sidebar-border: 220 20% 16%;
+    --sidebar-ring: 217 91% 65%;
+  }
+  .theme {
+    --animate-shimmer-slide: shimmer-slide var(--speed) ease-in-out infinite alternate;
+    --animate-spin-around: spin-around calc(var(--speed) * 2) infinite linear;
+    --animate-blink-cursor: blink-cursor 1.2s step-end infinite;
   }
 }
 
@@ -53,8 +108,80 @@
   * {
     @apply border-border;
   }
+
+  html {
+    /* 弹簧动画：全局默认过渡曲线 */
+    scroll-behavior: smooth;
+  }
+
   body {
     @apply bg-background text-foreground;
-    font-feature-settings: "rlig" 1, "calt" 1;
+    font-family: 'Inter', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont,
+      'Noto Sans SC', sans-serif;
+    font-feature-settings: 'rlig' 1, 'calt' 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+@layer utilities {
+  /* iOS 弹簧过渡 */
+  .transition-spring {
+    transition-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
+    transition-duration: 300ms;
+  }
+
+  /* 按压反馈 */
+  .press-feedback {
+    @apply active:scale-[0.97] transition-transform duration-150;
+  }
+
+  /* 卡片悬浮上浮 */
+  .card-hover {
+    @apply hover:-translate-y-0.5 transition-transform duration-200;
+  }
+
+  /* 磨砂玻璃 */
+  .glass {
+    @apply backdrop-blur-xl bg-background/70;
+  }
+
+  /* iOS 底部安全区 */
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .pt-safe {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+}
+
+@theme inline {
+  @keyframes shimmer-slide {
+  to {
+    transform: translate(calc(100cqw - 100%), 0);
+    }
+  }
+  @keyframes spin-around {
+  0% {
+    transform: translateZ(0) rotate(0);
+    }
+  15%, 35% {
+    transform: translateZ(0) rotate(90deg);
+    }
+  65%, 85% {
+    transform: translateZ(0) rotate(270deg);
+    }
+  100% {
+    transform: translateZ(0) rotate(360deg);
+    }
+  }
+  @keyframes blink-cursor {
+  0%, 49% {
+    opacity: 1;
+    }
+  50%, 100% {
+    opacity: 0;
+    }
   }
 }
