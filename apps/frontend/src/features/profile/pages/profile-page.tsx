@@ -282,7 +282,7 @@ function FavoritesTab() {
     )
   }
 
-  if (data.length === 0) {
+  if ((data ?? []).length === 0) {
     return (
       <div className="rounded-lg border py-20 text-center text-muted-foreground">
         <Star className="mx-auto mb-3 h-10 w-10 opacity-30" />
