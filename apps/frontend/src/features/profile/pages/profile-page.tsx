@@ -249,7 +249,7 @@ function RecordsTab() {
     <div className="space-y-4">
       <h2 className="text-base font-semibold">{t('profile.records')}</h2>
       <ConfigDataTable
-        data={data?.items || []}
+        data={data?.list || []}
         columns={columns}
         total={data?.total || 0}
         page={page}
@@ -269,7 +269,7 @@ function FavoritesTab() {
 
   useEffect(() => {
     getFavorites()
-      .then((res) => setData(res.items))
+      .then((res) => setData(res?.list ?? []))
       .catch(() => {})
       .finally(() => setIsLoading(false))
   }, [])

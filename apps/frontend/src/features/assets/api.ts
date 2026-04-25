@@ -9,19 +9,23 @@ export interface FavoriteItem {
 }
 
 export interface FavoritesResult {
-  items: FavoriteItem[]
+  list: FavoriteItem[]
   total: number
+  page: number
+  pageSize: number
 }
 
 export interface WordItem {
-  word: string
-  meaning?: string
-  addedAt: string
+  term: string
+  definition?: string
+  createdAt: string
 }
 
 export interface WordsResult {
-  items: WordItem[]
+  list: WordItem[]
   total: number
+  page: number
+  pageSize: number
 }
 
 export const getFavorites = (params?: { page?: number; pageSize?: number }): Promise<FavoritesResult> =>

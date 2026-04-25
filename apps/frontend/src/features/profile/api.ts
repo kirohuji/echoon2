@@ -30,7 +30,7 @@ export interface PracticeRecord {
 }
 
 export interface PracticeRecordsResult {
-  items: PracticeRecord[]
+  list: PracticeRecord[]
   total: number
   page: number
   pageSize: number
