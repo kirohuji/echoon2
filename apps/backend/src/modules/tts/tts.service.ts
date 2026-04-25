@@ -23,7 +23,7 @@ export class TtsService {
     return TTS_PARAMS_SCHEMA;
   }
 
-  /** 题目音频：按 (questionId + 配置哈希) 持久化缓存 */
+  /** 题目音频：按 (questionId + textType + 配置哈希) 持久化缓存 */
   async synthesizeQuestion(dto: SynthesizeQuestionDto) {
     const question = await this.prisma.questionItem.findUnique({
       where: { id: dto.questionId },
@@ -32,11 +32,13 @@ export class TtsService {
     if (!question) throw new NotFoundException('题目不存在');
     if (!question.content) throw new BadRequestException('题目暂无内容');
 
-    // 英文答案 + 问题拼接作为语音文本
-    const text = question.content.answerEn?.trim() || question.content.promptEn?.trim();
+    const textType = dto.textType ?? 'answer';
+    const text = textType === 'question'
+      ? question.content.promptEn?.trim()
+      : question.content.answerEn?.trim() || question.content.promptEn?.trim();
     if (!text) throw new BadRequestException('题目英文内容为空');
 
-    const configHash = this.buildConfigHash(dto.provider, dto.model, dto.voiceId, dto.params);
+    const configHash = this.buildConfigHash(dto.provider, dto.model, dto.voiceId, dto.params, textType);
 
     // 检查缓存
     const existing = await this.prisma.questionAudio.findUnique({
@@ -58,7 +60,7 @@ export class TtsService {
     const provider = this.factory.getProvider(dto.provider);
     const ephemeralId = `q-${dto.questionId}-${randomUUID()}`;
 
-    this.logger.log(`Generating TTS: questionId=${dto.questionId} provider=${dto.provider} model=${dto.model}`);
+    this.logger.log(`Generating TTS: questionId=${dto.questionId} textType=${textType} provider=${dto.provider} model=${dto.model}`);
     const result = await provider.generateAudio({
       id: ephemeralId,
       text,
@@ -131,11 +133,13 @@ export class TtsService {
     model: string,
     voiceId?: string,
     params?: Record<string, unknown>,
+    textType?: string,
   ): string {
     const key = JSON.stringify({
       provider,
       model,
       voiceId: voiceId ?? null,
+      textType: textType ?? 'answer',
       params: params ? JSON.stringify(Object.keys(params).sort().reduce((acc, k) => ({ ...acc, [k]: params[k] }), {})) : null,
     });
     return createHash('sha1').update(key).digest('hex');

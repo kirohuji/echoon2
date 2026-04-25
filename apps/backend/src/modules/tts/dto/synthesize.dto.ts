@@ -1,4 +1,4 @@
-import { IsEnum, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsEnum, IsIn, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
 import { TtsProvider } from '@prisma/client';
 
 export class SynthesizeQuestionDto {
@@ -19,6 +19,11 @@ export class SynthesizeQuestionDto {
 
   @IsOptional()
   params?: Record<string, unknown>;
+
+  /** 合成哪部分：question = 题干（promptEn），answer = 答案（answerEn）；默认 answer */
+  @IsOptional()
+  @IsIn(['question', 'answer'])
+  textType?: 'question' | 'answer';
 }
 
 export class SynthesizeTextDto {

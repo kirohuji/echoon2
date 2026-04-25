@@ -26,6 +26,83 @@ type AudioState =
   | { status: 'ready'; audioId: string; wordTimestamps: TtsWordTimestamp[] | null; provider: string }
   | { status: 'error'; message: string }
 
+// ---------- 复用：AI 朗读区块 ----------
+function AudioBlock({
+  label,
+  audioState,
+  ttsBackend,
+  onGenerate,
+}: {
+  label: string
+  audioState: AudioState
+  ttsBackend: { provider: string; model: string }
+  onGenerate: () => void
+}) {
+  return (
+    <div className="border-t border-border/50 pt-4">
+      <div className="mb-3 flex items-center justify-between">
+        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          {label}
+        </span>
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <span className="rounded-md bg-muted px-1.5 py-0.5 font-mono">
+            {ttsBackend.provider} · {ttsBackend.model}
+          </span>
+          {audioState.status === 'ready' && (
+            <button
+              className="flex items-center gap-1 transition-colors hover:text-primary"
+              onClick={onGenerate}
+              title="用当前设置重新生成"
+            >
+              <RotateCcw className="size-3" />
+              重新生成
+            </button>
+          )}
+        </div>
+      </div>
+
+      {audioState.status === 'idle' && (
+        <button
+          type="button"
+          onClick={onGenerate}
+          className="flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-border py-6 text-sm text-muted-foreground transition-colors hover:border-primary/50 hover:text-primary"
+        >
+          <Mic2 className="size-4" />
+          点击生成 AI 语音
+        </button>
+      )}
+
+      {audioState.status === 'generating' && (
+        <div className="flex items-center justify-center gap-2 rounded-2xl bg-muted/30 py-6 text-sm text-muted-foreground">
+          <Loader2 className="size-4 animate-spin" />
+          合成语音中，请稍候…
+        </div>
+      )}
+
+      {audioState.status === 'error' && (
+        <div className="rounded-2xl bg-destructive/10 p-4">
+          <div className="flex items-center gap-2 text-sm text-destructive">
+            <AlertCircle className="size-4 shrink-0" />
+            <span>{audioState.message}</span>
+          </div>
+          <Button size="sm" variant="outline" className="mt-3 h-7 text-xs" onClick={onGenerate}>
+            <RotateCcw className="mr-1.5 size-3" />
+            重试
+          </Button>
+        </div>
+      )}
+
+      {audioState.status === 'ready' && (
+        <AudioPlayer
+          audioUrl={getAudioUrl(audioState.audioId)}
+          wordTimestamps={audioState.wordTimestamps}
+          audioProvider={audioState.provider}
+        />
+      )}
+    </div>
+  )
+}
+
 export function PracticePage() {
   const { topicId } = useParams<{ topicId: string }>()
   const navigate = useNavigate()
@@ -42,7 +119,8 @@ export function PracticePage() {
   const [showTranslation, setShowTranslation] = useState(false)
   const [mode, setMode] = useState<'practice' | 'study'>('practice')
   const [ttsSettingsOpen, setTtsSettingsOpen] = useState(false)
-  const [audioState, setAudioState] = useState<AudioState>({ status: 'idle' })
+  const [questionAudio, setQuestionAudio] = useState<AudioState>({ status: 'idle' })
+  const [answerAudio, setAnswerAudio]     = useState<AudioState>({ status: 'idle' })
 
   const currentQuestion: Question | undefined = topicData?.questions[currentIndex]
 
@@ -58,17 +136,20 @@ export function PracticePage() {
 
   // 切题时重置音频状态
   useEffect(() => {
-    setAudioState({ status: 'idle' })
+    setQuestionAudio({ status: 'idle' })
+    setAnswerAudio({ status: 'idle' })
   }, [currentIndex, currentQuestion?.questionId])
 
-  // TTS 配置变更时也重置（让用户用新配置重新生成）
+  // TTS 配置变更时也重置
   useEffect(() => {
-    setAudioState({ status: 'idle' })
+    setQuestionAudio({ status: 'idle' })
+    setAnswerAudio({ status: 'idle' })
   }, [ttsBackend.provider, ttsBackend.model, ttsBackend.voiceId])
 
-  const handleGenerateAudio = useCallback(async () => {
+  const handleGenerateAudio = useCallback(async (textType: 'question' | 'answer') => {
     if (!currentQuestion) return
-    setAudioState({ status: 'generating' })
+    const setter = textType === 'question' ? setQuestionAudio : setAnswerAudio
+    setter({ status: 'generating' })
     try {
       const result = await synthesizeQuestion({
         questionId: currentQuestion.questionId,
@@ -76,15 +157,16 @@ export function PracticePage() {
         model: ttsBackend.model,
         voiceId: ttsBackend.voiceId,
         params: ttsBackend.params,
+        textType,
       })
-      setAudioState({
+      setter({
         status: 'ready',
         audioId: result.id,
         wordTimestamps: result.wordTimestamps as TtsWordTimestamp[] | null,
         provider: ttsBackend.provider,
       })
     } catch (e: any) {
-      setAudioState({
+      setter({
         status: 'error',
         message: e?.response?.data?.message || e?.message || '音频生成失败，请检查 API Key 配置',
       })
@@ -257,6 +339,14 @@ export function PracticePage() {
               <p className="text-base leading-relaxed">{currentQuestion.questionText}</p>
             </div>
 
+            {/* 题目 AI 朗读 */}
+            <AudioBlock
+              label="题目朗读"
+              audioState={questionAudio}
+              ttsBackend={ttsBackend}
+              onGenerate={() => handleGenerateAudio('question')}
+            />
+
             {/* 翻译 */}
             {currentQuestion.translation && (
               <div>
@@ -301,72 +391,13 @@ export function PracticePage() {
               </div>
             )}
 
-            {/* TTS 音频区块 */}
-            <div className="border-t border-border/50 pt-4">
-              <div className="mb-3 flex items-center justify-between">
-                <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  AI 语音朗读
-                </span>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <span className="rounded-md bg-muted px-1.5 py-0.5 font-mono">
-                    {ttsBackend.provider} · {ttsBackend.model}
-                  </span>
-                  {audioState.status === 'ready' && (
-                    <button
-                      className="flex items-center gap-1 hover:text-primary transition-colors"
-                      onClick={handleGenerateAudio}
-                      title="用当前设置重新生成"
-                    >
-                      <RotateCcw className="size-3" />
-                      重新生成
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {audioState.status === 'idle' && (
-                <button
-                  type="button"
-                  onClick={handleGenerateAudio}
-                  className="flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-border py-8 text-sm text-muted-foreground transition-colors hover:border-primary/50 hover:text-primary"
-                >
-                  <Mic2 className="size-5" />
-                  点击生成 AI 语音
-                </button>
-              )}
-
-              {audioState.status === 'generating' && (
-                <div className="flex items-center justify-center gap-2 rounded-2xl bg-muted/30 py-8 text-sm text-muted-foreground">
-                  <Loader2 className="size-4 animate-spin" />
-                  合成语音中，请稍候…
-                </div>
-              )}
-
-              {audioState.status === 'error' && (
-                <div className="rounded-2xl bg-destructive/10 p-4">
-                  <div className="flex items-center gap-2 text-sm text-destructive">
-                    <AlertCircle className="size-4 shrink-0" />
-                    <span>{audioState.message}</span>
-                  </div>
-                  <Button
-                    size="sm" variant="outline"
-                    className="mt-3 h-7 text-xs"
-                    onClick={handleGenerateAudio}
-                  >
-                    <RotateCcw className="mr-1.5 size-3" />
-                    重试
-                  </Button>
-                </div>
-              )}
-
-              {audioState.status === 'ready' && (
-                <AudioPlayer
-                  audioUrl={getAudioUrl(audioState.audioId)}
-                  wordTimestamps={audioState.wordTimestamps}
-                  audioProvider={audioState.provider}
-                />
-              )}
-            </div>
+            {/* 答案 AI 朗读 */}
+            <AudioBlock
+              label="答案朗读"
+              audioState={answerAudio}
+              ttsBackend={ttsBackend}
+              onGenerate={() => handleGenerateAudio('answer')}
+            />
           </CardContent>
         </Card>
       )}

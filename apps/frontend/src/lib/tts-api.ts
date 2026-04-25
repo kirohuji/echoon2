@@ -40,6 +40,8 @@ export type SynthesizeQuestionPayload = {
   model: string
   voiceId?: string
   params?: Record<string, string | number | boolean>
+  /** 合成哪部分：question = 题干，answer = 答案（默认） */
+  textType?: 'question' | 'answer'
 }
 
 export type SynthesizeQuestionResult = {
