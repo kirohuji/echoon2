@@ -1,0 +1,164 @@
+import { Injectable } from '@nestjs/common';
+import { PrismaService } from '../../common/prisma/prisma.service';
+import { PaginationDto, toPageResult } from '../../common/dto/pagination.dto';
+
+@Injectable()
+export class ProfileService {
+  constructor(private readonly prisma: PrismaService) {}
+
+  async getOverview(deviceId: string) {
+    const config = await this.prisma.userBindingConfig.findUnique({
+      where: { deviceId },
+      include: { bank: true },
+    });
+
+    const totalPracticed = await this.prisma.practiceProgress.count({
+      where: { deviceId, seenAt: { not: null } },
+    });
+
+    const masteredCount = await this.prisma.practiceProgress.count({
+      where: { deviceId, masteryScore: { gte: 60 } },
+    });
+
+    const favoritesCount = await this.prisma.favoriteQuestion.count({
+      where: { deviceId },
+    });
+
+    const wordsCount = await this.prisma.vocabularyWord.count({
+      where: { deviceId },
+    });
+
+    const mockExamCount = await this.prisma.mockExamRecord.count({
+      where: { deviceId },
+    });
+
+    const latestExam = await this.prisma.mockExamRecord.findFirst({
+      where: { deviceId },
+      orderBy: { takenAt: 'desc' },
+      include: {
+        paper: { select: { title: true } },
+      },
+    });
+
+    const avgScoreResult = await this.prisma.mockExamRecord.aggregate({
+      where: { deviceId },
+      _avg: { score: true },
+    });
+
+    const now = new Date();
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const recentActivity = await this.prisma.dailyActivity.findMany({
+      where: {
+        deviceId,
+        date: { gte: sevenDaysAgo },
+      },
+      orderBy: { date: 'desc' },
+    });
+
+    const streakDays = this.calculateStreak(recentActivity);
+
+    return {
+      deviceId,
+      bank: config?.bank ?? null,
+      stats: {
+        totalPracticed,
+        masteredCount,
+        favoritesCount,
+        wordsCount,
+        mockExamCount,
+        averageExamScore: avgScoreResult._avg.score
+          ? Math.round(avgScoreResult._avg.score)
+          : null,
+        streakDays,
+      },
+      latestExam: latestExam
+        ? {
+            score: latestExam.score,
+            paperTitle: latestExam.paper.title,
+            takenAt: latestExam.takenAt,
+          }
+        : null,
+    };
+  }
+
+  private calculateStreak(activities: { date: Date; count: number }[]): number {
+    if (activities.length === 0) return 0;
+
+    const dates = activities.map((a) => {
+      const d = new Date(a.date);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    });
+
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+    let streak = 0;
+    let currentDate = new Date(today);
+
+    while (true) {
+      const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`;
+      if (dates.includes(dateStr)) {
+        streak++;
+        currentDate.setDate(currentDate.getDate() - 1);
+      } else {
+        break;
+      }
+    }
+
+    return streak;
+  }
+
+  async getActivityHeatmap(deviceId: string) {
+    const oneYearAgo = new Date();
+    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+
+    const activities = await this.prisma.dailyActivity.findMany({
+      where: {
+        deviceId,
+        date: { gte: oneYearAgo },
+      },
+      orderBy: { date: 'asc' },
+    });
+
+    return {
+      activities: activities.map((a) => ({
+        date: a.date,
+        count: a.count,
+      })),
+    };
+  }
+
+  async getPracticeRecords(deviceId: string, pagination: PaginationDto) {
+    const { page = 1, pageSize = 20 } = pagination;
+    const skip = (page - 1) * pageSize;
+
+    const where: any = { deviceId };
+    if (pagination.keyword) {
+      where.actionType = { contains: pagination.keyword, mode: 'insensitive' };
+    }
+
+    const [list, total] = await this.prisma.$transaction([
+      this.prisma.practiceRecord.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: pageSize,
+        include: {
+          question: {
+            select: {
+              id: true,
+              title: true,
+              difficulty: true,
+              topic: {
+                select: { name: true },
+              },
+            },
+          },
+        },
+      }),
+      this.prisma.practiceRecord.count({ where }),
+    ]);
+
+    return toPageResult(list, total, pagination);
+  }
+}

@@ -1,0 +1,203 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---- 题库域 ----
+
+model QuestionBank {
+  id            String   @id @default(cuid())
+  name          String
+  province      String
+  language      String
+  examType      String
+  interviewForm String
+  status        String   @default("active")
+  topics        QuestionTopic[]
+  userBindings  UserBindingConfig[]
+  mockPapers    MockPaper[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  @@map("question_bank")
+}
+
+model QuestionTopic {
+  id        String   @id @default(cuid())
+  bank      QuestionBank @relation(fields: [bankId], references: [id])
+  bankId    String
+  code      String
+  name      String
+  sortOrder Int      @default(0)
+  items     QuestionItem[]
+  @@map("question_topic")
+}
+
+model QuestionItem {
+  id                   String   @id @default(cuid())
+  topic                QuestionTopic @relation(fields: [topicId], references: [id])
+  topicId              String
+  title                String
+  difficulty           Int      @default(3)
+  suggestedDurationSec Int      @default(120)
+  masteryScore         Int      @default(0)
+  keywords             String[]
+  focusWords           String[]
+  content              QuestionContent?
+  favorites            FavoriteQuestion[]
+  practiceRecords      PracticeRecord[]
+  practiceProgresses   PracticeProgress[]
+  mockPaperQuestions   MockPaperQuestion[]
+  vocabularyWords      VocabularyWord[]
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  @@index([topicId, difficulty])
+  @@map("question_item")
+}
+
+model QuestionContent {
+  id         String   @id @default(cuid())
+  question   QuestionItem @relation(fields: [questionId], references: [id])
+  questionId String   @unique
+  promptEn   String   @db.Text
+  promptZh   String   @db.Text
+  answerEn   String   @db.Text
+  answerZh   String   @db.Text
+  summary    String   @db.Text
+  @@map("question_content")
+}
+
+// ---- 学习行为域 ----
+
+model UserBindingConfig {
+  id            String   @id @default(cuid())
+  deviceId      String   @unique
+  province      String
+  language      String
+  examType      String
+  interviewForm String
+  bank          QuestionBank? @relation(fields: [bankId], references: [id])
+  bankId        String?
+  updatedAt     DateTime @updatedAt
+  @@map("user_binding_config")
+}
+
+model FavoriteQuestion {
+  id         String   @id @default(cuid())
+  deviceId   String
+  question   QuestionItem @relation(fields: [questionId], references: [id])
+  questionId String
+  createdAt  DateTime @default(now())
+  @@unique([deviceId, questionId])
+  @@index([deviceId, createdAt(sort: Desc)])
+  @@map("favorite_question")
+}
+
+model VocabularyWord {
+  id               String   @id @default(cuid())
+  deviceId         String
+  term             String
+  definition       String?
+  sourceQuestion   QuestionItem? @relation(fields: [sourceQuestionId], references: [id])
+  sourceQuestionId String?
+  createdAt        DateTime @default(now())
+  @@unique([deviceId, term])
+  @@index([deviceId, createdAt(sort: Desc)])
+  @@map("vocabulary_word")
+}
+
+model PracticeRecord {
+  id         String   @id @default(cuid())
+  deviceId   String
+  question   QuestionItem @relation(fields: [questionId], references: [id])
+  questionId String
+  actionType String
+  payload    Json?
+  createdAt  DateTime @default(now())
+  @@index([deviceId, createdAt(sort: Desc)])
+  @@map("practice_record")
+}
+
+model PracticeProgress {
+  id           String   @id @default(cuid())
+  deviceId     String
+  question     QuestionItem @relation(fields: [questionId], references: [id])
+  questionId   String
+  masteryScore Int      @default(0)
+  seenAt       DateTime?
+  updatedAt    DateTime @updatedAt
+  @@unique([deviceId, questionId])
+  @@map("practice_progress")
+}
+
+// ---- 模考域 ----
+
+model MockPaper {
+  id               String   @id @default(cuid())
+  bank             QuestionBank @relation(fields: [bankId], references: [id])
+  bankId           String
+  title            String
+  paperType        String   @default("standard")
+  suggestedMinutes Int      @default(30)
+  focus            String[]
+  questions        MockPaperQuestion[]
+  examRecords      MockExamRecord[]
+  createdAt        DateTime @default(now())
+  @@map("mock_paper")
+}
+
+model MockPaperQuestion {
+  id         String   @id @default(cuid())
+  paper      MockPaper @relation(fields: [paperId], references: [id])
+  paperId    String
+  question   QuestionItem @relation(fields: [questionId], references: [id])
+  questionId String
+  sortOrder  Int      @default(0)
+  @@map("mock_paper_question")
+}
+
+model MockExamRecord {
+  id       String   @id @default(cuid())
+  deviceId String
+  paper    MockPaper @relation(fields: [paperId], references: [id])
+  paperId  String
+  score    Int
+  weakness String[]
+  takenAt  DateTime @default(now())
+  @@index([deviceId, takenAt(sort: Desc)])
+  @@map("mock_exam_record")
+}
+
+// ---- 用户看板域 ----
+
+model DailyActivity {
+  id       String   @id @default(cuid())
+  deviceId String
+  date     DateTime @db.Date
+  count    Int      @default(1)
+  @@unique([deviceId, date])
+  @@map("daily_activity")
+}
+
+model UserPreference {
+  id        String   @id @default(cuid())
+  deviceId  String   @unique
+  autoPlay  Boolean  @default(false)
+  language  String   @default("zh-CN")
+  theme     String   @default("system")
+  updatedAt DateTime @updatedAt
+  @@map("user_preference")
+}
+
+model MembershipPlan {
+  id        String   @id @default(cuid())
+  name      String
+  price     Int
+  period    String
+  features  String[]
+  sortOrder Int      @default(0)
+  @@map("membership_plan")
+}

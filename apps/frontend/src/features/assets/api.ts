@@ -1,0 +1,43 @@
+import { get, post, del } from '@/lib/request'
+
+export interface FavoriteItem {
+  questionId: string
+  topicId: string
+  topicName: string
+  questionText: string
+  createdAt: string
+}
+
+export interface FavoritesResult {
+  items: FavoriteItem[]
+  total: number
+}
+
+export interface WordItem {
+  word: string
+  meaning?: string
+  addedAt: string
+}
+
+export interface WordsResult {
+  items: WordItem[]
+  total: number
+}
+
+export const getFavorites = (params?: { page?: number; pageSize?: number }): Promise<FavoritesResult> =>
+  get('/assets/favorites', params)
+
+export const addFavorite = (questionId: string): Promise<void> =>
+  post(`/assets/favorites/${questionId}`)
+
+export const removeFavorite = (questionId: string): Promise<void> =>
+  del(`/assets/favorites/${questionId}`)
+
+export const getWords = (params?: { page?: number; pageSize?: number }): Promise<WordsResult> =>
+  get('/assets/words', params)
+
+export const addWord = (term: string, definition?: string): Promise<void> =>
+  post('/assets/words', { term, definition })
+
+export const removeWord = (term: string): Promise<void> =>
+  del(`/assets/words/${encodeURIComponent(term)}`)
