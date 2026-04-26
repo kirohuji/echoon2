@@ -42,10 +42,10 @@ export const DEFAULT_TTS: TtsSettings = {
 }
 
 export const DEFAULT_TTS_BACKEND: TtsBackendSettings = {
-  provider: 'cartesia',
-  model: 'sonic-3',
-  voiceId: '79a125e8-cd45-4c13-8a67-188112f4dd22', // British Reading Lady
-  params: { speed: 1, volume: 1 },
+  provider: 'minimax',
+  model: 'speech-2.8-hd',
+  voiceId: 'English_Trustworthy_Man',
+  params: { speed: 1, vol: 1, pitch: 0 },
 }
 
 export const usePreferencesStore = create<PreferencesStore>()(

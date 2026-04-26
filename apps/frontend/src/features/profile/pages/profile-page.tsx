@@ -895,8 +895,28 @@ function ExampleCard({ ex, idx }: { ex: WordExampleItem; idx: number }) {
   const [state, setState] = useState<'idle' | 'loading' | 'playing' | 'error'>('idle')
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const cachedUrlRef = useRef<string | null>(null)
-  const { ttsBackend } = usePreferencesStore()
+  const { ttsBackend, setTtsBackend } = usePreferencesStore()
   const cfg = LEVEL_CONFIG[ex.level]
+  const isMiniMax = ttsBackend.provider === 'minimax'
+
+  const toggleTtsProvider = () => {
+    // 切换时使用对应引擎的一组安全默认参数，避免旧参数结构不兼容
+    if (isMiniMax) {
+      setTtsBackend({
+        provider: 'cartesia',
+        model: 'sonic-3',
+        voiceId: '79a125e8-cd45-4c13-8a67-188112f4dd22',
+        params: { speed: 1, volume: 1 },
+      })
+      return
+    }
+    setTtsBackend({
+      provider: 'minimax',
+      model: 'speech-2.8-hd',
+      voiceId: 'English_Trustworthy_Man',
+      params: { speed: 1, vol: 1, pitch: 0 },
+    })
+  }
 
   const handleSpeak = async () => {
     if (state === 'loading') return
@@ -936,17 +956,27 @@ function ExampleCard({ ex, idx }: { ex: WordExampleItem; idx: number }) {
           <span className="text-xs font-medium text-muted-foreground">例句 {idx + 1}</span>
           <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-semibold', cfg.color)}>{cfg.label}</span>
         </div>
-        <button type="button" onClick={handleSpeak}
-          disabled={state === 'loading'}
-          className="flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-xs text-primary hover:bg-primary/20 transition-colors disabled:opacity-60">
-          {state === 'loading'
-            ? <><Loader2 className="h-3 w-3 animate-spin" />合成中</>
-            : state === 'playing'
-            ? <><Volume2 className="h-3 w-3" />朗读中</>
-            : state === 'error'
-            ? <><Volume2 className="h-3 w-3 text-destructive" />重试</>
-            : <><Volume2 className="h-3 w-3" />朗读</>}
-        </button>
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={toggleTtsProvider}
+            className="rounded-full border border-border bg-background px-2 py-1 text-[10px] text-muted-foreground transition-colors hover:text-foreground"
+            title="切换发音引擎"
+          >
+            {isMiniMax ? 'MiniMax' : 'Cartesia'}
+          </button>
+          <button type="button" onClick={handleSpeak}
+            disabled={state === 'loading'}
+            className="flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-xs text-primary hover:bg-primary/20 transition-colors disabled:opacity-60">
+            {state === 'loading'
+              ? <><Loader2 className="h-3 w-3 animate-spin" />合成中</>
+              : state === 'playing'
+              ? <><Volume2 className="h-3 w-3" />朗读中</>
+              : state === 'error'
+              ? <><Volume2 className="h-3 w-3 text-destructive" />重试</>
+              : <><Volume2 className="h-3 w-3" />朗读</>}
+          </button>
+        </div>
       </div>
       <div className="px-4 py-3 space-y-2">
         <p className="text-sm font-medium leading-relaxed">{ex.en}</p>
