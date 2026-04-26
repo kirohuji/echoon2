@@ -6,7 +6,8 @@ import {
   LayoutDashboard, ClipboardList, Star, BookMarked, Settings, User, Trash2,
   Search, X, Volume2, Loader2, ChevronLeft, ChevronRight, Calendar, SortAsc,
   Plus, Sparkles, BookOpen, Link2, ExternalLink, Brain, BarChart2,
-  GraduationCap, CheckCircle2, Lightbulb, Crown,
+  GraduationCap, CheckCircle2, Lightbulb, Crown, Sun, Moon, Monitor,
+  Globe, Database, Zap, TrendingUp, Target, Flame,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -77,15 +78,17 @@ export function ProfilePage() {
           <MobileProfileHome onNavigate={setMobileView} />
         ) : (
           <div className="space-y-4">
-            {/* 返回栏 */}
-            <div className="flex items-center gap-2">
+            {/* iOS 风格返回栏 */}
+            <div className="flex items-center">
               <button
                 onClick={() => setMobileView('home')}
-                className="flex items-center gap-0.5 text-sm text-muted-foreground"
+                className="flex items-center gap-0.5 text-primary text-sm font-medium"
               >
-                <ChevronLeft className="h-4 w-4" />返回
+                <ChevronLeft className="h-5 w-5" />我的
               </button>
-              <h1 className="text-base font-bold">{mobileTitles[mobileView as Tab]}</h1>
+              <h1 className="flex-1 text-center text-base font-semibold -ml-14">
+                {mobileTitles[mobileView as Tab]}
+              </h1>
             </div>
             {mobileView === 'overview' && <OverviewTab />}
             {mobileView === 'records' && <RecordsTab />}
@@ -144,8 +147,78 @@ export function ProfilePage() {
   )
 }
 
+// ─── iOS 风格行组件 ──────────────────────────────────────────────────────────
+function IosRow({
+  iconBg,
+  icon: Icon,
+  label,
+  subtitle,
+  value,
+  last = false,
+  onTap,
+  right,
+}: {
+  iconBg?: string
+  icon?: React.ElementType
+  label: string
+  subtitle?: string
+  value?: string
+  last?: boolean
+  onTap?: () => void
+  right?: React.ReactNode
+}) {
+  const inner = (
+    <div className={cn(
+      'flex min-h-[52px] items-center gap-3 px-4 py-3 transition-colors',
+      onTap && 'active:bg-muted/60',
+      !last && 'border-b border-border/50'
+    )}>
+      {Icon && iconBg && (
+        <div className={cn('flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[10px]', iconBg)}>
+          <Icon className="h-4 w-4 text-white" />
+        </div>
+      )}
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium">{label}</p>
+        {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
+      </div>
+      {right ?? (
+        <div className="flex items-center gap-1 text-muted-foreground">
+          {value && <span className="text-sm">{value}</span>}
+          {onTap && <ChevronRight className="h-4 w-4 flex-shrink-0" />}
+        </div>
+      )}
+    </div>
+  )
+
+  return onTap ? (
+    <button type="button" onClick={onTap} className="w-full text-left">
+      {inner}
+    </button>
+  ) : (
+    <div>{inner}</div>
+  )
+}
+
+function IosSection({ header, children }: { header?: string; children: React.ReactNode }) {
+  return (
+    <div>
+      {header && (
+        <p className="mb-1.5 px-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+          {header}
+        </p>
+      )}
+      <div className="overflow-hidden rounded-2xl bg-card shadow-sm">
+        {children}
+      </div>
+    </div>
+  )
+}
+
 // ─── 手机端：个人中心首页 ──────────────────────────────────────────────────
 function MobileProfileHome({ onNavigate }: { onNavigate: (view: MobileView) => void }) {
+  const { theme } = useTheme()
+  const { language } = usePreferencesStore()
   const [overview, setOverview] = useState<ProfileOverview | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
@@ -156,89 +229,117 @@ function MobileProfileHome({ onNavigate }: { onNavigate: (view: MobileView) => v
       .finally(() => setIsLoading(false))
   }, [])
 
-  const navItems: { key: Tab; icon: React.ElementType; label: string }[] = [
-    { key: 'overview', icon: LayoutDashboard, label: '概览' },
-    { key: 'records', icon: ClipboardList, label: '练习记录' },
-    { key: 'favorites', icon: Star, label: '收藏题库' },
-    { key: 'words', icon: BookMarked, label: '生词本' },
+  const themeLabel: Record<string, string> = { light: '浅色', dark: '深色', system: '跟随系统' }
+  const langLabel: Record<string, string> = { 'zh-CN': '中文', en: 'English' }
+
+  const navItems = [
+    { key: 'overview' as Tab, icon: LayoutDashboard, label: '概览', iconBg: 'bg-blue-500' },
+    { key: 'records' as Tab, icon: ClipboardList, label: '练习记录', iconBg: 'bg-emerald-500' },
+    { key: 'favorites' as Tab, icon: Star, label: '收藏题库', iconBg: 'bg-orange-400' },
+    { key: 'words' as Tab, icon: BookMarked, label: '生词本', iconBg: 'bg-purple-500' },
   ]
 
+  const nickname = overview?.nickname || '导游备考者'
+
   return (
-    <div className="space-y-3">
-      {/* 顶部：设置按钮 */}
-      <div className="flex justify-end">
+    <div className="space-y-4">
+      {/* 用户信息区 */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          {/* 头像 */}
+          <div className="relative">
+            <div className="flex h-[72px] w-[72px] items-center justify-center rounded-full bg-primary/10 ring-2 ring-primary/15">
+              <User className="h-9 w-9 text-primary" />
+            </div>
+          </div>
+          <div>
+            <p className="text-lg font-bold leading-tight">{nickname}</p>
+            <div className="mt-1.5 flex items-center gap-2">
+              <span className="inline-flex items-center rounded-full border border-muted-foreground/25 px-2 py-0.5 text-[11px] text-muted-foreground">
+                免费用户
+              </span>
+              <Link
+                to="/member"
+                className="no-underline inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 px-2.5 py-0.5 text-[11px] font-semibold text-white shadow-sm"
+              >
+                <Crown className="h-2.5 w-2.5" />升级 VIP
+              </Link>
+            </div>
+          </div>
+        </div>
+        {/* 设置入口 */}
         <button
           onClick={() => onNavigate('settings')}
-          className="rounded-full p-1.5 text-muted-foreground transition-colors active:bg-muted"
+          className="flex h-9 w-9 items-center justify-center rounded-full bg-muted/60 text-muted-foreground transition-colors active:bg-muted"
         >
-          <Settings className="h-5 w-5" />
+          <Settings className="h-4.5 w-4.5" />
         </button>
       </div>
 
-      {/* 用户信息 */}
-      <div className="rounded-2xl bg-card p-4 shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-full bg-primary/10">
-            <User className="h-8 w-8 text-primary" />
-          </div>
-          <div>
-            <p className="text-base font-semibold">导游备考者</p>
-            <Link
-              to="/member"
-              className="no-underline mt-1.5 inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 px-2.5 py-0.5 text-xs font-semibold text-white shadow-sm"
-            >
-              <Crown className="h-3 w-3" />
-              免费用户 · 升级 VIP
-            </Link>
-          </div>
-        </div>
-      </div>
-
-      {/* 统计数字（2列） */}
+      {/* 统计双卡 */}
       <div className="grid grid-cols-2 gap-3">
         <div className="rounded-2xl bg-card p-4 shadow-sm">
-          <p className="text-xs text-muted-foreground">练习天数</p>
+          <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+            <Calendar className="h-3.5 w-3.5" />练习天数
+          </div>
           {isLoading ? (
-            <Skeleton className="mt-1 h-8 w-16" />
+            <Skeleton className="mt-2 h-9 w-14 rounded-lg" />
           ) : (
-            <p className="mt-1 text-3xl font-bold text-primary">{overview?.totalPracticeDays ?? 0}</p>
+            <p className="mt-1.5 text-3xl font-bold tracking-tight">{overview?.totalPracticeDays ?? 0}</p>
           )}
-          <p className="mt-1 text-[11px] text-muted-foreground">
+          <p className="mt-1 flex items-center gap-1 text-[11px] text-muted-foreground">
+            <Flame className="h-3 w-3 text-orange-400" />
             连续打卡 {isLoading ? '--' : overview?.streakDays ?? 0} 天
           </p>
         </div>
         <div className="rounded-2xl bg-card p-4 shadow-sm">
-          <p className="text-xs text-muted-foreground">累计做题</p>
+          <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+            <TrendingUp className="h-3.5 w-3.5" />累计做题
+          </div>
           {isLoading ? (
-            <Skeleton className="mt-1 h-8 w-16" />
+            <Skeleton className="mt-2 h-9 w-14 rounded-lg" />
           ) : (
-            <p className="mt-1 text-3xl font-bold text-primary">{overview?.totalQuestionsAnswered ?? 0}</p>
+            <p className="mt-1.5 text-3xl font-bold tracking-tight">{overview?.totalQuestionsAnswered ?? 0}</p>
           )}
-          <p className="mt-1 text-[11px] text-muted-foreground">
-            收藏 {isLoading ? '--' : overview?.totalFavorites ?? 0} 道题
+          <p className="mt-1 flex items-center gap-1 text-[11px] text-muted-foreground">
+            <Target className="h-3 w-3 text-blue-400" />
+            日均 {isLoading ? '--' : overview?.avgDailyQuestions ?? 0} 道
           </p>
         </div>
       </div>
 
-      {/* 导航区 */}
-      <div className="overflow-hidden rounded-2xl bg-card shadow-sm">
-        {navItems.map(({ key, icon: Icon, label }, idx) => (
-          <button
+      {/* 主导航 */}
+      <IosSection>
+        {navItems.map(({ key, icon, label, iconBg }, idx) => (
+          <IosRow
             key={key}
-            onClick={() => onNavigate(key)}
-            className={cn(
-              'flex w-full items-center justify-between px-4 py-4 text-left transition-colors active:bg-muted/50',
-              idx < navItems.length - 1 && 'border-b border-border/50'
-            )}
-          >
-            <div className="flex items-center gap-3">
-              <Icon className="h-5 w-5 text-primary" />
-              <span className="text-sm font-medium">{label}</span>
-            </div>
-            <ChevronRight className="h-4 w-4 text-muted-foreground" />
-          </button>
+            icon={icon}
+            iconBg={iconBg}
+            label={label}
+            last={idx === navItems.length - 1}
+            onTap={() => onNavigate(key)}
+          />
         ))}
-      </div>
+      </IosSection>
+
+      {/* 快速设置入口 */}
+      <IosSection>
+        <IosRow
+          icon={theme === 'dark' ? Moon : theme === 'light' ? Sun : Monitor}
+          iconBg="bg-slate-500"
+          label="主题"
+          value={themeLabel[theme || 'system'] ?? '跟随系统'}
+          onTap={() => onNavigate('settings')}
+        />
+        <IosRow
+          icon={Globe}
+          iconBg="bg-teal-500"
+          label="界面语言"
+          value={langLabel[language] ?? '中文'}
+          last
+          onTap={() => onNavigate('settings')}
+        />
+      </IosSection>
     </div>
   )
 }
@@ -255,54 +356,71 @@ function MobileSettingsView() {
     i18n.changeLanguage(lang)
   }
 
+  const ThemeIcon = theme === 'dark' ? Moon : theme === 'light' ? Sun : Monitor
+
   return (
-    <div className="space-y-3">
+    <div className="space-y-5">
       <BindingDialog open={showBinding} onClose={() => setShowBinding(false)} />
 
-      {/* 偏好 */}
-      <div className="overflow-hidden rounded-2xl bg-card shadow-sm">
-        <div className="flex items-center justify-between border-b border-border/50 px-4 py-4">
-          <span className="text-sm font-medium">自动播放</span>
-          <Switch checked={autoPlay} onCheckedChange={setAutoPlay} />
-        </div>
-        <div className="flex items-center justify-between border-b border-border/50 px-4 py-4">
-          <span className="text-sm font-medium">主题</span>
-          <select
-            value={theme || 'system'}
-            onChange={(e) => setTheme(e.target.value)}
-            className="bg-transparent text-sm text-muted-foreground outline-none"
-          >
-            <option value="light">浅色</option>
-            <option value="dark">深色</option>
-            <option value="system">跟随系统</option>
-          </select>
-        </div>
-        <div className="flex items-center justify-between px-4 py-4">
-          <span className="text-sm font-medium">界面语言</span>
-          <select
-            value={language}
-            onChange={(e) => handleLanguageChange(e.target.value)}
-            className="bg-transparent text-sm text-muted-foreground outline-none"
-          >
-            <option value="zh-CN">中文</option>
-            <option value="en">English</option>
-          </select>
-        </div>
-      </div>
+      {/* 练习偏好 */}
+      <IosSection header="练习偏好">
+        <IosRow
+          icon={Zap}
+          iconBg="bg-orange-400"
+          label="自动播放"
+          subtitle="进入练习页自动播放题目音频"
+          last
+          right={<Switch checked={autoPlay} onCheckedChange={setAutoPlay} />}
+        />
+      </IosSection>
 
-      {/* 题库绑定 */}
-      <div className="overflow-hidden rounded-2xl bg-card shadow-sm">
-        <button
-          onClick={() => setShowBinding(true)}
-          className="flex w-full items-center justify-between px-4 py-4 text-left active:bg-muted/50"
-        >
-          <div>
-            <span className="text-sm font-medium">当前题库</span>
-            <p className="mt-0.5 text-xs text-muted-foreground">{config?.bankName || '未配置题库'}</p>
-          </div>
-          <ChevronRight className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
-        </button>
-      </div>
+      {/* 外观 */}
+      <IosSection header="外观">
+        <IosRow
+          icon={ThemeIcon}
+          iconBg="bg-slate-500"
+          label="主题"
+          right={
+            <select
+              value={theme || 'system'}
+              onChange={(e) => setTheme(e.target.value)}
+              className="bg-transparent text-sm text-muted-foreground outline-none"
+            >
+              <option value="light">浅色</option>
+              <option value="dark">深色</option>
+              <option value="system">跟随系统</option>
+            </select>
+          }
+        />
+        <IosRow
+          icon={Globe}
+          iconBg="bg-teal-500"
+          label="界面语言"
+          last
+          right={
+            <select
+              value={language}
+              onChange={(e) => handleLanguageChange(e.target.value)}
+              className="bg-transparent text-sm text-muted-foreground outline-none"
+            >
+              <option value="zh-CN">中文</option>
+              <option value="en">English</option>
+            </select>
+          }
+        />
+      </IosSection>
+
+      {/* 数据 */}
+      <IosSection header="数据">
+        <IosRow
+          icon={Database}
+          iconBg="bg-emerald-600"
+          label="当前题库"
+          subtitle={config?.bankName || '未配置题库'}
+          last
+          onTap={() => setShowBinding(true)}
+        />
+      </IosSection>
     </div>
   )
 }
