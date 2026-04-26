@@ -22,6 +22,9 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog'
+import {
+  Drawer, DrawerContent, DrawerHeader, DrawerTitle,
+} from '@/components/ui/drawer'
 import { ConfigDataTable, type ColumnConfig } from '@/components/common/config-datatable'
 import { BindingDialog } from '@/features/question-bank/components/binding-dialog'
 import {
@@ -219,8 +222,12 @@ function IosSection({ header, children }: { header?: string; children: React.Rea
 
 // ─── 手机端：个人中心首页 ──────────────────────────────────────────────────
 function MobileProfileHome({ onNavigate }: { onNavigate: (view: MobileView) => void }) {
+  const { theme, setTheme } = useTheme()
+  const { language, setLanguage } = usePreferencesStore()
   const [overview, setOverview] = useState<ProfileOverview | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [showThemeDialog, setShowThemeDialog] = useState(false)
+  const [showLanguageDialog, setShowLanguageDialog] = useState(false)
 
   useEffect(() => {
     getProfileOverview()
@@ -235,6 +242,13 @@ function MobileProfileHome({ onNavigate }: { onNavigate: (view: MobileView) => v
     { key: 'favorites' as Tab, icon: Star, label: '收藏题库', iconBg: 'bg-orange-400' },
     { key: 'words' as Tab, icon: BookMarked, label: '生词本', iconBg: 'bg-purple-500' },
   ]
+  const themeLabel: Record<string, string> = { light: '浅色', dark: '深色', system: '跟随系统' }
+  const langLabel: Record<string, string> = { 'zh-CN': '中文', en: 'English' }
+
+  const handleLanguageChange = (lang: string) => {
+    setLanguage(lang)
+    i18n.changeLanguage(lang)
+  }
 
   const nickname = overview?.nickname || '导游备考者'
 
@@ -319,6 +333,82 @@ function MobileProfileHome({ onNavigate }: { onNavigate: (view: MobileView) => v
         ))}
       </IosSection>
 
+      {/* 外观与语言（保留在“我的”首页，点击弹窗切换） */}
+      <IosSection>
+        <IosRow
+          label="主题"
+          value={themeLabel[theme || 'system'] ?? '跟随系统'}
+          onTap={() => setShowThemeDialog(true)}
+        />
+        <IosRow
+          label="界面语言"
+          value={langLabel[language] ?? '中文'}
+          last
+          onTap={() => setShowLanguageDialog(true)}
+        />
+      </IosSection>
+
+      <Drawer open={showThemeDialog} onOpenChange={setShowThemeDialog}>
+        <DrawerContent className="rounded-t-3xl">
+          <DrawerHeader>
+            <DrawerTitle className="text-base">选择主题</DrawerTitle>
+          </DrawerHeader>
+          <div className="px-4 pb-6">
+            {[
+              { value: 'light', label: '浅色' },
+              { value: 'dark', label: '深色' },
+              { value: 'system', label: '跟随系统' },
+            ].map((item) => (
+              <button
+                key={item.value}
+                type="button"
+                onClick={() => {
+                  setTheme(item.value)
+                  setShowThemeDialog(false)
+                }}
+                className={cn(
+                  'flex w-full items-center justify-between border-b px-1 py-3 text-left text-sm',
+                  (theme || 'system') === item.value && 'font-medium'
+                )}
+              >
+                <span>{item.label}</span>
+                {(theme || 'system') === item.value && <CheckCircle2 className="h-4 w-4 text-primary" />}
+              </button>
+            ))}
+          </div>
+        </DrawerContent>
+      </Drawer>
+
+      <Drawer open={showLanguageDialog} onOpenChange={setShowLanguageDialog}>
+        <DrawerContent className="rounded-t-3xl">
+          <DrawerHeader>
+            <DrawerTitle className="text-base">选择界面语言</DrawerTitle>
+          </DrawerHeader>
+          <div className="px-4 pb-6">
+            {[
+              { value: 'zh-CN', label: '中文' },
+              { value: 'en', label: 'English' },
+            ].map((item) => (
+              <button
+                key={item.value}
+                type="button"
+                onClick={() => {
+                  handleLanguageChange(item.value)
+                  setShowLanguageDialog(false)
+                }}
+                className={cn(
+                  'flex w-full items-center justify-between border-b px-1 py-3 text-left text-sm',
+                  language === item.value && 'font-medium'
+                )}
+              >
+                <span>{item.label}</span>
+                {language === item.value && <CheckCircle2 className="h-4 w-4 text-primary" />}
+              </button>
+            ))}
+          </div>
+        </DrawerContent>
+      </Drawer>
+
     </div>
   )
 }
@@ -341,7 +431,7 @@ function MobileSettingsView() {
     <div className="space-y-5">
       <BindingDialog open={showBinding} onClose={() => setShowBinding(false)} />
 
-      <IosSection header="区域一">
+      <IosSection>
         <IosRow
           label="查词自动发音"
           right={<Switch checked={autoPlay} onCheckedChange={setAutoPlay} />}
@@ -370,7 +460,7 @@ function MobileSettingsView() {
         />
       </IosSection>
 
-      <IosSection header="区域二">
+      <IosSection>
         <IosRow
           label="设置打卡目标"
           right={
@@ -402,7 +492,7 @@ function MobileSettingsView() {
         />
       </IosSection>
 
-      <IosSection header="区域三">
+      <IosSection>
         <IosRow
           label="个性化推荐"
           right={<Switch checked={personalizedRecommendation} onCheckedChange={setPersonalizedRecommendation} />}
@@ -414,7 +504,7 @@ function MobileSettingsView() {
         />
       </IosSection>
 
-      <IosSection header="区域四">
+      <IosSection>
         <IosRow
           label="清除播放缓存"
           onTap={() => {}}
@@ -439,7 +529,7 @@ function MobileSettingsView() {
         />
       </IosSection>
 
-      <IosSection header="区域五">
+      <IosSection>
         <div className="px-4 py-3">
           <button
             type="button"
