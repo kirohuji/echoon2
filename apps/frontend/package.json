@@ -7,9 +7,15 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "cap:copy": "pnpm build && pnpm exec cap copy",
+    "cap:sync": "pnpm build && pnpm exec cap sync",
+    "cap:sync:ios": "pnpm build && pnpm exec cap sync ios",
+    "cap:open:ios": "pnpm exec cap open ios"
   },
   "dependencies": {
+    "@capacitor/core": "^8.3.1",
+    "@capacitor/ios": "^8.3.1",
     "@hookform/resolvers": "^3.10.0",
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-scroll-area": "^1.2.10",
@@ -41,6 +47,7 @@
     "zustand": "^5.0.8"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.3.1",
     "@types/node": "^22.0.0",
     "@types/react": "^19.1.0",
     "@types/react-dom": "^19.1.0",
