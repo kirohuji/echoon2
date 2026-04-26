@@ -26,10 +26,15 @@ services:
       PORT: 3001
       DATABASE_URL: postgresql://${POSTGRES_USER:-echoon2}:${POSTGRES_PASSWORD:-echoon2}@db:5432/${POSTGRES_DB:-echoon2}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
+      MINIMAX_API_KEY: ${MINIMAX_API_KEY:-}
+      MINIMAX_GROUP_ID: ${MINIMAX_GROUP_ID:-}
+      CARTESIA_API_KEY: ${CARTESIA_API_KEY:-}
+      WHISPER_INFERENCE_URL: ${WHISPER_INFERENCE_URL:-}
+      WHISPER_LANGUAGE: ${WHISPER_LANGUAGE:-en}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
     depends_on:
       db:
         condition: service_healthy
-
   nginx:
     build:
       context: .
@@ -41,7 +46,7 @@ services:
     depends_on:
       - backend
     ports:
-      - "80:80"
+      - "2605:80"
 
 volumes:
   postgres_data:
