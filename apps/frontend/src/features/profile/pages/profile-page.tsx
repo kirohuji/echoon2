@@ -5,7 +5,7 @@ import { useTheme } from 'next-themes'
 import {
   LayoutDashboard, ClipboardList, Star, BookMarked, Settings, User, Trash2,
   Search, X, Volume2, Loader2, ChevronLeft, ChevronRight, Calendar, SortAsc,
-  Plus, Sparkles, BookOpen, Link2, ExternalLink, Brain, BarChart2,
+  Sparkles, BookOpen, Link2, ExternalLink, Brain, BarChart2, CheckSquare,
   GraduationCap, CheckCircle2, Lightbulb, Crown, Sun, Moon, Monitor,
   Globe, Database, Zap, TrendingUp, Target, Flame,
 } from 'lucide-react'
@@ -971,7 +971,6 @@ function WordDetailDialog({
   hasPrev: boolean
   hasNext: boolean
 }) {
-  const { removeWord } = useWordsStore()
   const [dictData, setDictData] = useState<DictEntry[] | null | 'loading'>(null)
   const [enrichData, setEnrichData] = useState<WordEnrichmentResult | null | 'loading'>(null)
   const [enrichError, setEnrichError] = useState('')
@@ -1024,7 +1023,7 @@ function WordDetailDialog({
 
   return (
     <Dialog open={!!entry} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-4xl h-[90vh] flex flex-col p-0 gap-0 overflow-hidden rounded-2xl">
+      <DialogContent className="h-[100dvh] w-screen max-w-none flex flex-col p-0 gap-0 overflow-hidden rounded-none md:h-[90vh] md:max-w-4xl md:rounded-2xl [&>button]:hidden">
 
         {/* Header */}
         <div className="relative border-b border-border/50 bg-gradient-to-br from-primary/5 to-background px-6 py-5">
@@ -1069,9 +1068,13 @@ function WordDetailDialog({
               )}
             </div>
 
-            <button type="button" onClick={() => { removeWord(entry.word); onClose() }}
-              className="shrink-0 rounded-xl p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors" title="从生词本移除">
-              <Trash2 className="h-4 w-4" />
+            <button
+              type="button"
+              onClick={onClose}
+              className="shrink-0 rounded-xl p-2 text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-colors"
+              title="关闭"
+            >
+              <X className="h-4 w-4" />
             </button>
           </div>
 
@@ -1208,12 +1211,14 @@ function WordDetailDialog({
 
 // 单词小卡片
 function WordCard({
-  entry, isSelected, onClick, onRemove,
+  entry, isSelected, onClick, multiSelect, checked, onToggleSelect,
 }: {
   entry: WordEntry
   isSelected: boolean
   onClick: () => void
-  onRemove: () => void
+  multiSelect: boolean
+  checked: boolean
+  onToggleSelect: () => void
 }) {
   const [dictData, setDictData] = useState<DictEntry[] | null | 'loading'>('loading')
 
@@ -1229,6 +1234,7 @@ function WordCard({
       className={cn(
         'group relative cursor-pointer transition-all hover:shadow-md active:scale-[0.98]',
         isSelected && 'ring-2 ring-primary',
+        multiSelect && checked && 'ring-2 ring-primary',
       )}
       onClick={onClick}
     >
@@ -1238,11 +1244,18 @@ function WordCard({
             <p className="truncate text-sm font-bold">{entry.word}</p>
             {phonetic && <p className="text-[10px] text-muted-foreground font-mono">{phonetic}</p>}
           </div>
-          <button type="button"
-            className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
-            onClick={(e) => { e.stopPropagation(); onRemove() }}>
-            <X className="h-3 w-3" />
-          </button>
+          {multiSelect && (
+            <button
+              type="button"
+              className={cn(
+                'shrink-0 rounded-md p-0.5 transition-colors',
+                checked ? 'text-primary' : 'text-muted-foreground'
+              )}
+              onClick={(e) => { e.stopPropagation(); onToggleSelect() }}
+            >
+              <CheckCircle2 className="h-4 w-4" />
+            </button>
+          )}
         </div>
         {firstMeaning && <Badge variant="outline" className="text-[10px] h-4">{firstMeaning.partOfSpeech}</Badge>}
         {dictData === 'loading' ? (
@@ -1259,11 +1272,12 @@ function WordCard({
 
 function WordsTab() {
   const { t } = useTranslation()
-  const { entries, removeWord, addWord } = useWordsStore()
+  const { entries, removeWord } = useWordsStore()
   const [search, setSearch] = useState('')
   const [groupMode, setGroupMode] = useState<GroupMode>('date')
   const [selectedWord, setSelectedWord] = useState<string | null>(null)
-  const [addInput, setAddInput] = useState('')
+  const [multiSelectMode, setMultiSelectMode] = useState(false)
+  const [selectedWords, setSelectedWords] = useState<string[]>([])
 
   const filtered = useMemo(() => {
     if (!search.trim()) return entries
@@ -1281,7 +1295,9 @@ function WordsTab() {
   const selectedEntry = flatList.find((e) => e.word === selectedWord) ?? null
   const selectedIdx = selectedEntry ? flatList.indexOf(selectedEntry) : -1
 
-  const openWord = useCallback((word: string) => setSelectedWord(word), [])
+  const openWord = useCallback((word: string) => {
+    if (!multiSelectMode) setSelectedWord(word)
+  }, [multiSelectMode])
   const closeDialog = useCallback(() => setSelectedWord(null), [])
   const gotoPrev = useCallback(() => {
     if (selectedIdx > 0) setSelectedWord(flatList[selectedIdx - 1].word)
@@ -1290,11 +1306,23 @@ function WordsTab() {
     if (selectedIdx < flatList.length - 1) setSelectedWord(flatList[selectedIdx + 1].word)
   }, [selectedIdx, flatList])
 
-  const handleAdd = () => {
-    const w = addInput.trim().toLowerCase()
-    if (!w) return
-    addWord(w)
-    setAddInput('')
+  const toggleMultiSelectMode = () => {
+    setMultiSelectMode((prev) => {
+      if (prev) setSelectedWords([])
+      return !prev
+    })
+  }
+
+  const toggleWordChecked = (word: string) => {
+    setSelectedWords((prev) =>
+      prev.includes(word) ? prev.filter((w) => w !== word) : [...prev, word]
+    )
+  }
+
+  const deleteSelectedWords = () => {
+    selectedWords.forEach((word) => removeWord(word))
+    setSelectedWords([])
+    setMultiSelectMode(false)
   }
 
   // 键盘 ← → 在 dialog 里切换
@@ -1311,18 +1339,6 @@ function WordsTab() {
   if (entries.length === 0 && !search) {
     return (
       <div className="space-y-4">
-        <div className="flex items-center gap-3">
-          <Input
-            placeholder="手动添加单词"
-            value={addInput}
-            onChange={(e) => setAddInput(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
-            className="h-8 max-w-xs text-sm"
-          />
-          <Button size="sm" className="h-8 gap-1.5" onClick={handleAdd} disabled={!addInput.trim()}>
-            <Plus className="h-3.5 w-3.5" />添加
-          </Button>
-        </div>
         <div className="rounded-2xl bg-muted/40 py-16 text-center text-muted-foreground">
           <BookMarked className="mx-auto mb-3 h-10 w-10 opacity-30" />
           <p>{t('profile.noWords')}</p>
@@ -1351,39 +1367,51 @@ function WordsTab() {
           />
         </div>
 
-        {/* 分组 */}
-        <div className="flex rounded-lg bg-muted p-0.5">
-          {([
-            { mode: 'date', icon: Calendar, label: '按日期' },
-            { mode: 'alpha', icon: SortAsc, label: '字母序' },
-          ] as const).map(({ mode, icon: Icon, label }) => (
-            <button
-              key={mode}
-              onClick={() => setGroupMode(mode)}
-              className={cn(
-                'flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-all',
-                groupMode === mode
-                  ? 'bg-background text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground'
-              )}
-            >
-              <Icon className="h-3 w-3" />{label}
-            </button>
-          ))}
-        </div>
+        {/* 分组 + 多选（过滤层） */}
+        <div className="flex w-full items-center justify-between gap-2">
+          <div className="flex rounded-lg bg-muted p-0.5">
+            {([
+              { mode: 'date', icon: Calendar, label: '按日期' },
+              { mode: 'alpha', icon: SortAsc, label: '字母序' },
+            ] as const).map(({ mode, icon: Icon, label }) => (
+              <button
+                key={mode}
+                onClick={() => setGroupMode(mode)}
+                className={cn(
+                  'flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-all',
+                  groupMode === mode
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                )}
+              >
+                <Icon className="h-3 w-3" />{label}
+              </button>
+            ))}
+          </div>
 
-        {/* 手动添加 */}
-        <div className="flex items-center gap-1">
-          <Input
-            placeholder="添加单词"
-            value={addInput}
-            onChange={(e) => setAddInput(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
-            className="h-8 w-24 text-sm"
-          />
-          <Button size="sm" className="h-8 w-8 p-0" onClick={handleAdd} disabled={!addInput.trim()}>
-            <Plus className="h-3.5 w-3.5" />
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant={multiSelectMode ? 'default' : 'outline'}
+              className="h-8 w-8 p-0"
+              onClick={toggleMultiSelectMode}
+              title={multiSelectMode ? '取消多选' : '多选'}
+              aria-label={multiSelectMode ? '取消多选' : '开启多选'}
+            >
+              <CheckSquare className="h-4 w-4" />
+            </Button>
+            {multiSelectMode && (
+              <Button
+                size="sm"
+                variant="destructive"
+                className="h-8"
+                onClick={deleteSelectedWords}
+                disabled={selectedWords.length === 0}
+              >
+                删除({selectedWords.length})
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -1410,8 +1438,13 @@ function WordsTab() {
                     key={e.word}
                     entry={e}
                     isSelected={selectedWord === e.word}
-                    onClick={() => openWord(e.word)}
-                    onRemove={() => removeWord(e.word)}
+                    onClick={() => {
+                      if (multiSelectMode) toggleWordChecked(e.word)
+                      else openWord(e.word)
+                    }}
+                    multiSelect={multiSelectMode}
+                    checked={selectedWords.includes(e.word)}
+                    onToggleSelect={() => toggleWordChecked(e.word)}
                   />
                 ))}
               </div>

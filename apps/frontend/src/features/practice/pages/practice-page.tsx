@@ -179,7 +179,6 @@ export function PracticePage() {
   const [answerAudio, setAnswerAudio] = useState<AudioState>({ status: 'idle' })
 
   // 作答
-  const [answerInputTab, setAnswerInputTab] = useState<'text' | 'voice'>('text')
   const [textAnswer, setTextAnswer] = useState('')
   const [voiceAnswer, setVoiceAnswer] = useState('')
   const [isVoiceMode, setIsVoiceMode] = useState(false)
@@ -414,8 +413,7 @@ export function PracticePage() {
   const total = topicData.questions.length
   const progress = Math.round(((currentIndex + 1) / total) * 100)
   const isFav = currentQuestion ? isFavorite(currentQuestion.questionId) : false
-  const currentAnswer = answerInputTab === 'voice' ? voiceAnswer : textAnswer
-  const canSubmit = currentAnswer.trim().length > 0
+  const canSubmit = textAnswer.trim().length > 0 || voiceAnswer.trim().length > 0
 
   return (
     <div className="flex flex-col gap-4 pb-8">
@@ -681,88 +679,69 @@ export function PracticePage() {
           <TabsContent value="answer" className="mt-3">
             <Card>
               <CardContent className="p-4 space-y-4">
-                {/* 文字/录音切换 */}
-                <div className="flex gap-1 rounded-xl bg-muted p-1">
-                  {(['text', 'voice'] as const).map((tab) => (
-                    <button
-                      key={tab}
-                      type="button"
-                      onClick={() => setAnswerInputTab(tab)}
-                      className={cn(
-                        'flex flex-1 items-center justify-center gap-1.5 rounded-lg py-1.5 text-sm font-medium transition-all',
-                        answerInputTab === tab
-                          ? 'bg-background text-foreground shadow-sm'
-                          : 'text-muted-foreground hover:text-foreground',
-                      )}
-                    >
-                      {tab === 'text'
-                        ? <><MessageSquare className="size-3.5" />文字</>
-                        : <><Mic className="size-3.5" />录音</>
-                      }
-                    </button>
-                  ))}
-                </div>
-
-                {/* 文字输入 */}
-                {answerInputTab === 'text' && (
-                  <div className="space-y-3">
-                    <textarea
-                      className="min-h-[130px] w-full resize-none rounded-xl border border-border bg-background px-4 py-3 text-sm leading-relaxed placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/40"
-                      placeholder="用英语回答这道题目，尽量覆盖关键词和知识点…"
-                      value={textAnswer}
-                      onChange={(e) => setTextAnswer(e.target.value)}
-                    />
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground">{textAnswer.length} 字符</span>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={handleStreamTeach}
-                          disabled={teachStreaming}
-                          className="h-8 gap-1.5 text-xs"
-                        >
-                          <Lightbulb className="size-3.5" />
-                          获取提示
-                        </Button>
-                        <Button
-                          size="sm"
-                          disabled={!textAnswer.trim() || feedbackStreaming}
-                          onClick={() => handleStreamFeedback(false)}
-                          className="h-8 gap-1.5"
-                        >
-                          {feedbackStreaming
-                            ? <><Loader2 className="size-3.5 animate-spin" />评分中…</>
-                            : <><Send className="size-3.5" />AI 评分</>
-                          }
-                        </Button>
-                      </div>
+                {/* 合并作答：文字 + 录音同屏 */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                    <MessageSquare className="size-3.5" />
+                    文字作答
+                  </div>
+                  <textarea
+                    className="min-h-[130px] w-full resize-none rounded-xl border border-border bg-background px-4 py-3 text-sm leading-relaxed placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/40"
+                    placeholder="用英语回答这道题目，尽量覆盖关键词和知识点…"
+                    value={textAnswer}
+                    onChange={(e) => setTextAnswer(e.target.value)}
+                  />
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-muted-foreground">{textAnswer.length} 字符</span>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={handleStreamTeach}
+                        disabled={teachStreaming}
+                        className="h-8 gap-1.5 text-xs"
+                      >
+                        <Lightbulb className="size-3.5" />
+                        获取提示
+                      </Button>
+                      <Button
+                        size="sm"
+                        disabled={!textAnswer.trim() || feedbackStreaming}
+                        onClick={() => handleStreamFeedback(false)}
+                        className="h-8 gap-1.5"
+                      >
+                        {feedbackStreaming
+                          ? <><Loader2 className="size-3.5 animate-spin" />评分中…</>
+                          : <><Send className="size-3.5" />文字评分</>
+                        }
+                      </Button>
                     </div>
                   </div>
-                )}
+                </div>
 
-                {/* 录音输入 */}
-                {answerInputTab === 'voice' && (
-                  <div className="space-y-3">
-                    <VoiceRecorder onTranscribed={(text) => setVoiceAnswer(text)} />
-                    {voiceAnswer && (
-                      <div className="flex items-center justify-between border-t border-border/50 pt-3">
-                        <span className="text-xs text-muted-foreground">转写完成，可提交 AI 评分</span>
-                        <Button
-                          size="sm"
-                          disabled={feedbackStreaming}
-                          onClick={() => handleStreamFeedback(true)}
-                          className="h-8 gap-1.5"
-                        >
-                          {feedbackStreaming
-                            ? <><Loader2 className="size-3.5 animate-spin" />评分中…</>
-                            : <><Send className="size-3.5" />AI 评分</>
-                          }
-                        </Button>
-                      </div>
-                    )}
+                <div className="border-t border-border/50 pt-4 space-y-3">
+                  <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                    <Mic className="size-3.5" />
+                    录音作答
                   </div>
-                )}
+                  <VoiceRecorder onTranscribed={(text) => setVoiceAnswer(text)} />
+                  {voiceAnswer && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground">转写完成，可提交 AI 评分</span>
+                      <Button
+                        size="sm"
+                        disabled={feedbackStreaming}
+                        onClick={() => handleStreamFeedback(true)}
+                        className="h-8 gap-1.5"
+                      >
+                        {feedbackStreaming
+                          ? <><Loader2 className="size-3.5 animate-spin" />评分中…</>
+                          : <><Send className="size-3.5" />录音评分</>
+                        }
+                      </Button>
+                    </div>
+                  )}
+                </div>
 
                 {/* 提交后的快捷跳转提示 */}
                 {canSubmit && !feedbackText && !feedbackStreaming && (
