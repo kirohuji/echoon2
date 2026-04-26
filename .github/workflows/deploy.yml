@@ -16,6 +16,7 @@ jobs:
       WHISPER_INFERENCE_URL: ${{ secrets.WHISPER_INFERENCE_URL }}
       WHISPER_LANGUAGE: ${{ secrets.WHISPER_LANGUAGE }}
       DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+      SSL_DEPLOY: ${{ secrets.SSL_DEPLOY }}
 
     steps:
       - name: Checkout repository

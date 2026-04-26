@@ -49,7 +49,7 @@ services:
     depends_on:
       - backend
     volumes:
-      - ./ssl:/etc/nginx/ssl:ro
+      - ${SSL_DEPLOY:-./ssl}:/etc/nginx/ssl:ro
     ports:
       - "2605:443"
 
