@@ -38,8 +38,13 @@ export interface PracticeRecordsResult {
 
 export const getProfileOverview = (): Promise<ProfileOverview> => get('/profile/overview')
 
-export const getActivityHeatmap = (year?: number): Promise<ActivityDay[]> =>
-  get('/profile/activity-heatmap', { year: year || new Date().getFullYear() })
+export const getActivityHeatmap = async (year?: number): Promise<ActivityDay[]> => {
+  try {
+    return await get('/profile/activity-heatmap', { year: year || new Date().getFullYear() })
+  } catch {
+    return []
+  }
+}
 
 export const getPracticeRecords = (params: {
   page?: number

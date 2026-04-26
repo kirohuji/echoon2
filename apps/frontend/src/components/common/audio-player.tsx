@@ -97,10 +97,12 @@ type AudioPlayerProps = {
   wordTimestamps?: TtsWordTimestamp[] | null
   audioProvider?: string | null
   className?: string
+  /** compact=true 时句子区默认折叠，适合嵌入卡片内使用 */
+  compact?: boolean
 }
 
 export function AudioPlayer({
-  audioUrl, wordTimestamps, audioProvider, className,
+  audioUrl, wordTimestamps, audioProvider, className, compact = false,
 }: AudioPlayerProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const waveRef  = useRef<AudioWaveformHandle | null>(null)
@@ -120,6 +122,7 @@ export function AudioPlayer({
   const [showWords, setShowWords] = useState(true)
   const [loopOn, setLoopOn] = useState(false)
   const [loopSeg, setLoopSeg] = useState(0)
+  const [sentencesOpen, setSentencesOpen] = useState(!compact)
 
   useEffect(() => { loopOnRef.current  = loopOn  }, [loopOn])
   useEffect(() => { loopSegRef.current = loopSeg }, [loopSeg])
@@ -227,8 +230,9 @@ export function AudioPlayer({
     <div className={cn('flex flex-col gap-0', className)}>
       {/* Lyrics + waveform + controls: flat, no card wrapping */}
 
-      {/* Lyrics — auto height, no fixed cap */}
-      <div ref={lyricRef} className="px-1 py-2">
+      {/* Lyrics — collapsible section */}
+      {sentencesOpen && (
+        <div ref={lyricRef} className="px-1 py-2">
           {sentences.length ? (
             <div className="space-y-1">
               {sentences.map((s, idx) => (
@@ -301,28 +305,39 @@ export function AudioPlayer({
             </div>
           )}
         </div>
+      )}
 
-        {/* Options row */}
-        {hasWords && (
-          <div className="flex flex-wrap gap-4 border-t border-border/40 px-1 py-1.5 text-xs text-muted-foreground">
-            <label className="flex cursor-pointer items-center gap-1.5">
-              <input type="checkbox" className="accent-primary" checked={showWords}
-                onChange={(e) => setShowWords(e.target.checked)} />
-              逐词高亮
-            </label>
-            <label className="flex cursor-pointer items-center gap-1.5">
-              <input type="checkbox" className="accent-primary" checked={loopOn}
-                onChange={(e) => {
-                  const on = e.target.checked
-                  setLoopOn(on)
-                  if (on && sentences.length > 0)
-                    setLoopSeg(Math.max(0, Math.min(activeSent, sentences.length - 1)))
-                }} />
+      {/* Options row */}
+      {hasWords && (
+        <div className="flex flex-wrap gap-4 border-t border-border/40 px-1 py-1.5 text-xs text-muted-foreground">
+          {sentences.length > 0 && (
+            <button
+              type="button"
+              className="flex cursor-pointer items-center gap-1.5 hover:text-foreground transition-colors"
+              onClick={() => setSentencesOpen((v) => !v)}
+            >
               <RepeatIcon className="size-3" />
-              单句循环
-            </label>
-          </div>
-        )}
+              {sentencesOpen ? '收起歌词' : '展开歌词'}
+            </button>
+          )}
+          <label className="flex cursor-pointer items-center gap-1.5">
+            <input type="checkbox" className="accent-primary" checked={showWords}
+              onChange={(e) => setShowWords(e.target.checked)} />
+            逐词高亮
+          </label>
+          <label className="flex cursor-pointer items-center gap-1.5">
+            <input type="checkbox" className="accent-primary" checked={loopOn}
+              onChange={(e) => {
+                const on = e.target.checked
+                setLoopOn(on)
+                if (on && sentences.length > 0)
+                  setLoopSeg(Math.max(0, Math.min(activeSent, sentences.length - 1)))
+              }} />
+            <RepeatIcon className="size-3" />
+            单句循环
+          </label>
+        </div>
+      )}
 
         {/* Time row */}
         <div className="flex justify-between px-1 pt-1 text-[11px] tabular-nums text-muted-foreground">
