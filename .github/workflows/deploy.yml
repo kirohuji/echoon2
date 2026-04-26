@@ -1,4 +1,4 @@
-name: Deploy via SSH
+name: Deploy on Self-Hosted Runner
 
 on:
   push:
@@ -8,56 +8,21 @@ on:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     env:
-      DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
-      DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
-      FRONTEND_URL: ${{ vars.FRONTEND_URL }}
-      POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
-      POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
-      POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+      MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
+      MINIMAX_GROUP_ID: ${{ secrets.MINIMAX_GROUP_ID }}
+      CARTESIA_API_KEY: ${{ secrets.CARTESIA_API_KEY }}
+      WHISPER_INFERENCE_URL: ${{ secrets.WHISPER_INFERENCE_URL }}
+      WHISPER_LANGUAGE: ${{ secrets.WHISPER_LANGUAGE }}
+      DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
 
     steps:
-      - name: Validate deployment host variable
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Deploy with local self-hosted runner
         run: |
-          if [ -z "${DEPLOY_HOST}" ]; then
-            echo "Missing vars.DEPLOY_HOST"
-            exit 1
-          fi
-
-      - name: Deploy on target server
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ env.DEPLOY_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: ${{ secrets.SSH_PORT || 22 }}
-          script_stop: true
-          script: |
-            set -e
-
-            APP_DIR="${DEPLOY_PATH:-/opt/echoon2}"
-            REPO_URL="https://github.com/${{ github.repository }}.git"
-            BRANCH="${{ github.ref_name }}"
-
-            if [ ! -d "$APP_DIR/.git" ]; then
-              mkdir -p "$APP_DIR"
-              git clone -b "$BRANCH" "$REPO_URL" "$APP_DIR"
-            fi
-
-            cd "$APP_DIR"
-            git fetch origin "$BRANCH"
-            git checkout "$BRANCH"
-            git pull --ff-only origin "$BRANCH"
-
-            cat > .env <<EOF
-            DEPLOY_HOST=${DEPLOY_HOST}
-            FRONTEND_URL=${FRONTEND_URL:-https://${DEPLOY_HOST}}
-            POSTGRES_USER=${POSTGRES_USER:-echoon2}
-            POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-            POSTGRES_DB=${POSTGRES_DB:-echoon2}
-            EOF
-
-            docker compose --env-file .env pull || true
-            docker compose --env-file .env up -d --build
-            docker image prune -f
+          set -euo pipefail
+          docker compose up -d --build
+          docker image prune -f
