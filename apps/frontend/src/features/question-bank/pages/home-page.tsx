@@ -45,11 +45,7 @@ export function HomePage() {
   }, [t])
 
   useEffect(() => {
-    if (!isConfigured) {
-      setShowBinding(true)
-    } else {
-      fetchData(keyword, mode)
-    }
+    if (!isConfigured) setShowBinding(true)
   }, [isConfigured])
 
   useEffect(() => {
@@ -57,11 +53,11 @@ export function HomePage() {
     if (debounceRef.current) clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(() => {
       fetchData(keyword, mode)
-    }, 300)
+    }, keyword ? 300 : 0)
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current)
     }
-  }, [keyword, mode, isConfigured])
+  }, [keyword, mode, isConfigured, fetchData])
 
   const otherTopicsColumns: ColumnConfig<OtherTopic>[] = [
     {
