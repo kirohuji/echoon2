@@ -48,8 +48,10 @@ services:
     restart: unless-stopped
     depends_on:
       - backend
+    volumes:
+      - ./ssl:/etc/nginx/ssl:ro
     ports:
-      - "2605:80"
+      - "2605:443"
 
 volumes:
   postgres_data:
