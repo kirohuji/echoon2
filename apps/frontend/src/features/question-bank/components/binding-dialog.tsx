@@ -105,7 +105,7 @@ export function BindingDialog({ open, onClose, forceOpen = false }: BindingDialo
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v && !forceOpen) onClose() }}>
       <DialogContent
-        className="w-[480px]"
+        className="w-[calc(100vw-1.5rem)] max-w-[480px] sm:w-full"
         onInteractOutside={(e) => { if (forceOpen) e.preventDefault() }}
         onEscapeKeyDown={(e) => { if (forceOpen) e.preventDefault() }}
       >
