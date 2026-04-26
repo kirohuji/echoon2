@@ -307,8 +307,8 @@ function FavoritesTab() {
   return (
     <div className="space-y-3">
       <h2 className="text-base font-semibold">{t('profile.favorites')}</h2>
-      {data.map((item) => (
-        <Card key={item.questionId}>
+      {data.map((item, idx) => (
+        <Card key={`${item.questionId}-${idx}`}>
           <CardContent className="p-4">
             <div className="flex items-start justify-between gap-3">
               <div>

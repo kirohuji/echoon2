@@ -224,23 +224,23 @@ export function AudioPlayer({
   const hasWords = words.length > 0
 
   return (
-    <div className={cn('flex flex-col gap-2', className)}>
-      {/* Lyric panel */}
-      <div className="rounded-2xl bg-card shadow-[0_1px_2px_rgba(0,0,0,0.04),0_4px_16px_rgba(0,0,0,0.06)] dark:shadow-none dark:ring-1 dark:ring-white/[0.07]">
-        {/* Lyrics scroll */}
-        <div ref={lyricRef} className="h-52 overflow-y-auto p-4">
+    <div className={cn('flex flex-col gap-0', className)}>
+      {/* Lyrics + waveform + controls: flat, no card wrapping */}
+
+      {/* Lyrics — auto height, no fixed cap */}
+      <div ref={lyricRef} className="px-1 py-2">
           {sentences.length ? (
-            <div className="space-y-3">
+            <div className="space-y-1">
               {sentences.map((s, idx) => (
                 <div
                   key={`${s.startTimeNs}-${idx}`}
                   data-si={idx}
                   className={cn(
-                    'rounded-xl px-2 py-1.5 text-sm leading-6 transition-all',
+                    'rounded-lg px-2 py-1 text-sm leading-6 transition-all cursor-pointer',
                     idx === activeSent
-                      ? 'font-semibold text-foreground'
-                      : 'text-muted-foreground hover:text-foreground/70',
-                    loopOn && loopSeg === idx && 'ring-2 ring-inset ring-primary/50',
+                      ? 'bg-primary/8 font-medium text-foreground'
+                      : 'text-muted-foreground hover:text-foreground/80',
+                    loopOn && loopSeg === idx && 'ring-1 ring-inset ring-primary/50',
                   )}
                 >
                   <button
@@ -294,55 +294,44 @@ export function AudioPlayer({
               ))}
             </div>
           ) : (
-            <div className="flex h-full items-center justify-center p-4 text-center text-xs text-muted-foreground">
+            <div className="py-3 text-center text-xs text-muted-foreground">
               {audioProvider === 'minimax'
-                ? 'MiniMax 暂不支持词级时间戳，仍可使用波形与进度控制。'
-                : '该音频暂无词级时间戳，支持波形与进度控制。'}
+                ? 'MiniMax 暂不支持词级时间戳'
+                : '该音频暂无词级时间戳'}
             </div>
           )}
         </div>
 
         {/* Options row */}
         {hasWords && (
-          <div className="border-t border-border/50 px-4 pb-2 pt-2 text-xs text-muted-foreground">
-            <div className="flex flex-wrap gap-4">
-              <label className="flex cursor-pointer items-center gap-1.5">
-                <input
-                  type="checkbox"
-                  className="accent-primary"
-                  checked={showWords}
-                  onChange={(e) => setShowWords(e.target.checked)}
-                />
-                逐词高亮
-              </label>
-              <label className="flex cursor-pointer items-center gap-1.5">
-                <input
-                  type="checkbox"
-                  className="accent-primary"
-                  checked={loopOn}
-                  onChange={(e) => {
-                    const on = e.target.checked
-                    setLoopOn(on)
-                    if (on && sentences.length > 0) {
-                      setLoopSeg(Math.max(0, Math.min(activeSent, sentences.length - 1)))
-                    }
-                  }}
-                />
-                <RepeatIcon className="size-3" />
-                单句循环
-              </label>
-            </div>
+          <div className="flex flex-wrap gap-4 border-t border-border/40 px-1 py-1.5 text-xs text-muted-foreground">
+            <label className="flex cursor-pointer items-center gap-1.5">
+              <input type="checkbox" className="accent-primary" checked={showWords}
+                onChange={(e) => setShowWords(e.target.checked)} />
+              逐词高亮
+            </label>
+            <label className="flex cursor-pointer items-center gap-1.5">
+              <input type="checkbox" className="accent-primary" checked={loopOn}
+                onChange={(e) => {
+                  const on = e.target.checked
+                  setLoopOn(on)
+                  if (on && sentences.length > 0)
+                    setLoopSeg(Math.max(0, Math.min(activeSent, sentences.length - 1)))
+                }} />
+              <RepeatIcon className="size-3" />
+              单句循环
+            </label>
           </div>
         )}
 
-        {/* Time */}
-        <div className="flex justify-between px-4 pb-1 text-[11px] tabular-nums text-muted-foreground">
+        {/* Time row */}
+        <div className="flex justify-between px-1 pt-1 text-[11px] tabular-nums text-muted-foreground">
           <span>{fmt(currentTime)}</span>
           <span>{duration > 0 ? fmt(duration) : '--:--'}</span>
         </div>
 
         {/* Waveform */}
-        <div className="px-4 pb-2">
+        <div className="py-1">
           <AudioWaveform
             ref={waveRef}
             audioUrl={audioUrl}
@@ -353,71 +342,53 @@ export function AudioPlayer({
         </div>
 
         {/* Scrubber */}
-        <div className="px-4 pb-2">
-          <input
-            type="range"
-            className="h-1 w-full cursor-pointer accent-primary"
-            min={0}
-            max={duration || 0}
-            step={0.05}
-            value={Math.min(currentTime, duration || 0)}
-            onChange={(e) => seekTo(Number(e.target.value))}
-          />
-        </div>
+        <input
+          type="range"
+          className="h-1 w-full cursor-pointer accent-primary"
+          min={0} max={duration || 0} step={0.05}
+          value={Math.min(currentTime, duration || 0)}
+          onChange={(e) => seekTo(Number(e.target.value))}
+        />
 
         {/* Controls */}
-        <div className="flex items-center justify-between gap-1 px-4 pb-3">
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => jumpBy(-10)}>
-            <Rewind className="size-4" />
+        <div className="flex items-center justify-between gap-1 pt-1">
+          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => jumpBy(-10)}>
+            <Rewind className="size-3.5" />
           </Button>
-          <Button
-            variant="ghost" size="icon" className="h-8 w-8"
-            disabled={!hasWords}
-            onClick={() => jumpToSentence('prev')}
-          >
-            <SkipBack className="size-4" />
+          <Button variant="ghost" size="icon" className="h-7 w-7" disabled={!hasWords}
+            onClick={() => jumpToSentence('prev')}>
+            <SkipBack className="size-3.5" />
           </Button>
-          <Button
-            size="icon"
-            className="h-10 w-10 rounded-full shadow-sm"
-            onClick={() => void togglePlay()}
-          >
+          <Button size="icon" className="h-9 w-9 rounded-full shadow-sm"
+            onClick={() => void togglePlay()}>
             {isPlaying
-              ? <Pause className="size-5" />
-              : <Play className="size-5 translate-x-0.5" />
-            }
+              ? <Pause className="size-4" />
+              : <Play className="size-4 translate-x-0.5" />}
           </Button>
-          <Button
-            variant="ghost" size="icon" className="h-8 w-8"
-            disabled={!hasWords}
-            onClick={() => jumpToSentence('next')}
-          >
-            <SkipForward className="size-4" />
+          <Button variant="ghost" size="icon" className="h-7 w-7" disabled={!hasWords}
+            onClick={() => jumpToSentence('next')}>
+            <SkipForward className="size-3.5" />
           </Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => jumpBy(10)}>
-            <FastForward className="size-4" />
+          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => jumpBy(10)}>
+            <FastForward className="size-3.5" />
           </Button>
-        </div>
 
-        {/* Speed */}
-        <div className="flex items-center justify-center gap-1.5 pb-4">
-          {PLAYBACK_RATES.map((r) => (
-            <button
-              key={r}
-              type="button"
-              className={cn(
-                'rounded-full px-2.5 py-0.5 text-[11px] transition-colors',
-                playbackRate === r
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-muted text-muted-foreground hover:bg-muted/80',
-              )}
-              onClick={() => setPlaybackRate(r)}
-            >
-              {r}x
-            </button>
-          ))}
+          {/* Speed inline */}
+          <div className="ml-auto flex items-center gap-1">
+            {PLAYBACK_RATES.map((r) => (
+              <button key={r} type="button"
+                className={cn(
+                  'rounded-full px-2 py-0.5 text-[11px] transition-colors',
+                  playbackRate === r
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-muted text-muted-foreground hover:bg-muted/80',
+                )}
+                onClick={() => setPlaybackRate(r)}>
+                {r}x
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
 
       {/* Hidden native audio element */}
       <audio

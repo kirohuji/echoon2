@@ -361,20 +361,20 @@ export function PracticePage() {
         <div className="flex items-center gap-2">
           {/* 练习 / 学习模式 */}
           <div className="flex rounded-full bg-muted p-0.5">
-            {(['practice', 'study'] as const).map((m) => (
-              <button
-                key={m}
-                onClick={() => setMode(m)}
-                className={cn(
+          {(['practice', 'study'] as const).map((m) => (
+            <button
+              key={m}
+              onClick={() => setMode(m)}
+              className={cn(
                   'rounded-full px-3 py-1 text-xs font-medium transition-all',
-                  mode === m
+                mode === m
                     ? 'bg-background text-foreground shadow-sm'
                     : 'text-muted-foreground hover:text-foreground',
-                )}
-              >
+              )}
+            >
                 {m === 'practice' ? '练习' : '学习'}
-              </button>
-            ))}
+            </button>
+          ))}
           </div>
           <Button
             variant="outline"
@@ -393,7 +393,7 @@ export function PracticePage() {
         <span className="shrink-0 text-xs text-muted-foreground">
           <span className="font-semibold text-foreground">{currentIndex + 1}</span>
           {' /'} {total}
-        </span>
+                </span>
         <Progress value={progress} className="h-1.5 flex-1" />
         <div className="flex shrink-0 items-center gap-1">
           <Button
@@ -402,16 +402,16 @@ export function PracticePage() {
             className="h-7 w-7"
           >
             <ChevronLeft className="h-3.5 w-3.5" />
-          </Button>
+              </Button>
           <Button
             variant="outline" size="icon"
             onClick={handleNext} disabled={currentIndex === total - 1}
             className="h-7 w-7"
           >
             <ChevronRight className="h-3.5 w-3.5" />
-          </Button>
-        </div>
-      </div>
+              </Button>
+            </div>
+          </div>
 
       {/* ── 题目卡（始终可见，紧凑） ── */}
       {currentQuestion && (
@@ -477,22 +477,26 @@ export function PracticePage() {
             )}
 
             {/* 题目朗读（内联） */}
-            <div className="flex items-center gap-2 border-t border-border/40 pt-2">
-              <Volume2 className="size-3 text-muted-foreground" />
-              <span className="text-xs text-muted-foreground">题目朗读</span>
-              <InlineTtsButton
-                audioState={questionAudio}
-                ttsBackend={ttsBackend}
-                onGenerate={() => handleGenerateAudio('question')}
-              />
+            <div className="border-t border-border/40 pt-2">
+              <div className="flex items-center gap-2">
+                <Volume2 className="size-3 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground">题目朗读</span>
+                <InlineTtsButton
+                  audioState={questionAudio}
+                  ttsBackend={ttsBackend}
+                  onGenerate={() => handleGenerateAudio('question')}
+                />
+              </div>
+              {questionAudio.status === 'ready' && (
+                <div className="mt-2">
+                  <AudioPlayer
+                    audioUrl={getAudioUrl(questionAudio.audioId)}
+                    wordTimestamps={questionAudio.wordTimestamps}
+                    audioProvider={questionAudio.provider}
+                  />
+                </div>
+              )}
             </div>
-            {questionAudio.status === 'ready' && (
-              <AudioPlayer
-                audioUrl={getAudioUrl(questionAudio.audioId)}
-                wordTimestamps={questionAudio.wordTimestamps}
-                audioProvider={questionAudio.provider}
-              />
-            )}
 
             {/* 教学指导面板（内联展开） */}
             {showTeach && (
@@ -517,7 +521,7 @@ export function PracticePage() {
                     >
                       收起
                     </button>
-                  </div>
+                    </div>
                 </div>
                 {teachError ? (
                   <div className="text-xs text-destructive">{teachError}</div>
@@ -742,7 +746,7 @@ export function PracticePage() {
               <CardContent className="p-4 space-y-4">
                 {currentQuestion.referenceAnswer ? (
                   <>
-                    <div className="relative rounded-xl bg-muted/30 p-4">
+                    <div className="relative">
                       {!showAnswer && mode === 'practice' && (
                         <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-xl bg-muted/80 backdrop-blur-sm z-10">
                           <Eye className="size-6 text-muted-foreground/50" />
@@ -878,35 +882,35 @@ export function PracticePage() {
                 </Card>
               )}
 
-              {/* 题目信息 */}
-              <Card>
+          {/* 题目信息 */}
+          <Card>
                 <CardHeader className="pb-2 pt-4 px-4">
-                  <CardTitle className="text-sm">{t('practice.info')}</CardTitle>
-                </CardHeader>
+              <CardTitle className="text-sm">{t('practice.info')}</CardTitle>
+            </CardHeader>
                 <CardContent className="px-4 pb-4 space-y-2 text-sm text-muted-foreground">
-                  <div className="flex justify-between">
-                    <span>题目 ID</span>
-                    <span className="font-mono text-xs">{currentQuestion.questionId.slice(-8)}</span>
-                  </div>
-                  {currentQuestion.difficulty && (
-                    <div className="flex justify-between">
-                      <span>难度</span>
-                      <span>{currentQuestion.difficulty}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between">
-                    <span>序号</span>
-                    <span>{currentQuestion.orderIndex}</span>
-                  </div>
-                </CardContent>
-              </Card>
+              <div className="flex justify-between">
+                <span>题目 ID</span>
+                <span className="font-mono text-xs">{currentQuestion.questionId.slice(-8)}</span>
+              </div>
+              {currentQuestion.difficulty && (
+                <div className="flex justify-between">
+                  <span>难度</span>
+                  <span>{currentQuestion.difficulty}</span>
+                </div>
+              )}
+              <div className="flex justify-between">
+                <span>序号</span>
+                <span>{currentQuestion.orderIndex}</span>
+              </div>
+            </CardContent>
+          </Card>
 
               {!(currentQuestion.keywords?.length || 0) && !(currentQuestion.vocabulary?.length || 0) && (
                 <div className="py-8 text-center text-sm text-muted-foreground">
                   暂无词汇数据
                 </div>
-              )}
-            </div>
+                        )}
+                      </div>
           </TabsContent>
         </Tabs>
       )}

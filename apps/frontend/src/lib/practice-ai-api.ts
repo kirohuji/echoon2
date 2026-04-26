@@ -1,6 +1,6 @@
-import instance from './request'
+import instance, { post } from './request'
 
-const API_BASE = (import.meta as any).env?.VITE_API_BASE ?? 'http://localhost:3000'
+const API_BASE = (import.meta as any).env?.VITE_API_BASE_URL ?? '/api/v1/guide-exam'
 
 export type TranscribeRecordingResult = {
   audioBase64: string
@@ -41,13 +41,10 @@ export async function enrichWord(
 ): Promise<WordEnrichmentResult> {
   const key = word.toLowerCase()
   if (_wordCache.has(key)) return _wordCache.get(key)!
-  const res = await fetch(`${API_BASE}/practice-ai/word-enrichment`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ word: key, englishDefinitions }),
+  const data = await post<WordEnrichmentResult>('/practice-ai/word-enrichment', {
+    word: key,
+    englishDefinitions,
   })
-  if (!res.ok) throw new Error(`单词增强失败 ${res.status}`)
-  const data: WordEnrichmentResult = await res.json()
   _wordCache.set(key, data)
   return data
 }
