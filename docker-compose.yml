@@ -19,6 +19,8 @@ services:
     build:
       context: .
       dockerfile: docker/backend.Dockerfile
+      args:
+        NPM_REGISTRY: ${NPM_REGISTRY:-https://registry.npmmirror.com}
     container_name: echoon2-backend
     restart: unless-stopped
     environment:
@@ -40,6 +42,7 @@ services:
       context: .
       dockerfile: docker/nginx.Dockerfile
       args:
+        NPM_REGISTRY: ${NPM_REGISTRY:-https://registry.npmmirror.com}
         VITE_API_BASE_URL: /api/v1/guide-exam
     container_name: echoon2-nginx
     restart: unless-stopped
