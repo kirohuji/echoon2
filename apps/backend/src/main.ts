@@ -10,7 +10,7 @@ async function bootstrap() {
   app.setGlobalPrefix('api/v1/guide-exam');
 
   app.enableCors({
-    origin: '*',
+    origin: process.env.FRONTEND_URL || '*',
     credentials: true,
   });
 
