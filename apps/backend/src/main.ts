@@ -9,8 +9,16 @@ async function bootstrap() {
 
   app.setGlobalPrefix('api/v1/guide-exam');
 
+  const originsFromEnv = (process.env.FRONTEND_URL || '')
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
+  const allowedOrigins = originsFromEnv.length
+    ? originsFromEnv
+    : ['https://hope.lourd.top:2605', 'capacitor://localhost', 'ionic://localhost', 'http://localhost'];
+
   app.enableCors({
-    origin: process.env.FRONTEND_URL || '*',
+    origin: allowedOrigins,
     credentials: true,
   });
 
