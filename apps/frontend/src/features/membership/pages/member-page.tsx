@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Check, X, Crown, Star, Zap } from 'lucide-react'
+import { Check, X, Crown, Star, Zap, Shield } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -17,6 +17,17 @@ import {
 } from '@/features/membership/api'
 import { cn } from '@/lib/cn'
 
+// 静态兜底权益（后端接口不存在时使用）
+const FALLBACK_BENEFITS: MemberBenefit[] = [
+  { benefitId: '1', name: '题库使用数量', freeSupport: '1 套', standardSupport: '3 套', advancedSupport: '无限' },
+  { benefitId: '2', name: 'AI 练习反馈', freeSupport: false, standardSupport: true, advancedSupport: true },
+  { benefitId: '3', name: '模拟考试', freeSupport: '5 次/月', standardSupport: '30 次/月', advancedSupport: '无限' },
+  { benefitId: '4', name: '练习记录', freeSupport: true, standardSupport: true, advancedSupport: true },
+  { benefitId: '5', name: '收藏题目', freeSupport: true, standardSupport: true, advancedSupport: true },
+  { benefitId: '6', name: '生词本', freeSupport: true, standardSupport: true, advancedSupport: true },
+  { benefitId: '7', name: '客服支持', freeSupport: false, standardSupport: '工作日', advancedSupport: '全天' },
+]
+
 export function MemberPage() {
   const { t } = useTranslation()
   const [plans, setPlans] = useState<MemberPlan[]>([])
@@ -29,7 +40,8 @@ export function MemberPage() {
       ([plansRes, curRes, benRes]) => {
         if (plansRes.status === 'fulfilled') setPlans(plansRes.value)
         if (curRes.status === 'fulfilled') setCurrent(curRes.value)
-        if (benRes.status === 'fulfilled') setBenefits(benRes.value)
+        // 若接口不存在或返回空，使用静态兜底数据
+        setBenefits(benRes.status === 'fulfilled' && benRes.value.length > 0 ? benRes.value : FALLBACK_BENEFITS)
         setIsLoading(false)
       }
     )
@@ -65,104 +77,99 @@ export function MemberPage() {
   ]
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 lg:space-y-6">
+      {/* 页面标题 */}
       <div>
-        <h1 className="text-2xl font-bold">{t('member.title')}</h1>
-        <p className="mt-1 text-muted-foreground">升级会员，解锁更多备考资源</p>
+        <h1 className="text-xl font-bold lg:text-2xl">{t('member.title')}</h1>
+        <p className="mt-1 text-sm text-muted-foreground">升级会员，解锁更多备考资源</p>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* 左列：套餐 + 权益表 */}
-        <div className="space-y-6 lg:col-span-2">
-          {/* 套餐卡片 */}
-          <section>
-            <h2 className="mb-4 text-base font-semibold">选择套餐</h2>
-            {isLoading ? (
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {[1, 2, 3].map((i) => <Skeleton key={i} className="h-64" />)}
+      {/* 手机/iPad：当前会员状态卡 */}
+      <div className="rounded-2xl bg-card p-4 shadow-sm lg:hidden">
+        {isLoading ? (
+          <Skeleton className="h-16" />
+        ) : current ? (
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-yellow-100 dark:bg-yellow-900/30">
+                <Crown className="h-5 w-5 text-yellow-500" />
               </div>
-            ) : plans.length === 0 ? (
-              <div className="rounded-lg border py-12 text-center text-muted-foreground">
-                {t('common.empty')}
+              <div>
+                <p className="text-sm font-semibold">{current.planName}</p>
+                {current.expireDate ? (
+                  <p className="text-xs text-muted-foreground">
+                    {new Date(current.expireDate).toLocaleDateString('zh-CN')} 到期
+                  </p>
+                ) : (
+                  <p className="text-xs text-muted-foreground">永久有效</p>
+                )}
               </div>
-            ) : (
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {plans.map((plan) => (
-                  <PlanCard key={plan.planId} plan={plan} isCurrent={current?.planId === plan.planId} />
-                ))}
+            </div>
+            <Badge variant={current.isActive ? 'default' : 'outline'} className="text-xs">
+              {current.isActive ? '生效中' : '已过期'}
+            </Badge>
+          </div>
+        ) : (
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted">
+                <Shield className="h-5 w-5 text-muted-foreground" />
               </div>
-            )}
-          </section>
+              <div>
+                <p className="text-sm font-semibold">免费用户</p>
+                <p className="text-xs text-muted-foreground">升级解锁更多功能</p>
+              </div>
+            </div>
+            <Badge variant="secondary" className="text-xs">免费</Badge>
+          </div>
+        )}
+      </div>
 
-          {/* 权益对比表 */}
-          <section>
-            <h2 className="mb-4 text-base font-semibold">{t('member.benefits')}</h2>
-            <ConfigDataTable
-              data={benefits}
-              columns={benefitColumns}
-              total={benefits.length}
-              page={1}
-              pageSize={benefits.length || 10}
-              onPageChange={() => {}}
-              isLoading={isLoading}
-              emptyMessage={t('common.empty')}
-            />
-          </section>
-        </div>
+      {/* 套餐卡片 */}
+      <div className="rounded-2xl bg-card p-4 shadow-sm lg:bg-transparent lg:p-0 lg:shadow-none">
+        <h2 className="mb-3 text-base font-bold lg:mb-4 lg:text-base lg:font-semibold">选择套餐</h2>
+        {isLoading ? (
+          <div className="grid gap-3 grid-cols-1 sm:grid-cols-3">
+            {[1, 2, 3].map((i) => <Skeleton key={i} className="h-52" />)}
+          </div>
+        ) : plans.length === 0 ? (
+          <div className="rounded-xl border py-12 text-center text-muted-foreground text-sm">
+            {t('common.empty')}
+          </div>
+        ) : (
+          <div className="grid gap-3 grid-cols-1 sm:grid-cols-3">
+            {plans.map((plan) => (
+              <PlanCard key={plan.planId} plan={plan} isCurrent={current?.planId === plan.planId} />
+            ))}
+          </div>
+        )}
+      </div>
 
-        {/* 右列：当前会员 + 服务说明 */}
-        <div className="space-y-4">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">{t('member.currentPlan')}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <Skeleton className="h-24" />
-              ) : current ? (
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <Crown className="h-5 w-5 text-yellow-500" />
-                    <span className="font-semibold">{current.planName}</span>
-                    <Badge variant={current.isActive ? 'success' : 'outline'} className="text-xs">
-                      {current.isActive ? '生效中' : '已过期'}
-                    </Badge>
-                  </div>
-                  {current.expireDate && (
-                    <p className="text-sm text-muted-foreground">
-                      {t('member.expireDate')}：{new Date(current.expireDate).toLocaleDateString('zh-CN')}
-                    </p>
-                  )}
-                  {current.boundBanks.length > 0 && (
-                    <div>
-                      <p className="text-xs font-medium text-muted-foreground mb-1">{t('member.bindBank')}</p>
-                      {current.boundBanks.map((bank) => (
-                        <Badge key={bank.bankId} variant="outline" className="mr-1 text-xs">
-                          {bank.bankName}
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">暂无会员信息</p>
-              )}
-            </CardContent>
-          </Card>
+      {/* 权益对比 */}
+      <div className="rounded-2xl bg-card p-4 shadow-sm lg:bg-transparent lg:p-0 lg:shadow-none">
+        <h2 className="mb-3 text-base font-bold lg:mb-4 lg:font-semibold">{t('member.benefits')}</h2>
+        <ConfigDataTable
+          data={benefits}
+          columns={benefitColumns}
+          total={benefits.length}
+          page={1}
+          pageSize={benefits.length || 10}
+          onPageChange={() => {}}
+          isLoading={isLoading}
+          emptyMessage={t('common.empty')}
+        />
+      </div>
 
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">{t('member.service')}</CardTitle>
-            </CardHeader>
-            <CardContent className="text-sm text-muted-foreground space-y-2">
-              <p>• 购买后立即生效，自然月计算有效期</p>
-              <p>• 每个账号最多绑定 3 套题库</p>
-              <p>• 到期前 7 天系统发送续费提醒</p>
-              <p>• 如有问题请联系在线客服</p>
-              <Separator className="my-3" />
-              <p className="text-xs">购买即代表同意《用户协议》和《隐私政策》</p>
-            </CardContent>
-          </Card>
+      {/* 服务说明 */}
+      <div className="rounded-2xl bg-card p-4 shadow-sm lg:bg-transparent lg:p-0 lg:shadow-none">
+        <h2 className="mb-3 text-base font-bold lg:mb-4 lg:font-semibold">{t('member.service')}</h2>
+        <div className="space-y-2 text-sm text-muted-foreground">
+          <p>• 购买后立即生效，自然月计算有效期</p>
+          <p>• 每个账号最多绑定 3 套题库</p>
+          <p>• 到期前 7 天系统发送续费提醒</p>
+          <p>• 如有问题请联系在线客服</p>
+          <Separator className="my-3" />
+          <p className="text-xs">购买即代表同意《用户协议》和《隐私政策》</p>
         </div>
       </div>
     </div>

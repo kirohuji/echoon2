@@ -179,7 +179,7 @@ export function HomePage() {
       />
 
       {/* ══════════════ 手机端视图 ══════════════ */}
-      <div className="md:hidden space-y-3">
+      <div className="lg:hidden space-y-3">
 
         {/* 搜索栏 */}
         <div className="relative">
@@ -288,7 +288,7 @@ export function HomePage() {
       </div>
 
       {/* ══════════════ 桌面端视图（保持原样） ══════════════ */}
-      <div className="hidden md:block space-y-8">
+      <div className="hidden lg:block space-y-8">
 
         {/* Hero */}
         <Card className="overflow-hidden bg-primary/[0.04] dark:bg-primary/[0.08]">

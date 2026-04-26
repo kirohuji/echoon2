@@ -73,7 +73,7 @@ export function ProfilePage() {
   return (
     <div>
       {/* ══════════════ 手机端视图 ══════════════ */}
-      <div className="md:hidden">
+      <div className="lg:hidden">
         {mobileView === 'home' ? (
           <MobileProfileHome onNavigate={setMobileView} />
         ) : (
@@ -100,7 +100,7 @@ export function ProfilePage() {
       </div>
 
       {/* ══════════════ 桌面端视图（保持原样） ══════════════ */}
-      <div className="hidden md:grid grid-cols-1 gap-6 md:grid-cols-4">
+      <div className="hidden lg:grid grid-cols-1 gap-6 lg:grid-cols-4">
         {/* 左侧边栏 */}
         <div className="md:col-span-1">
           <Card>
