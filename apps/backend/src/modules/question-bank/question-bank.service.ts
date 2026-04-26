@@ -54,6 +54,7 @@ export class QuestionBankService {
     const scenicCards = scenicItems.map((item) => {
       const p = progressMap.get(item.id);
       return {
+        id: item.id,
         topicId: item.topicId,
         questionId: item.id,
         name: item.title,

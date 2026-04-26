@@ -40,6 +40,7 @@ import {
   type DictEntry, type Meaning,
 } from '@/lib/dictionary-api'
 import { enrichWord, type WordEnrichmentResult, type WordExampleItem } from '@/lib/practice-ai-api'
+import { synthesizeText } from '@/lib/tts-api'
 import { cn } from '@/lib/cn'
 import i18n from '@/lib/i18n'
 
@@ -452,17 +453,41 @@ const LEVEL_CONFIG = {
 }
 
 function ExampleCard({ ex, idx }: { ex: WordExampleItem; idx: number }) {
-  const [playing, setPlaying] = useState(false)
+  const [state, setState] = useState<'idle' | 'loading' | 'playing' | 'error'>('idle')
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+  const cachedUrlRef = useRef<string | null>(null)
+  const { ttsBackend } = usePreferencesStore()
   const cfg = LEVEL_CONFIG[ex.level]
 
-  const speak = () => {
-    if (!('speechSynthesis' in window)) return
-    window.speechSynthesis.cancel()
-    const utt = new SpeechSynthesisUtterance(ex.en)
-    utt.lang = 'en-US'; utt.rate = 0.85
-    setPlaying(true)
-    utt.onend = () => setPlaying(false)
-    window.speechSynthesis.speak(utt)
+  const handleSpeak = async () => {
+    if (state === 'loading') return
+
+    // 已缓存，直接播放
+    if (cachedUrlRef.current) {
+      audioRef.current?.play()
+      return
+    }
+
+    setState('loading')
+    try {
+      const result = await synthesizeText({
+        text: ex.en,
+        provider: ttsBackend.provider,
+        model: ttsBackend.model,
+        voiceId: ttsBackend.voiceId,
+        params: ttsBackend.params,
+      })
+      const url = `data:${result.mimeType};base64,${result.audioBase64}`
+      cachedUrlRef.current = url
+      const audio = new Audio(url)
+      audioRef.current = audio
+      audio.onplay = () => setState('playing')
+      audio.onended = () => setState('idle')
+      audio.onerror = () => setState('error')
+      await audio.play()
+    } catch {
+      setState('error')
+    }
   }
 
   return (
@@ -472,9 +497,16 @@ function ExampleCard({ ex, idx }: { ex: WordExampleItem; idx: number }) {
           <span className="text-xs font-medium text-muted-foreground">例句 {idx + 1}</span>
           <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-semibold', cfg.color)}>{cfg.label}</span>
         </div>
-        <button type="button" onClick={speak}
-          className="flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-xs text-primary hover:bg-primary/20 transition-colors">
-          {playing ? <><Loader2 className="h-3 w-3 animate-spin" />朗读中</> : <><Volume2 className="h-3 w-3" />朗读</>}
+        <button type="button" onClick={handleSpeak}
+          disabled={state === 'loading'}
+          className="flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-xs text-primary hover:bg-primary/20 transition-colors disabled:opacity-60">
+          {state === 'loading'
+            ? <><Loader2 className="h-3 w-3 animate-spin" />合成中</>
+            : state === 'playing'
+            ? <><Volume2 className="h-3 w-3" />朗读中</>
+            : state === 'error'
+            ? <><Volume2 className="h-3 w-3 text-destructive" />重试</>
+            : <><Volume2 className="h-3 w-3" />朗读</>}
         </button>
       </div>
       <div className="px-4 py-3 space-y-2">

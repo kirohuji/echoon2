@@ -40,7 +40,17 @@ export const getProfileOverview = (): Promise<ProfileOverview> => get('/profile/
 
 export const getActivityHeatmap = async (year?: number): Promise<ActivityDay[]> => {
   try {
-    return await get('/profile/activity-heatmap', { year: year || new Date().getFullYear() })
+    const res = await get<{ activities: { date: string; count: number }[] }>(
+      '/profile/activity-heatmap',
+      { year: year || new Date().getFullYear() },
+    )
+    const raw = Array.isArray(res) ? res : res?.activities ?? []
+    const max = Math.max(1, ...raw.map((a) => a.count))
+    return raw.map((a) => ({
+      date: typeof a.date === 'string' ? a.date : new Date(a.date).toISOString().slice(0, 10),
+      count: a.count,
+      level: (Math.min(4, Math.ceil((a.count / max) * 4)) as ActivityDay['level']),
+    }))
   } catch {
     return []
   }

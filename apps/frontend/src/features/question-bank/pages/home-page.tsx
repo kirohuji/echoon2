@@ -183,7 +183,7 @@ export function HomePage() {
       <section>
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-semibold">{t('home.scenic.title')}</h2>
-          <Badge variant="secondary">{homeData?.scenicCards.length || 0} 个景点</Badge>
+          <Badge variant="secondary">{homeData?.scenicCards.length ?? 0} 个景点</Badge>
         </div>
         {isLoading ? (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -201,9 +201,9 @@ export function HomePage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {[...new Map(homeData?.scenicCards.map(c => [c.topicId, c])).values()].map((card) => (
+            {(homeData?.scenicCards ?? []).map((card) => (
               <ScenicCardItem
-                key={card.topicId}
+                key={card.id}
                 card={card}
                 isFav={isFavorite(card.topicId)}
                 onToggleFav={() => {

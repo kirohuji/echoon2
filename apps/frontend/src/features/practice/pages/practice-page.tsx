@@ -20,7 +20,7 @@ import { getTopicQuestions, recordAction, type Question, type TopicQuestionsResu
 import { addFavorite as apiFavorite, removeFavorite as apiUnfavorite } from '@/features/assets/api'
 import { useAssetsStore, useWordsStore } from '@/stores/assets.store'
 import { usePreferencesStore } from '@/stores/preferences.store'
-import { synthesizeQuestion, getAudioUrl, type TtsWordTimestamp } from '@/lib/tts-api'
+import { synthesizeQuestion, synthesizeText, getAudioUrl, type TtsWordTimestamp } from '@/lib/tts-api'
 import { transcribeRecording, streamFeedback, streamTeaching } from '@/lib/practice-ai-api'
 import { cn } from '@/lib/cn'
 
@@ -29,6 +29,13 @@ type AudioState =
   | { status: 'idle' }
   | { status: 'generating' }
   | { status: 'ready'; audioId: string; wordTimestamps: TtsWordTimestamp[] | null; provider: string }
+  | { status: 'error'; message: string }
+
+// 教学指导音频状态（直接存 URL，因为用任意文本合成接口）
+type TeachAudioState =
+  | { status: 'idle' }
+  | { status: 'generating' }
+  | { status: 'ready'; audioUrl: string; wordTimestamps: TtsWordTimestamp[] | null; provider: string }
   | { status: 'error'; message: string }
 
 // ---------- 内联 AI 朗读按钮 ----------
@@ -106,18 +113,47 @@ function StreamingMarkdown({ content, isStreaming }: { content: string; isStream
   )
 }
 
-/** 极简 markdown → HTML 转换（生产建议用 marked/remark） */
+/** markdown → HTML，正确包裹列表、处理段落 */
 function markdownToHtml(md: string): string {
-  return md
-    .replace(/### (.+)/g, '<h3 class="mt-4 mb-1.5 text-sm font-semibold text-foreground">$1</h3>')
-    .replace(/## (.+)/g, '<h2 class="mt-5 mb-2 text-base font-semibold text-foreground">$1</h2>')
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/^\* (.+)/gm, '<li class="ml-4 list-disc">$1</li>')
-    .replace(/^- (.+)/gm, '<li class="ml-4 list-disc">$1</li>')
-    .replace(/\n\n/g, '</p><p class="mb-2">')
-    .replace(/^([^<\n].+)$/gm, (line) =>
-      line.startsWith('<') ? line : `<span>${line}</span>`
-    )
+  const lines = md.split('\n')
+  const out: string[] = []
+  let inList = false
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]
+
+    // h3
+    if (/^### (.+)/.test(line)) {
+      if (inList) { out.push('</ul>'); inList = false }
+      out.push(`<h3 class="mt-5 mb-2 text-sm font-semibold text-foreground flex items-center gap-1.5">${line.replace(/^### /, '')}</h3>`)
+      continue
+    }
+    // h2
+    if (/^## (.+)/.test(line)) {
+      if (inList) { out.push('</ul>'); inList = false }
+      out.push(`<h2 class="mt-6 mb-2 text-base font-semibold text-foreground">${line.replace(/^## /, '')}</h2>`)
+      continue
+    }
+    // list item (* or -)
+    if (/^[*-] (.+)/.test(line)) {
+      if (!inList) { out.push('<ul class="my-1.5 space-y-1 pl-1">'); inList = true }
+      const text = line.replace(/^[*-] /, '').replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      out.push(`<li class="flex gap-2 text-sm text-foreground/90"><span class="mt-1.5 size-1.5 shrink-0 rounded-full bg-primary/60"></span><span>${text}</span></li>`)
+      continue
+    }
+    // empty line
+    if (line.trim() === '') {
+      if (inList) { out.push('</ul>'); inList = false }
+      continue
+    }
+    // plain text
+    if (inList) { out.push('</ul>'); inList = false }
+    const text = line.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    out.push(`<p class="text-sm text-foreground/90 leading-relaxed mb-1">${text}</p>`)
+  }
+
+  if (inList) out.push('</ul>')
+  return out.join('\n')
 }
 
 export function PracticePage() {
@@ -161,6 +197,10 @@ export function PracticePage() {
   const [showTeach, setShowTeach] = useState(false)
   const teachAbortRef = useRef<AbortController | null>(null)
 
+  // 教学指导朗读
+  const [teachAudio, setTeachAudio] = useState<TeachAudioState>({ status: 'idle' })
+  const [showTeachPlayer, setShowTeachPlayer] = useState(false)
+
   const currentQuestion: Question | undefined = topicData?.questions[currentIndex]
 
   // 加载题目
@@ -184,6 +224,8 @@ export function PracticePage() {
     setTeachText('')
     setTeachError('')
     setShowTeach(false)
+    setTeachAudio({ status: 'idle' })
+    setShowTeachPlayer(false)
     setIsVoiceMode(false)
     setActiveTab('answer')
     setShowAnswer(false)
@@ -265,6 +307,8 @@ export function PracticePage() {
     setTeachText('')
     setTeachError('')
     setShowTeach(true)
+    setTeachAudio({ status: 'idle' })
+    setShowTeachPlayer(false)
 
     try {
       await streamTeaching(
@@ -280,6 +324,31 @@ export function PracticePage() {
       setTeachStreaming(false)
     }
   }, [currentQuestion, textAnswer, voiceAnswer])
+
+  // 教学指导朗读合成
+  const handleGenerateTeachAudio = useCallback(async () => {
+    if (!teachText || teachStreaming) return
+    setTeachAudio({ status: 'generating' })
+    try {
+      const result = await synthesizeText({
+        text: teachText,
+        provider: ttsBackend.provider,
+        model: ttsBackend.model,
+        voiceId: ttsBackend.voiceId,
+        params: ttsBackend.params,
+      })
+      const url = `data:${result.mimeType};base64,${result.audioBase64}`
+      setTeachAudio({
+        status: 'ready',
+        audioUrl: url,
+        wordTimestamps: result.wordTimestamps,
+        provider: ttsBackend.provider,
+      })
+      setShowTeachPlayer(true)
+    } catch (e: any) {
+      setTeachAudio({ status: 'error', message: e?.message || '生成失败' })
+    }
+  }, [teachText, teachStreaming, ttsBackend])
 
   const goToQuestion = useCallback(
     (index: number) => {
@@ -507,6 +576,41 @@ export function PracticePage() {
                     <span className="text-sm font-semibold text-primary">AI 教学指导</span>
                   </div>
                   <div className="flex items-center gap-2">
+                    {/* 朗读按钮（仅生成完毕后显示） */}
+                    {!teachStreaming && teachText && !teachError && (
+                      <>
+                        {teachAudio.status === 'idle' && (
+                          <button
+                            onClick={handleGenerateTeachAudio}
+                            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"
+                          >
+                            <Volume2 className="size-3" />朗读
+                          </button>
+                        )}
+                        {teachAudio.status === 'generating' && (
+                          <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <Loader2 className="size-3 animate-spin" />合成中…
+                          </span>
+                        )}
+                        {teachAudio.status === 'error' && (
+                          <button
+                            onClick={handleGenerateTeachAudio}
+                            className="flex items-center gap-1 text-xs text-destructive hover:text-destructive/80"
+                          >
+                            <AlertCircle className="size-3" />重试
+                          </button>
+                        )}
+                        {teachAudio.status === 'ready' && (
+                          <button
+                            onClick={() => setShowTeachPlayer((v) => !v)}
+                            className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors"
+                          >
+                            <Volume2 className="size-3" />
+                            {showTeachPlayer ? '收起音频' : '展开音频'}
+                          </button>
+                        )}
+                      </>
+                    )}
                     {teachStreaming && (
                       <button
                         onClick={() => teachAbortRef.current?.abort()}
@@ -521,12 +625,22 @@ export function PracticePage() {
                     >
                       收起
                     </button>
-                    </div>
+                  </div>
                 </div>
                 {teachError ? (
                   <div className="text-xs text-destructive">{teachError}</div>
                 ) : (
                   <StreamingMarkdown content={teachText} isStreaming={teachStreaming} />
+                )}
+                {/* 朗读播放器（默认折叠） */}
+                {teachAudio.status === 'ready' && showTeachPlayer && (
+                  <div className="mt-3 border-t border-primary/20 pt-3">
+                    <AudioPlayer
+                      audioUrl={teachAudio.audioUrl}
+                      wordTimestamps={teachAudio.wordTimestamps}
+                      audioProvider={teachAudio.provider}
+                    />
+                  </div>
                 )}
               </div>
             )}

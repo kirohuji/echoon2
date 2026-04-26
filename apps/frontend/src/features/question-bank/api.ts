@@ -29,7 +29,9 @@ export interface QuestionBankHomeParams {
 }
 
 export interface ScenicCard {
+  id: string
   topicId: string
+  questionId: string
   name: string
   coverImage?: string
   questionCount: number

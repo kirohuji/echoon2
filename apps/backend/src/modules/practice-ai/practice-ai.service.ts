@@ -37,7 +37,9 @@ export class PracticeAiService {
   private getProvider() {
     const apiKey = process.env.DEEPSEEK_API_KEY?.trim();
     if (!apiKey) throw new BadRequestException('未配置 DEEPSEEK_API_KEY');
-    return createOpenAI({ apiKey, baseURL: 'https://api.deepseek.com/v1' });
+    const client = createOpenAI({ apiKey, baseURL: 'https://api.deepseek.com/v1' });
+    // DeepSeek only supports Chat Completions (/v1/chat/completions), not Responses API
+    return (model: string) => client.chat(model);
   }
 
   /** 将 AI SDK textStream 手动 pipe 到 Express Response */
@@ -66,51 +68,47 @@ export class PracticeAiService {
     const referenceAnswer = (q as any).content?.answerEn ?? '';
     const keywords        = (q as any).keywords ?? [];
 
-    const systemPrompt = `You are an expert English language coach and Chinese tour guide exam trainer.
-Your role is to give detailed, constructive, and encouraging feedback on student answers.
-Always respond in Chinese. Be specific, warm, and actionable.
-Structure your response with clear sections using markdown headings and bullet points.`;
+    const systemPrompt = `You are a supportive English language coach for Chinese tour guide exam candidates.
+Your role is to give balanced, encouraging, and practical feedback.
+Key principles:
+- If the student's answer covers the main points of the reference answer, recognize that as a good answer.
+- Only point out improvements that are genuinely significant (not minor stylistic preferences).
+- Be warm and specific. Avoid over-criticism.
+Always respond in Chinese. Use markdown for clear structure.`;
 
     const userPrompt = `## 题目
 ${questionText}
 
-## 参考答案
+## 参考答案要点
 ${referenceAnswer}
 
-## 关键词要点
+## 关键词
 ${keywords.length ? keywords.join('、') : '无'}
 
 ## 学生作答
 ${dto.userAnswer}
-${dto.isVoice ? '\n（以上为语音录音转写文本，请额外关注表达流畅度和语言自然度）' : ''}
+${dto.isVoice ? '\n（以上为语音录音转写，请额外关注表达流畅度）' : ''}
 
-请按以下结构给出详细反馈：
+请给出简洁实用的点评，结构如下：
 
 ### 📊 综合评分
-给出 0-100 分并说明理由（一句话）。
+0-100 分，一句话说明（与参考答案要点的覆盖程度为主要依据，不要因表达方式不同而扣分）。
 
-### ✅ 做得好的地方
-列出 2-3 个具体优点。
+### ✅ 答得好的地方
+2-3 个具体亮点，鼓励到位。
 
-### 🎯 可以改进的地方
-列出 2-3 个具体改进点，每点给出如何改进的建议。
+### 🎯 可以更好的地方
+**仅列出参考答案中学生明显遗漏或表达有误的内容**（若基本覆盖则可写"整体表达完整，继续保持"），限 1-2 条。
 
-### 💡 语言表达建议
-针对词汇、语法或句式给出 1-2 条具体建议，附上改进示例。
-${dto.isVoice ? '\n### 🎙️ 发音与流畅度\n根据转写文本判断可能的发音或流畅度问题并给出建议。' : ''}
-
-### 📝 关键词覆盖
-指出哪些关键词用到了，哪些遗漏了，遗漏的应如何融入答案。
-
-### ✨ 改进版本
-给出一个完整的参考改进版英文答案（100-150词）。`;
+### 📝 关键词使用
+简短说明关键词覆盖情况（用到哪些 / 遗漏了哪些），若全部覆盖则肯定一下。${dto.isVoice ? '\n\n### 🎙️ 流畅度\n根据转写文本简短评价表达的自然流畅程度。' : ''}`;
 
     const result = streamText({
       model: provider('deepseek-chat'),
       system: systemPrompt,
       prompt: userPrompt,
       temperature: 0.4,
-      maxOutputTokens: 1200,
+      maxOutputTokens: 800,
     });
 
     await this.pipeStream(result.textStream, res);
