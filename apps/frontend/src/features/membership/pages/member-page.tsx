@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Check, X, Crown, Star, Zap, Shield, ChevronLeft } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -36,6 +35,7 @@ export function MemberPage() {
   const [current, setCurrent] = useState<CurrentMembership | null>(null)
   const [benefits, setBenefits] = useState<MemberBenefit[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('yearly')
 
   useEffect(() => {
     Promise.allSettled([getMemberPlans(), getCurrentMembership(), getMemberBenefits()]).then(
@@ -127,7 +127,31 @@ export function MemberPage() {
         </div>
 
         <div className="rounded-2xl bg-card p-4 shadow-sm">
-          <h2 className="mb-3 text-base font-bold">选择套餐</h2>
+          <div className="mb-4 space-y-3">
+            <h2 className="text-lg font-bold">选择套餐</h2>
+            <div className="inline-flex rounded-xl bg-muted p-1">
+              <button
+                type="button"
+                onClick={() => setBillingCycle('monthly')}
+                className={cn(
+                  'rounded-lg px-3 py-1.5 text-xs font-medium transition',
+                  billingCycle === 'monthly' ? 'bg-background shadow-sm' : 'text-muted-foreground'
+                )}
+              >
+                月付
+              </button>
+              <button
+                type="button"
+                onClick={() => setBillingCycle('yearly')}
+                className={cn(
+                  'rounded-lg px-3 py-1.5 text-xs font-medium transition',
+                  billingCycle === 'yearly' ? 'bg-background shadow-sm' : 'text-muted-foreground'
+                )}
+              >
+                年付
+              </button>
+            </div>
+          </div>
           {isLoading ? (
             <div className="space-y-3">
               {[1, 2, 3].map((i) => <Skeleton key={i} className="h-40 rounded-xl" />)}
@@ -139,7 +163,12 @@ export function MemberPage() {
           ) : (
             <div className="space-y-3">
               {plans.map((plan) => (
-                <PlanCard key={plan.planId} plan={plan} isCurrent={current?.planId === plan.planId} />
+                <PlanCard
+                  key={plan.planId}
+                  plan={plan}
+                  isCurrent={current?.planId === plan.planId}
+                  billingCycle={billingCycle}
+                />
               ))}
             </div>
           )}
@@ -176,15 +205,38 @@ export function MemberPage() {
         </div>
       </div>
 
-      {/* 平板/PC：保持原布局 */}
-      <div className="hidden space-y-4 md:block lg:space-y-6">
+      {/* 平板/PC：Claude 风格布局 */}
+      <div className="hidden rounded-3xl bg-muted/30 p-4 md:block lg:space-y-6 lg:p-6">
         <div>
-          <h1 className="text-xl font-bold lg:text-2xl">{t('member.title')}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">升级会员，解锁更多备考资源</p>
+          <h1 className="text-center text-2xl font-bold tracking-tight lg:text-4xl">Plans that grow with you</h1>
+          <p className="mt-2 text-center text-sm text-muted-foreground">升级会员，解锁更多备考资源</p>
+          <div className="mt-4 flex justify-center">
+            <div className="inline-flex rounded-xl border bg-card p-1">
+              <button
+                type="button"
+                onClick={() => setBillingCycle('monthly')}
+                className={cn(
+                  'rounded-lg px-4 py-1.5 text-sm font-medium transition',
+                  billingCycle === 'monthly' ? 'bg-background shadow-sm' : 'text-muted-foreground'
+                )}
+              >
+                Monthly
+              </button>
+              <button
+                type="button"
+                onClick={() => setBillingCycle('yearly')}
+                className={cn(
+                  'rounded-lg px-4 py-1.5 text-sm font-medium transition',
+                  billingCycle === 'yearly' ? 'bg-background shadow-sm' : 'text-muted-foreground'
+                )}
+              >
+                Yearly · Save 17%
+              </button>
+            </div>
+          </div>
         </div>
 
-        <div className="rounded-2xl bg-card p-4 shadow-sm lg:bg-transparent lg:p-0 lg:shadow-none">
-          <h2 className="mb-3 text-base font-bold lg:mb-4 lg:text-base lg:font-semibold">选择套餐</h2>
+        <div>
           {isLoading ? (
             <div className="grid gap-3 grid-cols-1 sm:grid-cols-3">
               {[1, 2, 3].map((i) => <Skeleton key={i} className="h-52" />)}
@@ -194,9 +246,14 @@ export function MemberPage() {
               {t('common.empty')}
             </div>
           ) : (
-            <div className="grid gap-3 grid-cols-1 sm:grid-cols-3">
+            <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
               {plans.map((plan) => (
-                <PlanCard key={plan.planId} plan={plan} isCurrent={current?.planId === plan.planId} />
+                <PlanCard
+                  key={plan.planId}
+                  plan={plan}
+                  isCurrent={current?.planId === plan.planId}
+                  billingCycle={billingCycle}
+                />
               ))}
             </div>
           )}
@@ -232,7 +289,15 @@ export function MemberPage() {
   )
 }
 
-function PlanCard({ plan, isCurrent }: { plan: MemberPlan; isCurrent: boolean }) {
+function PlanCard({
+  plan,
+  isCurrent,
+  billingCycle,
+}: {
+  plan: MemberPlan
+  isCurrent: boolean
+  billingCycle: 'monthly' | 'yearly'
+}) {
   const { t } = useTranslation()
 
   const levelIcons: Record<string, React.ElementType> = {
@@ -241,62 +306,90 @@ function PlanCard({ plan, isCurrent }: { plan: MemberPlan; isCurrent: boolean })
     advanced: Zap,
   }
   const Icon = levelIcons[plan.level] || Star
+  const planDescription =
+    plan.description ||
+    (plan.level === 'free'
+      ? '适合初次备考，先用基础功能'
+      : plan.level === 'standard'
+        ? '适合稳定练习，覆盖核心能力'
+        : '适合高强度冲刺，解锁全部权益')
+  const displayPrice =
+    billingCycle === 'yearly' && plan.level !== 'free'
+      ? Math.round((plan.price * 12 * 0.83) / 12)
+      : plan.price
 
   return (
-    <Card
+    <div
       className={cn(
-        'relative transition-shadow hover:shadow-md',
-        plan.highlighted && 'border-primary shadow-md',
-        isCurrent && 'ring-2 ring-primary'
+        'relative h-full rounded-2xl border bg-card p-5 shadow-sm transition-all hover:shadow-md',
+        plan.highlighted && 'shadow-md',
+        isCurrent && 'ring-1 ring-border'
       )}
     >
-      {plan.highlighted && (
-        <div className="absolute -top-2.5 left-1/2 -translate-x-1/2">
-          <Badge className="text-xs px-3">推荐</Badge>
+      <div className="flex h-full flex-col">
+        <div className="mb-4 flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1 space-y-2.5">
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-background">
+                <Icon className="h-4 w-4" />
+              </div>
+              <p className="text-[18px] font-semibold leading-none tracking-tight">{plan.name}</p>
+            </div>
+            <p className="line-clamp-2 text-xs text-muted-foreground">{planDescription}</p>
+          </div>
+          <div className="flex flex-col items-end gap-1">
+            <div className="flex items-center gap-1.5">
+              {plan.highlighted && (
+                <Badge variant="outline" className="text-[10px]">推荐</Badge>
+              )}
+            </div>
+            <div className="text-right">
+              <div className="flex items-end justify-end gap-1">
+                <span className="text-[22px] font-bold leading-none">${displayPrice}</span>
+                <span className="pb-0.5 text-[11px] text-muted-foreground">/ month</span>
+              </div>
+              <p className="mt-0.5 text-[11px] text-muted-foreground">
+                billed {billingCycle === 'yearly' ? 'annually' : 'monthly'}
+              </p>
+            </div>
+          </div>
         </div>
-      )}
-      {isCurrent && (
-        <div className="absolute -top-2.5 right-3">
-          <Badge variant="secondary" className="text-xs">当前</Badge>
-        </div>
-      )}
-      <CardHeader className="pb-2">
-        <div className="flex items-center gap-2">
-          <Icon className="h-5 w-5 text-primary" />
-          <CardTitle className="text-base">{plan.name}</CardTitle>
-        </div>
-        {plan.description && (
-          <CardDescription className="text-xs">{plan.description}</CardDescription>
+        {plan.originalPrice && plan.originalPrice > displayPrice && (
+          <p className="mb-4 text-right text-xs text-muted-foreground line-through">
+            原价 ${plan.originalPrice}
+          </p>
         )}
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <div className="flex items-baseline gap-1">
-          <span className="text-3xl font-bold">¥{plan.price}</span>
-          {plan.originalPrice && plan.originalPrice > plan.price && (
-            <span className="text-sm text-muted-foreground line-through">¥{plan.originalPrice}</span>
-          )}
-          <span className="text-xs text-muted-foreground">/ {plan.durationDays}天</span>
-        </div>
-        <ul className="space-y-1.5">
-          {plan.features.map((f) => (
-            <li key={f} className="flex items-center gap-1.5 text-xs">
-              <Check className="h-3.5 w-3.5 text-green-500 shrink-0" />
-              <span>{f}</span>
-            </li>
-          ))}
-        </ul>
-      </CardContent>
-      <CardFooter>
+
         <Button
-          className="w-full"
           variant={plan.level === 'free' ? 'outline' : 'default'}
+          size="lg"
+          className={cn(
+            'mb-2 h-10 w-[78%] self-center rounded-xl text-sm font-medium',
+            plan.level !== 'free' && 'bg-foreground text-background hover:bg-foreground/90'
+          )}
           disabled={isCurrent || plan.level === 'free'}
-          size="sm"
         >
           {isCurrent ? '当前套餐' : plan.level === 'free' ? '免费使用' : t('member.upgrade')}
         </Button>
-      </CardFooter>
-    </Card>
+        {plan.level !== 'free' && (
+          <p className="mb-3 text-center text-[11px] text-muted-foreground">No commitment · Cancel anytime</p>
+        )}
+
+        <div className="mt-auto space-y-2.5 border-t pt-3.5">
+          <p className="text-[15px] font-medium">
+            {plan.level === 'free' ? '基础功能：' : `Everything in ${plan.level === 'standard' ? 'Free' : 'Pro'} and:`}
+          </p>
+          <ul className="space-y-1.5">
+            {plan.features.map((f) => (
+              <li key={f} className="flex items-start gap-2 text-[15px] leading-5">
+                <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                <span>{f}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </div>
   )
 }
 

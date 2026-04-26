@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useTheme } from 'next-themes'
 import {
@@ -219,8 +219,6 @@ function IosSection({ header, children }: { header?: string; children: React.Rea
 
 // ─── 手机端：个人中心首页 ──────────────────────────────────────────────────
 function MobileProfileHome({ onNavigate }: { onNavigate: (view: MobileView) => void }) {
-  const { theme } = useTheme()
-  const { language } = usePreferencesStore()
   const [overview, setOverview] = useState<ProfileOverview | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
@@ -230,9 +228,6 @@ function MobileProfileHome({ onNavigate }: { onNavigate: (view: MobileView) => v
       .catch(() => {})
       .finally(() => setIsLoading(false))
   }, [])
-
-  const themeLabel: Record<string, string> = { light: '浅色', dark: '深色', system: '跟随系统' }
-  const langLabel: Record<string, string> = { 'zh-CN': '中文', en: 'English' }
 
   const navItems = [
     { key: 'overview' as Tab, icon: LayoutDashboard, label: '概览', iconBg: 'bg-blue-500' },
@@ -324,104 +319,136 @@ function MobileProfileHome({ onNavigate }: { onNavigate: (view: MobileView) => v
         ))}
       </IosSection>
 
-      {/* 快速设置入口 */}
-      <IosSection>
-        <IosRow
-          icon={theme === 'dark' ? Moon : theme === 'light' ? Sun : Monitor}
-          iconBg="bg-slate-500"
-          label="主题"
-          value={themeLabel[theme || 'system'] ?? '跟随系统'}
-          onTap={() => onNavigate('settings')}
-        />
-        <IosRow
-          icon={Globe}
-          iconBg="bg-teal-500"
-          label="界面语言"
-          value={langLabel[language] ?? '中文'}
-          last
-          onTap={() => onNavigate('settings')}
-        />
-      </IosSection>
     </div>
   )
 }
 
 // ─── 手机端：设置页 ────────────────────────────────────────────────────────
 function MobileSettingsView() {
-  const { theme, setTheme } = useTheme()
-  const { autoPlay, setAutoPlay, language, setLanguage } = usePreferencesStore()
+  const navigate = useNavigate()
+  const { autoPlay, setAutoPlay } = usePreferencesStore()
   const { config } = useConfigStore()
   const [showBinding, setShowBinding] = useState(false)
-
-  const handleLanguageChange = (lang: string) => {
-    setLanguage(lang)
-    i18n.changeLanguage(lang)
-  }
-
-  const ThemeIcon = theme === 'dark' ? Moon : theme === 'light' ? Sun : Monitor
+  const [autoSpeakOnLookup, setAutoSpeakOnLookup] = useState(true)
+  const [pronunciationType, setPronunciationType] = useState<'us' | 'uk'>('us')
+  const [autoCopyWord, setAutoCopyWord] = useState(false)
+  const [wifiOnlyMedia, setWifiOnlyMedia] = useState(true)
+  const [dailyGoal, setDailyGoal] = useState('20')
+  const [learningPreference, setLearningPreference] = useState('balanced')
+  const [personalizedRecommendation, setPersonalizedRecommendation] = useState(true)
 
   return (
     <div className="space-y-5">
       <BindingDialog open={showBinding} onClose={() => setShowBinding(false)} />
 
-      {/* 练习偏好 */}
-      <IosSection header="练习偏好">
+      <IosSection header="区域一">
         <IosRow
-          icon={Zap}
-          iconBg="bg-orange-400"
-          label="自动播放"
-          subtitle="进入练习页自动播放题目音频"
-          last
+          label="查词自动发音"
           right={<Switch checked={autoPlay} onCheckedChange={setAutoPlay} />}
         />
-      </IosSection>
-
-      {/* 外观 */}
-      <IosSection header="外观">
         <IosRow
-          icon={ThemeIcon}
-          iconBg="bg-slate-500"
-          label="主题"
+          label="查词发音类型"
           right={
             <select
-              value={theme || 'system'}
-              onChange={(e) => setTheme(e.target.value)}
+              value={pronunciationType}
+              onChange={(e) => setPronunciationType(e.target.value as 'us' | 'uk')}
               className="bg-transparent text-sm text-muted-foreground outline-none"
             >
-              <option value="light">浅色</option>
-              <option value="dark">深色</option>
-              <option value="system">跟随系统</option>
+              <option value="us">美式发音</option>
+              <option value="uk">英式发音</option>
             </select>
           }
         />
         <IosRow
-          icon={Globe}
-          iconBg="bg-teal-500"
-          label="界面语言"
+          label="查词自动复制单词到剪切板"
+          right={<Switch checked={autoCopyWord} onCheckedChange={setAutoCopyWord} />}
+        />
+        <IosRow
+          label="仅使用 WIFI 播放&下载"
+          last
+          right={<Switch checked={wifiOnlyMedia} onCheckedChange={setWifiOnlyMedia} />}
+        />
+      </IosSection>
+
+      <IosSection header="区域二">
+        <IosRow
+          label="设置打卡目标"
+          right={
+            <select
+              value={dailyGoal}
+              onChange={(e) => setDailyGoal(e.target.value)}
+              className="bg-transparent text-sm text-muted-foreground outline-none"
+            >
+              <option value="10">每天 10 题</option>
+              <option value="20">每天 20 题</option>
+              <option value="30">每天 30 题</option>
+            </select>
+          }
+        />
+        <IosRow
+          label="设置学习偏好"
           last
           right={
             <select
-              value={language}
-              onChange={(e) => handleLanguageChange(e.target.value)}
+              value={learningPreference}
+              onChange={(e) => setLearningPreference(e.target.value)}
               className="bg-transparent text-sm text-muted-foreground outline-none"
             >
-              <option value="zh-CN">中文</option>
-              <option value="en">English</option>
+              <option value="balanced">均衡模式</option>
+              <option value="exam">考试冲刺</option>
+              <option value="speaking">口语优先</option>
             </select>
           }
         />
       </IosSection>
 
-      {/* 数据 */}
-      <IosSection header="数据">
+      <IosSection header="区域三">
         <IosRow
-          icon={Database}
-          iconBg="bg-emerald-600"
-          label="当前题库"
+          label="个性化推荐"
+          right={<Switch checked={personalizedRecommendation} onCheckedChange={setPersonalizedRecommendation} />}
+        />
+        <IosRow
+          label="违法不良信息举报"
+          last
+          onTap={() => {}}
+        />
+      </IosSection>
+
+      <IosSection header="区域四">
+        <IosRow
+          label="清除播放缓存"
+          onTap={() => {}}
+        />
+        <IosRow
+          label="应用权限管理"
+          onTap={() => {}}
+        />
+        <IosRow
+          label="内容诉讼"
+          onTap={() => {}}
+        />
+        <IosRow
+          label="切换当前题库"
           subtitle={config?.bankName || '未配置题库'}
-          last
           onTap={() => setShowBinding(true)}
         />
+        <IosRow
+          label="注销账户"
+          last
+          onTap={() => {}}
+        />
+      </IosSection>
+
+      <IosSection header="区域五">
+        <div className="px-4 py-3">
+          <button
+            type="button"
+            onClick={() => navigate('/')}
+            className="w-full text-center text-sm font-medium text-red-500"
+          >
+            退出登录
+          </button>
+        </div>
       </IosSection>
     </div>
   )
