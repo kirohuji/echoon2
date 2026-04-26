@@ -25,4 +25,19 @@ jobs:
         run: |
           set -euo pipefail
           docker compose up -d --build
+
+      - name: Seed database when empty
+        run: |
+          set -euo pipefail
+          RECORD_COUNT=$(docker compose exec -T backend node -e "const { PrismaClient } = require('@prisma/client'); const prisma = new PrismaClient(); prisma.questionBank.count().then((count) => { console.log(count); }).catch((err) => { console.error(err); process.exit(1); }).finally(() => prisma.\$disconnect());" | awk 'END{print}' | tr -d '[:space:]')
+          if [ "${RECORD_COUNT}" = "0" ]; then
+            echo "Database is empty, running seed..."
+            docker compose exec -T backend pnpm --filter @echoon2/backend prisma:seed
+          else
+            echo "Database already initialized, skip seed. questionBank count=${RECORD_COUNT}"
+          fi
+
+      - name: Cleanup dangling images
+        run: |
+          set -euo pipefail
           docker image prune -f
