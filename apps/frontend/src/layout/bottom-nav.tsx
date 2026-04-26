@@ -1,12 +1,11 @@
 import React from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { BookOpen, FileText, Crown, User } from 'lucide-react'
+import { BookOpen, FileText, User } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
 const navItems = [
   { label: '题库', path: '/', icon: BookOpen },
   { label: '模考', path: '/mock', icon: FileText },
-  { label: '会员', path: '/member', icon: Crown },
   { label: '我的', path: '/profile', icon: User },
 ]
 

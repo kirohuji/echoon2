@@ -1,11 +1,12 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react'
+import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useTheme } from 'next-themes'
 import {
   LayoutDashboard, ClipboardList, Star, BookMarked, Settings, User, Trash2,
   Search, X, Volume2, Loader2, ChevronLeft, ChevronRight, Calendar, SortAsc,
   Plus, Sparkles, BookOpen, Link2, ExternalLink, Brain, BarChart2,
-  GraduationCap, CheckCircle2, Lightbulb,
+  GraduationCap, CheckCircle2, Lightbulb, Crown,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -45,6 +46,7 @@ import { cn } from '@/lib/cn'
 import i18n from '@/lib/i18n'
 
 type Tab = 'overview' | 'records' | 'favorites' | 'words' | 'settings'
+type MobileView = Tab | 'home'
 
 const tabs: { key: Tab; icon: React.ElementType }[] = [
   { key: 'overview', icon: LayoutDashboard },
@@ -54,52 +56,252 @@ const tabs: { key: Tab; icon: React.ElementType }[] = [
   { key: 'settings', icon: Settings },
 ]
 
+const mobileTitles: Record<Tab, string> = {
+  overview: '概览',
+  records: '练习记录',
+  favorites: '收藏题库',
+  words: '生词本',
+  settings: '设置',
+}
+
 export function ProfilePage() {
   const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState<Tab>('overview')
+  const [mobileView, setMobileView] = useState<MobileView>('home')
 
   return (
-    <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
-      {/* 左侧边栏 */}
-      <div className="md:col-span-1">
-        <Card>
-          <CardContent className="p-4">
-            <div className="mb-4 flex flex-col items-center gap-2 text-center">
-              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
-                <User className="h-8 w-8 text-primary" />
-              </div>
-              <p className="font-semibold">导游备考者</p>
-              <Badge variant="secondary" className="text-xs">免费用户</Badge>
+    <div>
+      {/* ══════════════ 手机端视图 ══════════════ */}
+      <div className="md:hidden">
+        {mobileView === 'home' ? (
+          <MobileProfileHome onNavigate={setMobileView} />
+        ) : (
+          <div className="space-y-4">
+            {/* 返回栏 */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setMobileView('home')}
+                className="flex items-center gap-0.5 text-sm text-muted-foreground"
+              >
+                <ChevronLeft className="h-4 w-4" />返回
+              </button>
+              <h1 className="text-base font-bold">{mobileTitles[mobileView as Tab]}</h1>
             </div>
-            <Separator className="mb-4" />
-            <nav className="space-y-1">
-              {tabs.map(({ key, icon: Icon }) => (
-                <button
-                  key={key}
-                  onClick={() => setActiveTab(key)}
-                  className={cn(
-                    'flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors',
-                    activeTab === key
-                      ? 'bg-primary text-primary-foreground'
-                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                  )}
-                >
-                  <Icon className="h-4 w-4" />
-                  {t(`profile.${key}`)}
-                </button>
-              ))}
-            </nav>
-          </CardContent>
-        </Card>
+            {mobileView === 'overview' && <OverviewTab />}
+            {mobileView === 'records' && <RecordsTab />}
+            {mobileView === 'favorites' && <FavoritesTab />}
+            {mobileView === 'words' && <WordsTab />}
+            {mobileView === 'settings' && <MobileSettingsView />}
+          </div>
+        )}
       </div>
 
-      {/* 右侧内容 */}
-      <div className="md:col-span-3">
-        {activeTab === 'overview' && <OverviewTab />}
-        {activeTab === 'records' && <RecordsTab />}
-        {activeTab === 'favorites' && <FavoritesTab />}
-        {activeTab === 'words' && <WordsTab />}
-        {activeTab === 'settings' && <SettingsTab />}
+      {/* ══════════════ 桌面端视图（保持原样） ══════════════ */}
+      <div className="hidden md:grid grid-cols-1 gap-6 md:grid-cols-4">
+        {/* 左侧边栏 */}
+        <div className="md:col-span-1">
+          <Card>
+            <CardContent className="p-4">
+              <div className="mb-4 flex flex-col items-center gap-2 text-center">
+                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
+                  <User className="h-8 w-8 text-primary" />
+                </div>
+                <p className="font-semibold">导游备考者</p>
+                <Badge variant="secondary" className="text-xs">免费用户</Badge>
+              </div>
+              <Separator className="mb-4" />
+              <nav className="space-y-1">
+                {tabs.map(({ key, icon: Icon }) => (
+                  <button
+                    key={key}
+                    onClick={() => setActiveTab(key)}
+                    className={cn(
+                      'flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors',
+                      activeTab === key
+                        ? 'bg-primary text-primary-foreground'
+                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                    )}
+                  >
+                    <Icon className="h-4 w-4" />
+                    {t(`profile.${key}`)}
+                  </button>
+                ))}
+              </nav>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* 右侧内容 */}
+        <div className="md:col-span-3">
+          {activeTab === 'overview' && <OverviewTab />}
+          {activeTab === 'records' && <RecordsTab />}
+          {activeTab === 'favorites' && <FavoritesTab />}
+          {activeTab === 'words' && <WordsTab />}
+          {activeTab === 'settings' && <SettingsTab />}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── 手机端：个人中心首页 ──────────────────────────────────────────────────
+function MobileProfileHome({ onNavigate }: { onNavigate: (view: MobileView) => void }) {
+  const [overview, setOverview] = useState<ProfileOverview | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    getProfileOverview()
+      .then(setOverview)
+      .catch(() => {})
+      .finally(() => setIsLoading(false))
+  }, [])
+
+  const navItems: { key: Tab; icon: React.ElementType; label: string }[] = [
+    { key: 'overview', icon: LayoutDashboard, label: '概览' },
+    { key: 'records', icon: ClipboardList, label: '练习记录' },
+    { key: 'favorites', icon: Star, label: '收藏题库' },
+    { key: 'words', icon: BookMarked, label: '生词本' },
+  ]
+
+  return (
+    <div className="space-y-3">
+      {/* 顶部：设置按钮 */}
+      <div className="flex justify-end">
+        <button
+          onClick={() => onNavigate('settings')}
+          className="rounded-full p-1.5 text-muted-foreground transition-colors active:bg-muted"
+        >
+          <Settings className="h-5 w-5" />
+        </button>
+      </div>
+
+      {/* 用户信息 */}
+      <div className="rounded-2xl bg-card p-4 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-full bg-primary/10">
+            <User className="h-8 w-8 text-primary" />
+          </div>
+          <div>
+            <p className="text-base font-semibold">导游备考者</p>
+            <Link
+              to="/member"
+              className="no-underline mt-1.5 inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 px-2.5 py-0.5 text-xs font-semibold text-white shadow-sm"
+            >
+              <Crown className="h-3 w-3" />
+              免费用户 · 升级 VIP
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      {/* 统计数字（2列） */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="rounded-2xl bg-card p-4 shadow-sm">
+          <p className="text-xs text-muted-foreground">练习天数</p>
+          {isLoading ? (
+            <Skeleton className="mt-1 h-8 w-16" />
+          ) : (
+            <p className="mt-1 text-3xl font-bold text-primary">{overview?.totalPracticeDays ?? 0}</p>
+          )}
+          <p className="mt-1 text-[11px] text-muted-foreground">
+            连续打卡 {isLoading ? '--' : overview?.streakDays ?? 0} 天
+          </p>
+        </div>
+        <div className="rounded-2xl bg-card p-4 shadow-sm">
+          <p className="text-xs text-muted-foreground">累计做题</p>
+          {isLoading ? (
+            <Skeleton className="mt-1 h-8 w-16" />
+          ) : (
+            <p className="mt-1 text-3xl font-bold text-primary">{overview?.totalQuestionsAnswered ?? 0}</p>
+          )}
+          <p className="mt-1 text-[11px] text-muted-foreground">
+            收藏 {isLoading ? '--' : overview?.totalFavorites ?? 0} 道题
+          </p>
+        </div>
+      </div>
+
+      {/* 导航区 */}
+      <div className="overflow-hidden rounded-2xl bg-card shadow-sm">
+        {navItems.map(({ key, icon: Icon, label }, idx) => (
+          <button
+            key={key}
+            onClick={() => onNavigate(key)}
+            className={cn(
+              'flex w-full items-center justify-between px-4 py-4 text-left transition-colors active:bg-muted/50',
+              idx < navItems.length - 1 && 'border-b border-border/50'
+            )}
+          >
+            <div className="flex items-center gap-3">
+              <Icon className="h-5 w-5 text-primary" />
+              <span className="text-sm font-medium">{label}</span>
+            </div>
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ─── 手机端：设置页 ────────────────────────────────────────────────────────
+function MobileSettingsView() {
+  const { theme, setTheme } = useTheme()
+  const { autoPlay, setAutoPlay, language, setLanguage } = usePreferencesStore()
+  const { config } = useConfigStore()
+  const [showBinding, setShowBinding] = useState(false)
+
+  const handleLanguageChange = (lang: string) => {
+    setLanguage(lang)
+    i18n.changeLanguage(lang)
+  }
+
+  return (
+    <div className="space-y-3">
+      <BindingDialog open={showBinding} onClose={() => setShowBinding(false)} />
+
+      {/* 偏好 */}
+      <div className="overflow-hidden rounded-2xl bg-card shadow-sm">
+        <div className="flex items-center justify-between border-b border-border/50 px-4 py-4">
+          <span className="text-sm font-medium">自动播放</span>
+          <Switch checked={autoPlay} onCheckedChange={setAutoPlay} />
+        </div>
+        <div className="flex items-center justify-between border-b border-border/50 px-4 py-4">
+          <span className="text-sm font-medium">主题</span>
+          <select
+            value={theme || 'system'}
+            onChange={(e) => setTheme(e.target.value)}
+            className="bg-transparent text-sm text-muted-foreground outline-none"
+          >
+            <option value="light">浅色</option>
+            <option value="dark">深色</option>
+            <option value="system">跟随系统</option>
+          </select>
+        </div>
+        <div className="flex items-center justify-between px-4 py-4">
+          <span className="text-sm font-medium">界面语言</span>
+          <select
+            value={language}
+            onChange={(e) => handleLanguageChange(e.target.value)}
+            className="bg-transparent text-sm text-muted-foreground outline-none"
+          >
+            <option value="zh-CN">中文</option>
+            <option value="en">English</option>
+          </select>
+        </div>
+      </div>
+
+      {/* 题库绑定 */}
+      <div className="overflow-hidden rounded-2xl bg-card shadow-sm">
+        <button
+          onClick={() => setShowBinding(true)}
+          className="flex w-full items-center justify-between px-4 py-4 text-left active:bg-muted/50"
+        >
+          <div>
+            <span className="text-sm font-medium">当前题库</span>
+            <p className="mt-0.5 text-xs text-muted-foreground">{config?.bankName || '未配置题库'}</p>
+          </div>
+          <ChevronRight className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+        </button>
       </div>
     </div>
   )
