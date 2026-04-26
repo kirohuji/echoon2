@@ -1,7 +1,7 @@
 import { Controller, Get, Headers } from '@nestjs/common';
 import { MembershipService } from './membership.service';
 
-@Controller('member')
+@Controller('membership')
 export class MembershipController {
   constructor(private readonly membershipService: MembershipService) {}
 
@@ -13,5 +13,10 @@ export class MembershipController {
   @Get('current')
   getCurrentMembership(@Headers('x-device-id') deviceId: string) {
     return this.membershipService.getCurrentMembership(deviceId);
+  }
+
+  @Get('benefits')
+  getBenefits() {
+    return this.membershipService.getBenefits();
   }
 }

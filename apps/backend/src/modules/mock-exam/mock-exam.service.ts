@@ -75,6 +75,49 @@ export class MockExamService {
     return toPageResult(list, total, pagination);
   }
 
+  async getScores(deviceId: string, limit: number) {
+    const records = await this.prisma.mockExamRecord.findMany({
+      where: { deviceId },
+      orderBy: { takenAt: 'desc' },
+      take: limit,
+      include: {
+        paper: { select: { title: true, paperType: true } },
+      },
+    });
+
+    const PASS_SCORE = 60;
+    return records.map((r) => ({
+      mockId: r.id,
+      paperId: r.paperId,
+      paperName: r.paper.title,
+      score: r.score,
+      totalScore: 100,
+      passScore: PASS_SCORE,
+      passed: r.score >= PASS_SCORE,
+      durationSeconds: 0,
+      completedAt: r.takenAt.toISOString(),
+    }));
+  }
+
+  async getDashboard(deviceId: string) {
+    const records = await this.prisma.mockExamRecord.findMany({
+      where: { deviceId },
+      select: { score: true },
+    });
+
+    if (records.length === 0) {
+      return { avgScore: 0, totalMocks: 0, passRate: 0, bestScore: 0 };
+    }
+
+    const PASS_SCORE = 60;
+    const totalMocks = records.length;
+    const avgScore = Math.round(records.reduce((s, r) => s + r.score, 0) / totalMocks);
+    const passRate = Math.round((records.filter((r) => r.score >= PASS_SCORE).length / totalMocks) * 100);
+    const bestScore = Math.max(...records.map((r) => r.score));
+
+    return { avgScore, totalMocks, passRate, bestScore };
+  }
+
   async startExam(deviceId: string, dto: StartExamDto) {
     const paper = await this.prisma.mockPaper.findUnique({
       where: { id: dto.paperId },

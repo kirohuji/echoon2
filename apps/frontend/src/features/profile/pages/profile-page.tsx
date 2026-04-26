@@ -79,14 +79,16 @@ export function ProfilePage() {
         ) : (
           <div className="space-y-4">
             {/* iOS 风格返回栏 */}
-            <div className="flex items-center">
+            <div className="relative flex items-center justify-center">
               <button
+                type="button"
+                aria-label="返回"
                 onClick={() => setMobileView('home')}
-                className="flex items-center gap-0.5 text-primary text-sm font-medium"
+                className="absolute left-0 inline-flex h-8 w-8 items-center justify-center rounded-full hover:bg-muted/60 active:bg-muted"
               >
-                <ChevronLeft className="h-5 w-5" />我的
+                <ChevronLeft className="h-5 w-5" />
               </button>
-              <h1 className="flex-1 text-center text-base font-semibold -ml-14">
+              <h1 className="text-base font-semibold">
                 {mobileTitles[mobileView as Tab]}
               </h1>
             </div>

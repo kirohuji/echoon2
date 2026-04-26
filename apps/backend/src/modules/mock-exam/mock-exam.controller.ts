@@ -20,6 +20,19 @@ export class MockExamController {
     return this.mockExamService.getRecentScores(deviceId, pagination);
   }
 
+  @Get('scores')
+  getScores(
+    @Headers('x-device-id') deviceId: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.mockExamService.getScores(deviceId, limit ? parseInt(limit, 10) : 10);
+  }
+
+  @Get('dashboard')
+  getDashboard(@Headers('x-device-id') deviceId: string) {
+    return this.mockExamService.getDashboard(deviceId);
+  }
+
   @Post('start')
   startExam(
     @Headers('x-device-id') deviceId: string,
