@@ -20,6 +20,7 @@ model User {
   updatedAt           DateTime  @updatedAt
   sessions            Session[]
   accounts            Account[]
+  bindingConfig       UserBindingConfig?
 
   @@unique([email])
   @@map("user")
@@ -140,7 +141,9 @@ model QuestionContent {
 
 model UserBindingConfig {
   id            String   @id @default(cuid())
-  deviceId      String   @unique
+  user          User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId        String?  @unique
+  deviceId      String?  @unique
   province      String
   language      String
   examType      String

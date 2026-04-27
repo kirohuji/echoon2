@@ -1,6 +1,8 @@
-import { Body, Controller, Get, Headers, Post } from '@nestjs/common';
+import { Body, Controller, Get, Headers, Post, Req } from '@nestjs/common';
+import type { Request } from 'express';
 import { ConfigGuideService } from './config-guide.service';
 import { BindConfigDto } from './dto/bind-config.dto';
+import { getOptionalAuthSession } from '../auth/session.util';
 
 @Controller()
 export class ConfigGuideController {
@@ -12,20 +14,36 @@ export class ConfigGuideController {
   }
 
   @Post('config/bind')
-  bindConfig(
+  async bindConfig(
+    @Req() req: Request,
     @Headers('x-device-id') deviceId: string,
     @Body() dto: BindConfigDto,
   ) {
-    return this.configGuideService.bindConfig(deviceId, dto);
+    const session = await getOptionalAuthSession(req);
+    return this.configGuideService.bindConfig(
+      { deviceId, userId: session?.user?.id },
+      dto,
+    );
   }
 
   @Get('config/current')
-  getCurrentConfig(@Headers('x-device-id') deviceId: string) {
-    return this.configGuideService.getCurrentConfig(deviceId);
+  async getCurrentConfig(
+    @Req() req: Request,
+    @Headers('x-device-id') deviceId: string,
+  ) {
+    const session = await getOptionalAuthSession(req);
+    return this.configGuideService.getCurrentConfig({
+      deviceId,
+      userId: session?.user?.id,
+    });
   }
 
   @Get('bootstrap')
-  getBootstrap(@Headers('x-device-id') deviceId: string) {
-    return this.configGuideService.getBootstrap(deviceId);
+  async getBootstrap(@Req() req: Request, @Headers('x-device-id') deviceId: string) {
+    const session = await getOptionalAuthSession(req);
+    return this.configGuideService.getBootstrap({
+      deviceId,
+      userId: session?.user?.id,
+    });
   }
 }

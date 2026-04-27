@@ -1,15 +1,17 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
 
+type QuestionBankIdentity = {
+  deviceId: string;
+  userId?: string;
+};
+
 @Injectable()
 export class QuestionBankService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getHome(deviceId: string, mode?: string, keyword?: string) {
-    const config = await this.prisma.userBindingConfig.findUnique({
-      where: { deviceId },
-      include: { bank: true },
-    });
+  async getHome(identity: QuestionBankIdentity, mode?: string, keyword?: string) {
+    const config = await this.findBindingConfig(identity);
 
     if (!config || !config.bankId || !config.bank) {
       return {
@@ -45,7 +47,7 @@ export class QuestionBankService {
     // 统计掌握度
     const progresses = await this.prisma.practiceProgress.findMany({
       where: {
-        deviceId,
+        deviceId: identity.deviceId,
         questionId: { in: scenicItems.map((i) => i.id) },
       },
     });
@@ -74,7 +76,7 @@ export class QuestionBankService {
         });
         const masteredInTopic = await this.prisma.practiceProgress.count({
           where: {
-            deviceId,
+            deviceId: identity.deviceId,
             questionId: { in: qids.map((q) => q.id) },
             masteryScore: { gte: 60 },
           },
@@ -95,18 +97,18 @@ export class QuestionBankService {
     const totalItems = allTopics.reduce((acc, t) => acc + t._count.items, 0);
     const masteredTotal = await this.prisma.practiceProgress.count({
       where: {
-        deviceId,
+        deviceId: identity.deviceId,
         masteryScore: { gte: 60 },
         question: { topic: { bankId: config.bankId } },
       },
     });
 
     const practiceDays = await this.prisma.dailyActivity.count({
-      where: { deviceId },
+      where: { deviceId: identity.deviceId },
     });
 
     const lastMock = await this.prisma.mockExamRecord.findFirst({
-      where: { deviceId },
+      where: { deviceId: identity.deviceId },
       orderBy: { takenAt: 'desc' },
     });
 
@@ -120,5 +122,20 @@ export class QuestionBankService {
       scenicCards,
       otherTopics: otherTopicCards,
     };
+  }
+
+  private async findBindingConfig(identity: QuestionBankIdentity) {
+    if (identity.userId) {
+      const config = await this.prisma.userBindingConfig.findUnique({
+        where: { userId: identity.userId },
+        include: { bank: true },
+      });
+      if (config) return config;
+    }
+
+    return this.prisma.userBindingConfig.findUnique({
+      where: { deviceId: identity.deviceId },
+      include: { bank: true },
+    });
   }
 }

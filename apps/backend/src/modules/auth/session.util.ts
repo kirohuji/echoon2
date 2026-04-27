@@ -14,3 +14,11 @@ export async function requireAuthSession(req: Request) {
 
   return session;
 }
+
+export async function getOptionalAuthSession(req: Request) {
+  const session = await auth.api.getSession({
+    headers: fromNodeHeaders(req.headers),
+  });
+
+  return session ?? null;
+}

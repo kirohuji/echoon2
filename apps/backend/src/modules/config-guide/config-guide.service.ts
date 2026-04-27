@@ -2,6 +2,11 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { BindConfigDto } from './dto/bind-config.dto';
 
+type UserBindingIdentity = {
+  deviceId?: string;
+  userId?: string;
+};
+
 @Injectable()
 export class ConfigGuideService {
   constructor(private readonly prisma: PrismaService) {}
@@ -23,7 +28,7 @@ export class ConfigGuideService {
     };
   }
 
-  async bindConfig(deviceId: string, dto: BindConfigDto) {
+  async bindConfig(identity: UserBindingIdentity, dto: BindConfigDto) {
     const bank = await this.prisma.questionBank.findFirst({
       where: {
         province: dto.province,
@@ -34,31 +39,68 @@ export class ConfigGuideService {
       },
     });
 
-    await this.prisma.userBindingConfig.upsert({
-      where: { deviceId },
-      create: {
-        deviceId,
-        province: dto.province,
-        language: dto.language,
-        examType: dto.examType,
-        interviewForm: dto.interviewForm,
-        bankId: bank?.id ?? null,
-      },
-      update: {
-        province: dto.province,
-        language: dto.language,
-        examType: dto.examType,
-        interviewForm: dto.interviewForm,
-        bankId: bank?.id ?? null,
-      },
-    });
+    const payload = {
+      province: dto.province,
+      language: dto.language,
+      examType: dto.examType,
+      interviewForm: dto.interviewForm,
+      bankId: bank?.id ?? null,
+    };
+
+    if (identity.userId) {
+      const existingByDevice = identity.deviceId
+        ? await this.prisma.userBindingConfig.findFirst({
+            where: {
+              deviceId: identity.deviceId,
+              OR: [{ userId: null }, { userId: identity.userId }],
+            },
+          })
+        : null;
+
+      if (existingByDevice) {
+        await this.prisma.userBindingConfig.update({
+          where: { id: existingByDevice.id },
+          data: {
+            ...payload,
+            userId: identity.userId,
+            deviceId: identity.deviceId ?? existingByDevice.deviceId,
+          },
+        });
+      } else {
+        await this.prisma.userBindingConfig.upsert({
+          where: { userId: identity.userId },
+          create: {
+            ...payload,
+            userId: identity.userId,
+            deviceId: identity.deviceId ?? null,
+          },
+          update: {
+            ...payload,
+            ...(identity.deviceId ? { deviceId: identity.deviceId } : {}),
+          },
+        });
+      }
+    } else if (identity.deviceId) {
+      await this.prisma.userBindingConfig.upsert({
+        where: { deviceId: identity.deviceId },
+        create: {
+          ...payload,
+          deviceId: identity.deviceId,
+        },
+        update: payload,
+      });
+    } else {
+      throw new NotFoundException('缺少设备标识');
+    }
 
     // upsert user preference
-    await this.prisma.userPreference.upsert({
-      where: { deviceId },
-      create: { deviceId },
-      update: {},
-    });
+    if (identity.deviceId) {
+      await this.prisma.userPreference.upsert({
+        where: { deviceId: identity.deviceId },
+        create: { deviceId: identity.deviceId },
+        update: {},
+      });
+    }
 
     return {
       bankId: bank?.id ?? null,
@@ -70,30 +112,12 @@ export class ConfigGuideService {
     };
   }
 
-  async getCurrentConfig(deviceId: string) {
-    const config = await this.prisma.userBindingConfig.findUnique({
-      where: { deviceId },
-      include: { bank: true },
-    });
-    return config;
+  async getCurrentConfig(identity: UserBindingIdentity) {
+    return this.findBindingConfigSimple(identity);
   }
 
-  async getBootstrap(deviceId: string) {
-    const config = await this.prisma.userBindingConfig.findUnique({
-      where: { deviceId },
-      include: {
-        bank: {
-          include: {
-            topics: {
-              orderBy: { sortOrder: 'asc' },
-              include: {
-                _count: { select: { items: true } },
-              },
-            },
-          },
-        },
-      },
-    });
+  async getBootstrap(identity: UserBindingIdentity) {
+    const config = await this.findBindingConfigWithTopics(identity);
 
     if (!config) {
       return { configured: false, config: null, bank: null };
@@ -120,5 +144,65 @@ export class ConfigGuideService {
           }
         : null,
     };
+  }
+
+  private async findBindingConfigSimple(identity: UserBindingIdentity) {
+    if (identity.userId) {
+      const config = await this.prisma.userBindingConfig.findUnique({
+        where: { userId: identity.userId },
+        include: { bank: true },
+      });
+      if (config) return config;
+    }
+
+    if (!identity.deviceId) {
+      return null;
+    }
+
+    return this.prisma.userBindingConfig.findUnique({
+      where: { deviceId: identity.deviceId },
+      include: { bank: true },
+    });
+  }
+
+  private async findBindingConfigWithTopics(identity: UserBindingIdentity) {
+    if (identity.userId) {
+      const config = await this.prisma.userBindingConfig.findUnique({
+        where: { userId: identity.userId },
+        include: {
+          bank: {
+            include: {
+              topics: {
+                orderBy: { sortOrder: 'asc' },
+                include: {
+                  _count: { select: { items: true } },
+                },
+              },
+            },
+          },
+        },
+      });
+      if (config) return config;
+    }
+
+    if (!identity.deviceId) {
+      return null;
+    }
+
+    return this.prisma.userBindingConfig.findUnique({
+      where: { deviceId: identity.deviceId },
+      include: {
+        bank: {
+          include: {
+            topics: {
+              orderBy: { sortOrder: 'asc' },
+              include: {
+                _count: { select: { items: true } },
+              },
+            },
+          },
+        },
+      },
+    });
   }
 }
