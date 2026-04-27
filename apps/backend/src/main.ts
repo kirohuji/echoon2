@@ -1,11 +1,19 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
+import { json, urlencoded } from 'express';
+import { toNodeHandler } from 'better-auth/node';
 import { AppModule } from './app.module';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
+import { auth } from './modules/auth/auth';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, { bodyParser: false });
+
+  const expressApp = app.getHttpAdapter().getInstance();
+  expressApp.all('/api/auth/*', toNodeHandler(auth));
+  expressApp.use(json());
+  expressApp.use(urlencoded({ extended: true }));
 
   app.setGlobalPrefix('api/v1/guide-exam');
 

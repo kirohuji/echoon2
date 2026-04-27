@@ -31,12 +31,19 @@ import {
   getProfileOverview,
   getActivityHeatmap,
   getPracticeRecords,
+  getUserProfile,
+  updateUserProfile,
   type ProfileOverview,
   type ActivityDay,
   type PracticeRecord,
   type PracticeRecordsResult,
+  type UserProfile,
 } from '@/features/profile/api'
 import { getFavorites, type FavoriteItem } from '@/features/assets/api'
+import {
+  getAuthSession,
+  signOutAuth,
+} from '@/features/auth/api'
 import { usePreferencesStore } from '@/stores/preferences.store'
 import { useWordsStore, type WordEntry } from '@/stores/assets.store'
 import { useConfigStore } from '@/stores/config.store'
@@ -550,6 +557,12 @@ function MobileSettingsView() {
           last
           onTap={() => {}}
         />
+      </IosSection>
+
+      <IosSection header="账号中心">
+        <div className="px-4 py-3">
+          <AuthSettingsPanel compact />
+        </div>
       </IosSection>
 
       <IosSection>
@@ -1604,6 +1617,10 @@ function SettingsTab() {
 
           <Separator />
 
+          <AuthSettingsPanel compact={false} />
+
+          <Separator />
+
           <div>
             <div className="flex items-center justify-between">
               <div>
@@ -1627,6 +1644,101 @@ function SettingsTab() {
           </div>
         </CardContent>
       </Card>
+    </div>
+  )
+}
+
+function AuthSettingsPanel({ compact }: { compact: boolean }) {
+  const navigate = useNavigate()
+  const [sessionUser, setSessionUser] = useState<any | null>(null)
+  const [profile, setProfile] = useState<UserProfile | null>(null)
+  const [name, setName] = useState('')
+  const [username, setUsername] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [message, setMessage] = useState('')
+
+  const refreshSession = useCallback(async () => {
+    try {
+      const res = await getAuthSession()
+      const user = res?.data?.user || res?.user || null
+      setSessionUser(user)
+      if (user) {
+        const userProfile = await getUserProfile()
+        setProfile(userProfile)
+        setName(userProfile.name || '')
+        setUsername(userProfile.username || '')
+      } else {
+        setProfile(null)
+      }
+    } catch {
+      setSessionUser(null)
+      setProfile(null)
+    }
+  }, [])
+
+  useEffect(() => {
+    refreshSession()
+  }, [refreshSession])
+
+  const runAction = async (task: () => Promise<any>, successText: string) => {
+    try {
+      setLoading(true)
+      setMessage('')
+      await task()
+      await refreshSession()
+      setMessage(successText)
+    } catch (error: any) {
+      setMessage(error?.response?.data?.message || error?.message || '操作失败')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <Label>账号状态</Label>
+        <p className="text-xs text-muted-foreground">
+          {sessionUser ? `已登录：${sessionUser.email || sessionUser.name}` : '未登录'}
+        </p>
+      </div>
+
+      {!sessionUser && (
+        <div className="space-y-2">
+          <p className="text-xs text-muted-foreground">请前往独立认证页面进行登录或注册。</p>
+          <div className="flex gap-2">
+            <Button size={compact ? 'sm' : 'default'} onClick={() => navigate('/auth/login')}>
+              去登录
+            </Button>
+            <Button variant="outline" size={compact ? 'sm' : 'default'} onClick={() => navigate('/auth/register')}>
+              去注册
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {sessionUser && (
+        <div className="grid gap-2 sm:grid-cols-2">
+          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="用户名（name）" />
+          <Input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="昵称（username）" />
+          <Button
+            disabled={loading}
+            onClick={() => runAction(() => updateUserProfile({ name, username }), '个人信息保存成功')}
+          >
+            保存个人信息
+          </Button>
+          <Button variant="outline" disabled={loading} onClick={() => runAction(() => signOutAuth(), '已退出登录')}>
+            退出登录
+          </Button>
+          {profile && (
+            <p className="col-span-full text-xs text-muted-foreground">
+              当前资料：name={profile.name || '-'}，username={profile.username || '-'}，email={profile.email}
+            </p>
+          )}
+        </div>
+      )}
+
+      {message && <p className={cn('text-xs', compact ? 'text-muted-foreground' : 'text-primary')}>{message}</p>}
     </div>
   )
 }
