@@ -17,6 +17,26 @@ import { useAuth } from '@/providers/auth-provider'
 
 type AuthTab = 'password' | 'email-otp' | 'phone-otp'
 
+function getLoginErrorMessage(error: any): string {
+  const rawMessage =
+    error?.data?.message ||
+    error?.response?.data?.message ||
+    error?.message ||
+    ''
+
+  const message = String(rawMessage).toLowerCase()
+
+  if (!message) return '登录失败，请稍后重试'
+  if (message.includes('invalid email') || message.includes('password')) return '邮箱或密码错误'
+  if (message.includes('otp') || message.includes('verification code')) return '验证码错误或已过期'
+  if (message.includes('user not found')) return '账号不存在'
+  if (message.includes('too many requests') || message.includes('rate limit')) return '请求过于频繁，请稍后再试'
+  if (message.includes('network') || message.includes('failed to fetch')) return '网络异常，请检查网络后重试'
+  if (message.includes('email')) return '邮箱格式不正确'
+
+  return rawMessage || '登录失败，请稍后重试'
+}
+
 export function LoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -49,7 +69,7 @@ export function LoginPage() {
       setMessage(successMessage)
       if (onSuccess) onSuccess()
     } catch (error: any) {
-      setMessage(error?.response?.data?.message || error?.message || '操作失败')
+      setMessage(getLoginErrorMessage(error))
     } finally {
       setLoading(false)
     }
@@ -142,6 +162,8 @@ export function LoginPage() {
                   onClick={() =>
                     runAction(
                       async () => {
+                        if (!email.trim()) throw new Error('请输入邮箱')
+                        if (!password) throw new Error('请输入密码')
                         await signIn(email, password)
                       },
                       '登录成功，即将跳转',
@@ -204,6 +226,8 @@ export function LoginPage() {
                   onClick={() =>
                     runAction(
                       async () => {
+                        if (!email.trim()) throw new Error('请输入邮箱')
+                        if (!emailOtp.trim()) throw new Error('请输入验证码')
                         await signInWithEmailOtp(email, emailOtp)
                         const nextSession = await refreshSession()
                         if (!nextSession?.user?.id) {
@@ -261,6 +285,8 @@ export function LoginPage() {
                   onClick={() =>
                     runAction(
                       async () => {
+                        if (!phoneNumber.trim()) throw new Error('请输入手机号')
+                        if (!phoneOtp.trim()) throw new Error('请输入验证码')
                         await verifyPhoneOtp(phoneNumber, phoneOtp)
                         const nextSession = await refreshSession()
                         if (!nextSession?.user?.id) {
