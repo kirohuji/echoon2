@@ -12,6 +12,7 @@ import { CreateCosPolicyDto } from './dto/create-cos-policy.dto';
 import { CreateReferenceDto } from './dto/create-reference.dto';
 import { DeleteReferenceDto } from './dto/delete-reference.dto';
 import { FileAssetsService } from './file-assets.service';
+import { SetCurrentAvatarDto } from './dto/set-current-avatar.dto';
 
 @Controller('file-assets')
 export class FileAssetsController {
@@ -41,6 +42,19 @@ export class FileAssetsController {
     @Body() dto: DeleteReferenceDto,
   ) {
     return this.fileAssetsService.deleteReference(deviceId || 'anonymous', dto);
+  }
+
+  @Get('avatar/current')
+  getCurrentAvatar(@Headers('x-device-id') deviceId: string) {
+    return this.fileAssetsService.getCurrentAvatar(deviceId || 'anonymous');
+  }
+
+  @Post('avatar/current')
+  setCurrentAvatar(
+    @Headers('x-device-id') deviceId: string,
+    @Body() dto: SetCurrentAvatarDto,
+  ) {
+    return this.fileAssetsService.setCurrentAvatar(deviceId || 'anonymous', dto);
   }
 
   @Get(':id/private-url')
