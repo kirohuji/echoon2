@@ -10,13 +10,6 @@ import { auth } from './modules/auth/auth';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bodyParser: false });
 
-  const expressApp = app.getHttpAdapter().getInstance();
-  expressApp.all('/api/auth/*', toNodeHandler(auth));
-  expressApp.use(json());
-  expressApp.use(urlencoded({ extended: true }));
-
-  app.setGlobalPrefix('api/v1/guide-exam');
-
   const originsFromEnv = (process.env.FRONTEND_URL || '')
     .split(',')
     .map((item) => item.trim())
@@ -24,6 +17,32 @@ async function bootstrap() {
   const allowedOrigins = originsFromEnv.length
     ? originsFromEnv
     : ['https://hope.lourd.top:2605', 'capacitor://localhost', 'ionic://localhost', 'http://localhost'];
+
+  const expressApp = app.getHttpAdapter().getInstance();
+  expressApp.use('/api/auth', (req, res, next) => {
+    const origin = req.headers.origin as string | undefined;
+    const isAllowed = origin && allowedOrigins.includes(origin);
+
+    if (isAllowed) {
+      res.header('Access-Control-Allow-Origin', origin);
+      res.header('Access-Control-Allow-Credentials', 'true');
+      res.header('Vary', 'Origin');
+    }
+
+    res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+
+    if (req.method === 'OPTIONS') {
+      return res.sendStatus(204);
+    }
+
+    return next();
+  });
+  expressApp.all('/api/auth/*', toNodeHandler(auth));
+  expressApp.use(json());
+  expressApp.use(urlencoded({ extended: true }));
+
+  app.setGlobalPrefix('api/v1/guide-exam');
 
   app.enableCors({
     origin: allowedOrigins,

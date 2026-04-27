@@ -559,11 +559,11 @@ function MobileSettingsView() {
         />
       </IosSection>
 
-      <IosSection header="账号中心">
+      {/* <IosSection header="账号中心">
         <div className="px-4 py-3">
           <AuthSettingsPanel compact />
         </div>
-      </IosSection>
+      </IosSection> */}
 
       <IosSection>
         <IosRow
@@ -1696,13 +1696,6 @@ function AuthSettingsPanel({ compact }: { compact: boolean }) {
 
   return (
     <div className="space-y-3">
-      <div>
-        <Label>账号状态</Label>
-        <p className="text-xs text-muted-foreground">
-          {sessionUser ? `已登录：${sessionUser.email || sessionUser.name}` : '未登录'}
-        </p>
-      </div>
-
       {!sessionUser && (
         <div className="space-y-2">
           <p className="text-xs text-muted-foreground">请前往独立认证页面进行登录或注册。</p>
