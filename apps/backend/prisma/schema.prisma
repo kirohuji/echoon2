@@ -203,6 +203,53 @@ model MembershipPlan {
   @@map("membership_plan")
 }
 
+// ---- 文件资产域 ----
+
+enum FileAssetGroup {
+  avatar
+  library
+  tts
+}
+
+enum FileAssetStatus {
+  active
+  deleted
+}
+
+model FileAsset {
+  id               String          @id @default(cuid())
+  sha256           String          @unique
+  bucket           String
+  region           String
+  cosKey           String          @unique
+  group            FileAssetGroup
+  size             Int
+  mimeType         String
+  filename         String
+  status           FileAssetStatus @default(active)
+  refCount         Int             @default(0)
+  lastReferencedAt DateTime?
+  createdAt        DateTime        @default(now())
+  references       FileReference[]
+  questionAudios   QuestionAudio[]
+  @@index([group, status, createdAt(sort: Desc)])
+  @@index([status, refCount, createdAt])
+  @@map("file_asset")
+}
+
+model FileReference {
+  id        String    @id @default(cuid())
+  asset     FileAsset @relation(fields: [assetId], references: [id])
+  assetId   String
+  bizType   String
+  bizId     String
+  deviceId  String
+  createdAt DateTime  @default(now())
+  @@unique([assetId, bizType, bizId, deviceId])
+  @@index([bizType, bizId, deviceId])
+  @@map("file_reference")
+}
+
 // ---- TTS 音频缓存域 ----
 
 enum TtsProvider {
@@ -221,10 +268,12 @@ model QuestionAudio {
   model          String
   voiceId        String?
   mimeType       String
-  audioPath      String
+  asset          FileAsset   @relation(fields: [assetId], references: [id])
+  assetId        String
   wordTimestamps Json?
   createdAt      DateTime    @default(now())
   @@unique([questionId, configHash])
   @@index([questionId])
+  @@index([assetId])
   @@map("question_audio")
 }

@@ -6,9 +6,10 @@ import { TtsService } from './tts.service';
 import { TtsProviderFactory } from './tts-provider.factory';
 import { MinimaxTtsProvider } from './providers/minimax-tts.provider';
 import { CartesiaTtsProvider } from './providers/cartesia-tts.provider';
+import { FileAssetsModule } from '../file-assets/file-assets.module';
 
 @Module({
-  imports: [PrismaModule, MulterModule.register()],
+  imports: [PrismaModule, MulterModule.register(), FileAssetsModule],
   controllers: [TtsController],
   providers: [
     TtsService,

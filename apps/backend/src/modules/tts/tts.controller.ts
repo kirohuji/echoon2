@@ -4,18 +4,15 @@ import {
   Controller,
   Delete,
   Get,
-  HttpCode,
   HttpStatus,
+  HttpCode,
   Param,
   Post,
-  Res,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
-import type { Response } from 'express';
-import * as fs from 'node:fs';
 import { TtsService } from './tts.service';
 import { SynthesizeQuestionDto, SynthesizeTextDto } from './dto/synthesize.dto';
 
@@ -42,13 +39,8 @@ export class TtsController {
   }
 
   @Get('audio/:id')
-  async getAudio(@Param('id') id: string, @Res() res: Response) {
-    const { audioPath, mimeType } = await this.ttsService.getAudioFile(id);
-    res.setHeader('Content-Type', mimeType);
-    res.setHeader('Accept-Ranges', 'bytes');
-    const stat = fs.statSync(audioPath);
-    res.setHeader('Content-Length', stat.size);
-    fs.createReadStream(audioPath).pipe(res);
+  async getAudio(@Param('id') id: string) {
+    return this.ttsService.getAudioUrl(id);
   }
 
   /**
