@@ -54,7 +54,7 @@ export function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12">
+    <div className="min-h-[100dvh] flex flex-col items-center justify-center px-4 py-6 md:py-8">
       {/* 品牌标题区 */}
       <div className="mb-8 text-center">
         <h1 className="text-2xl font-bold tracking-tight">创建账号</h1>
