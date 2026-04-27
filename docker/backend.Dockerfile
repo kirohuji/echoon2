@@ -31,6 +31,8 @@ RUN pnpm install --frozen-lockfile
 
 COPY --from=builder /app/apps/backend/dist apps/backend/dist
 COPY --from=builder /app/apps/backend/prisma apps/backend/prisma
+COPY --from=builder /app/apps/backend/src apps/backend/src
+COPY --from=builder /app/apps/backend/tsconfig.json apps/backend/tsconfig.json
 RUN pnpm --filter @echoon2/backend prisma:generate
 
 WORKDIR /app/apps/backend
