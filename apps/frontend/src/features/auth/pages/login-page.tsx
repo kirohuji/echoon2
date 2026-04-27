@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Loader2 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -9,16 +9,18 @@ import {
   sendEmailOtp,
   sendPhoneOtp,
   signInWithEmailOtp,
-  signInWithEmailPassword,
   signInWithWechat,
   verifyPhoneOtp,
 } from '@/features/auth/api'
 import { cn } from '@/lib/cn'
+import { useAuth } from '@/providers/auth-provider'
 
 type AuthTab = 'password' | 'email-otp' | 'phone-otp'
 
 export function LoginPage() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const { signIn, refreshSession } = useAuth()
   const [activeTab, setActiveTab] = useState<AuthTab>('password')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -29,6 +31,11 @@ export function LoginPage() {
   const [otpsent, setOtpsent] = useState(false)
   const [phoneOtpSent, setPhoneOtpSent] = useState(false)
   const [message, setMessage] = useState('')
+  const fromPath = (location.state as { from?: string } | null)?.from
+
+  const navigateAfterLogin = () => {
+    navigate(fromPath || '/profile', { replace: true })
+  }
 
   const runAction = async (
     task: () => Promise<any>,
@@ -132,7 +139,15 @@ export function LoginPage() {
                   size="primary-lg"
                   className="w-full"
                   disabled={loading}
-                  onClick={() => runAction(() => signInWithEmailPassword(email, password), '登录成功，即将跳转', () => navigate('/profile'))}
+                  onClick={() =>
+                    runAction(
+                      async () => {
+                        await signIn(email, password)
+                      },
+                      '登录成功，即将跳转',
+                      navigateAfterLogin,
+                    )
+                  }
                 >
                   {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : '登录'}
                 </Button>
@@ -186,7 +201,19 @@ export function LoginPage() {
                   size="primary-lg"
                   className="w-full"
                   disabled={loading || !otpsent || !emailOtp}
-                  onClick={() => runAction(() => signInWithEmailOtp(email, emailOtp), '登录成功，即将跳转', () => navigate('/profile'))}
+                  onClick={() =>
+                    runAction(
+                      async () => {
+                        await signInWithEmailOtp(email, emailOtp)
+                        const nextSession = await refreshSession()
+                        if (!nextSession?.user?.id) {
+                          throw new Error('登录失败，请检查验证码后重试')
+                        }
+                      },
+                      '登录成功，即将跳转',
+                      navigateAfterLogin,
+                    )
+                  }
                 >
                   {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : '验证并登录'}
                 </Button>
@@ -231,7 +258,19 @@ export function LoginPage() {
                   size="primary-lg"
                   className="w-full"
                   disabled={loading || !phoneOtpSent || !phoneOtp}
-                  onClick={() => runAction(() => verifyPhoneOtp(phoneNumber, phoneOtp), '登录成功，即将跳转', () => navigate('/profile'))}
+                  onClick={() =>
+                    runAction(
+                      async () => {
+                        await verifyPhoneOtp(phoneNumber, phoneOtp)
+                        const nextSession = await refreshSession()
+                        if (!nextSession?.user?.id) {
+                          throw new Error('登录失败，请检查验证码后重试')
+                        }
+                      },
+                      '登录成功，即将跳转',
+                      navigateAfterLogin,
+                    )
+                  }
                 >
                   {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : '验证并登录'}
                 </Button>
@@ -253,7 +292,15 @@ export function LoginPage() {
               size="primary-lg"
               className="w-full gap-2"
               disabled={loading}
-              onClick={() => runAction(() => signInWithWechat(), '正在跳转微信登录')}
+              onClick={() =>
+                runAction(
+                  async () => {
+                    await signInWithWechat()
+                    await refreshSession()
+                  },
+                  '正在跳转微信登录',
+                )
+              }
             >
               <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor">
                 <path d="M8.5 11.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm7 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM12 2C6.48 2 2 6.03 2 11c0 2.76 1.36 5.22 3.57 6.87L2 20l3.89-2.14A9.36 9.36 0 0012 22c5.52 0 10-4.03 10-9S17.52 2 12 2z" />

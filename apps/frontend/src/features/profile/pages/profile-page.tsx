@@ -40,10 +40,7 @@ import {
   type UserProfile,
 } from '@/features/profile/api'
 import { getFavorites, type FavoriteItem } from '@/features/assets/api'
-import {
-  getAuthSession,
-  signOutAuth,
-} from '@/features/auth/api'
+import { useAuth } from '@/providers/auth-provider'
 import { usePreferencesStore } from '@/stores/preferences.store'
 import { useWordsStore, type WordEntry } from '@/stores/assets.store'
 import { useConfigStore } from '@/stores/config.store'
@@ -1650,35 +1647,33 @@ function SettingsTab() {
 
 function AuthSettingsPanel({ compact }: { compact: boolean }) {
   const navigate = useNavigate()
-  const [sessionUser, setSessionUser] = useState<any | null>(null)
+  const { session, refreshSession, signOut } = useAuth()
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [name, setName] = useState('')
   const [username, setUsername] = useState('')
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
+  const sessionUser = session?.user ?? null
 
-  const refreshSession = useCallback(async () => {
-    try {
-      const res = await getAuthSession()
-      const user = res?.data?.user || res?.user || null
-      setSessionUser(user)
-      if (user) {
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        if (!sessionUser) {
+          setProfile(null)
+          setName('')
+          setUsername('')
+          return
+        }
         const userProfile = await getUserProfile()
         setProfile(userProfile)
         setName(userProfile.name || '')
         setUsername(userProfile.username || '')
-      } else {
+      } catch {
         setProfile(null)
       }
-    } catch {
-      setSessionUser(null)
-      setProfile(null)
     }
-  }, [])
-
-  useEffect(() => {
-    refreshSession()
-  }, [refreshSession])
+    fetchProfile()
+  }, [sessionUser])
 
   const runAction = async (task: () => Promise<any>, successText: string) => {
     try {
@@ -1720,7 +1715,7 @@ function AuthSettingsPanel({ compact }: { compact: boolean }) {
           >
             保存个人信息
           </Button>
-          <Button variant="outline" disabled={loading} onClick={() => runAction(() => signOutAuth(), '已退出登录')}>
+          <Button variant="outline" disabled={loading} onClick={() => runAction(() => signOut(), '已退出登录')}>
             退出登录
           </Button>
           {profile && (
