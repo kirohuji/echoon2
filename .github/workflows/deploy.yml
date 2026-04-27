@@ -69,17 +69,17 @@ jobs:
             sleep 5
           done
 
-      - name: Seed database when empty
+      - name: Reset database and push Prisma schema (test env)
+        run: |
+          set -euo pipefail
+          trap 'echo "Prisma db push failed, print backend logs:"; docker compose logs --tail=200 backend' ERR
+          docker compose exec -T backend pnpm --filter @echoon2/backend exec prisma db push --force-reset
+
+      - name: Seed database
         run: |
           set -euo pipefail
           trap 'echo "Seed step failed, print backend logs:"; docker compose logs --tail=200 backend' ERR
-          RECORD_COUNT=$(docker compose exec -T backend node -e "const { PrismaClient } = require('@prisma/client'); const prisma = new PrismaClient(); prisma.questionBank.count().then((count) => { console.log(count); }).catch((err) => { console.error(err); process.exit(1); }).finally(() => prisma.\$disconnect());" | awk 'END{print}' | tr -d '[:space:]')
-          if [ "${RECORD_COUNT}" = "0" ]; then
-            echo "Database is empty, running seed..."
-            docker compose exec -T backend pnpm --filter @echoon2/backend prisma:seed
-          else
-            echo "Database already initialized, skip seed. questionBank count=${RECORD_COUNT}"
-          fi
+          docker compose exec -T backend pnpm --filter @echoon2/backend prisma:seed
 
       - name: Cleanup dangling images
         run: |
