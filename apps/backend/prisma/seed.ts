@@ -1,8 +1,14 @@
 import { PrismaClient } from '@prisma/client';
+import { auth } from '../src/modules/auth/auth';
 
 const prisma = new PrismaClient();
 
 async function main() {
+  await prisma.session.deleteMany();
+  await prisma.account.deleteMany();
+  await prisma.verification.deleteMany();
+  await prisma.user.deleteMany();
+
   await prisma.mockExamRecord.deleteMany();
   await prisma.mockPaperQuestion.deleteMany();
   await prisma.mockPaper.deleteMany();
@@ -355,6 +361,22 @@ async function main() {
       period: 'month',
       features: ['所有标准功能', 'AI 点评', '录音上传', '错题分析', '专项突破', '优先客服'],
       sortOrder: 2,
+    },
+  });
+
+  await auth.api.signUpEmail({
+    body: {
+      name: '普通用户',
+      email: 'user@echoon2.local',
+      password: 'user123456',
+    },
+  });
+
+  await auth.api.signUpEmail({
+    body: {
+      name: '管理员',
+      email: 'z1309014381@gmail.com',
+      password: 'admin123456',
     },
   });
 
