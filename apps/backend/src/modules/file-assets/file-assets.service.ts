@@ -7,13 +7,14 @@ import {
 } from '@nestjs/common';
 import { createHash, randomUUID } from 'node:crypto';
 import { basename, extname } from 'node:path';
-import COS from 'cos-nodejs-sdk-v5';
+import COS = require('cos-nodejs-sdk-v5');
 import { FileAsset, FileAssetGroup, FileAssetStatus } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { CompleteUploadDto } from './dto/complete-upload.dto';
 import { CreateCosPolicyDto } from './dto/create-cos-policy.dto';
 import { CreateReferenceDto } from './dto/create-reference.dto';
 import { DeleteReferenceDto } from './dto/delete-reference.dto';
+import { SetCurrentAvatarDto } from './dto/set-current-avatar.dto';
 
 type IngestBufferInput = {
   buffer: Buffer;
@@ -25,6 +26,7 @@ type IngestBufferInput = {
 @Injectable()
 export class FileAssetsService {
   private readonly logger = new Logger(FileAssetsService.name);
+  constructor(private readonly prisma: PrismaService) {}
 
   private get bucket() {
     return process.env.COS_BUCKET?.trim() || '';
@@ -81,9 +83,6 @@ export class FileAssetsService {
       Expires: expiresIn,
       Bucket: this.bucket,
       Region: this.region,
-      Headers: {
-        host: `${this.bucket}.cos.${this.region}.myqcloud.com`,
-      },
     });
 
     return {
@@ -93,7 +92,6 @@ export class FileAssetsService {
       method: 'PUT',
       headers: {
         Authorization: authorization,
-        Host: `${this.bucket}.cos.${this.region}.myqcloud.com`,
         ...(dto.mimeType ? { 'Content-Type': dto.mimeType } : {}),
       },
       expiresAt: new Date(expirationUnix * 1000).toISOString(),
@@ -208,6 +206,92 @@ export class FileAssetsService {
       where: { assetId },
       orderBy: { createdAt: 'desc' },
     });
+  }
+
+  async setCurrentAvatar(deviceId: string, dto: SetCurrentAvatarDto) {
+    const asset = await this.ensureAssetExists(dto.assetId);
+    if (asset.group !== FileAssetGroup.avatar) {
+      throw new BadRequestException('仅支持设置 avatar 分组文件为头像');
+    }
+
+    const currentRefs = await this.prisma.fileReference.findMany({
+      where: {
+        bizType: 'avatar',
+        bizId: deviceId,
+        deviceId,
+      },
+    });
+
+    await this.prisma.$transaction(async (tx) => {
+      if (currentRefs.length) {
+        await tx.fileReference.deleteMany({
+          where: {
+            bizType: 'avatar',
+            bizId: deviceId,
+            deviceId,
+          },
+        });
+        await Promise.all(
+          currentRefs.map((ref) =>
+            tx.fileAsset.update({
+              where: { id: ref.assetId },
+              data: { refCount: { decrement: 1 } },
+            }),
+          ),
+        );
+      }
+
+      const alreadyBound = await tx.fileReference.findUnique({
+        where: {
+          assetId_bizType_bizId_deviceId: {
+            assetId: dto.assetId,
+            bizType: 'avatar',
+            bizId: deviceId,
+            deviceId,
+          },
+        },
+      });
+
+      if (!alreadyBound) {
+        await tx.fileReference.create({
+          data: {
+            assetId: dto.assetId,
+            bizType: 'avatar',
+            bizId: deviceId,
+            deviceId,
+          },
+        });
+        await tx.fileAsset.update({
+          where: { id: dto.assetId },
+          data: {
+            refCount: { increment: 1 },
+            lastReferencedAt: new Date(),
+          },
+        });
+      }
+    });
+
+    return this.getCurrentAvatar(deviceId);
+  }
+
+  async getCurrentAvatar(deviceId: string) {
+    const ref = await this.prisma.fileReference.findFirst({
+      where: {
+        bizType: 'avatar',
+        bizId: deviceId,
+        deviceId,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    if (!ref) return null;
+    const asset = await this.prisma.fileAsset.findUnique({ where: { id: ref.assetId } });
+    if (!asset || asset.status !== FileAssetStatus.active) return null;
+    const url = await this.getSignedDownloadUrl(asset.cosKey);
+    return {
+      assetId: asset.id,
+      url,
+      expiresInSeconds: this.privateUrlExpiresSeconds,
+    };
   }
 
   async createAssetFromBuffer(input: IngestBufferInput): Promise<FileAsset> {
@@ -390,5 +474,4 @@ export class FileAssetsService {
     return `${safeName}${safeExt}`;
   }
 
-  constructor(private readonly prisma: PrismaService) {}
 }
