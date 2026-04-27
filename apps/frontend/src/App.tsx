@@ -6,6 +6,8 @@ import { PracticePage } from '@/features/practice/pages/practice-page'
 import { MockPage } from '@/features/mock-exam/pages/mock-page'
 import { ProfilePage } from '@/features/profile/pages/profile-page'
 import { MemberPage } from '@/features/membership/pages/member-page'
+import { LoginPage } from '@/features/auth/pages/login-page'
+import { RegisterPage } from '@/features/auth/pages/register-page'
 
 export default function App() {
   return (
@@ -18,6 +20,8 @@ export default function App() {
             <Route path="/mock" element={<MockPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/member" element={<MemberPage />} />
+            <Route path="/auth/login" element={<LoginPage />} />
+            <Route path="/auth/register" element={<RegisterPage />} />
           </Routes>
         </RootLayout>
       </HashRouter>

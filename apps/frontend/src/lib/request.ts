@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { clearBearerToken, getBearerToken } from '@/features/auth/client'
 
 function createDeviceId(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -35,6 +36,10 @@ const instance = axios.create({
 
 instance.interceptors.request.use((config) => {
   config.headers['x-device-id'] = getOrCreateDeviceId()
+  const token = getBearerToken()
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`
+  }
   return config
 })
 
@@ -47,6 +52,9 @@ instance.interceptors.response.use(
     return data
   },
   (error) => {
+    if (error.response?.status === 401) {
+      clearBearerToken()
+    }
     const msg =
       error.response?.data?.message ||
       error.response?.data?.error ||
@@ -65,6 +73,9 @@ export const post = <T = any>(url: string, data?: any): Promise<T> =>
 
 export const put = <T = any>(url: string, data?: any): Promise<T> =>
   instance.put(url, data) as any
+
+export const patch = <T = any>(url: string, data?: any): Promise<T> =>
+  instance.patch(url, data) as any
 
 export const del = <T = any>(url: string): Promise<T> =>
   instance.delete(url) as any

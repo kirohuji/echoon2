@@ -12,6 +12,7 @@ import { MembershipModule } from './modules/membership/membership.module';
 import { TtsModule } from './modules/tts/tts.module';
 import { PracticeAiModule } from './modules/practice-ai/practice-ai.module';
 import { FileAssetsModule } from './modules/file-assets/file-assets.module';
+import { AuthModule } from './modules/auth/auth.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { FileAssetsModule } from './modules/file-assets/file-assets.module';
     TtsModule,
     PracticeAiModule,
     FileAssetsModule,
+    AuthModule,
   ],
 })
 export class AppModule {}

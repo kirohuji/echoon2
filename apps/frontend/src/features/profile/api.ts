@@ -1,4 +1,4 @@
-import { get } from '@/lib/request'
+import { get, patch } from '@/lib/request'
 
 export interface ProfileOverview {
   userId: string
@@ -36,6 +36,17 @@ export interface PracticeRecordsResult {
   pageSize: number
 }
 
+export interface UserProfile {
+  id: string
+  email: string
+  name: string
+  username?: string | null
+  image?: string | null
+  phoneNumber?: string | null
+  phoneNumberVerified: boolean
+  emailVerified: boolean
+}
+
 export const getProfileOverview = (): Promise<ProfileOverview> => get('/profile/overview')
 
 export const getActivityHeatmap = async (year?: number): Promise<ActivityDay[]> => {
@@ -61,3 +72,8 @@ export const getPracticeRecords = (params: {
   pageSize?: number
   topicId?: string
 }): Promise<PracticeRecordsResult> => get('/profile/practice-records', params)
+
+export const getUserProfile = (): Promise<UserProfile> => get('/user/profile')
+
+export const updateUserProfile = (payload: { name?: string; username?: string }): Promise<UserProfile> =>
+  patch('/user/profile', payload)

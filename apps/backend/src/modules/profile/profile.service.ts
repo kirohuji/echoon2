@@ -1,10 +1,56 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { PaginationDto, toPageResult } from '../../common/dto/pagination.dto';
+import { UpdateUserProfileDto } from './dto/update-user-profile.dto';
 
 @Injectable()
 export class ProfileService {
   constructor(private readonly prisma: PrismaService) {}
+
+  async getUserProfile(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        username: true,
+        image: true,
+        phoneNumber: true,
+        phoneNumberVerified: true,
+        emailVerified: true,
+      },
+    });
+    return user;
+  }
+
+  async updateUserProfile(userId: string, dto: UpdateUserProfileDto) {
+    const data: { name?: string; username?: string } = {};
+
+    if (dto.name !== undefined) {
+      data.name = dto.name.trim();
+    }
+    if (dto.username !== undefined) {
+      data.username = dto.username.trim();
+    }
+
+    const user = await this.prisma.user.update({
+      where: { id: userId },
+      data,
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        username: true,
+        image: true,
+        phoneNumber: true,
+        phoneNumberVerified: true,
+        emailVerified: true,
+      },
+    });
+
+    return user;
+  }
 
   async getOverview(deviceId: string) {
     const config = await this.prisma.userBindingConfig.findUnique({
