@@ -1,5 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import { authClient, clearBearerToken } from '@/features/auth/client'
+import { getBootstrap } from '@/features/question-bank/api'
+import { useConfigStore } from '@/stores/config.store'
 
 interface SessionUser {
   id: string
@@ -60,9 +62,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const raw = await authClient.getSession()
       const nextSession = normalizeSessionResponse(raw)
       setSession(nextSession)
+
+      if (nextSession?.user?.id) {
+        try {
+          const boot = await getBootstrap()
+          useConfigStore.getState().hydrateFromBootstrap(boot)
+        } catch {
+          useConfigStore.getState().clearConfig()
+        }
+      } else {
+        useConfigStore.getState().clearConfig()
+      }
+
       return nextSession
     } catch {
       setSession(null)
+      useConfigStore.getState().clearConfig()
       return null
     } finally {
       setIsLoading(false)
@@ -109,6 +124,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await authClient.signOut()
     clearBearerToken()
     setSession(null)
+    useConfigStore.getState().clearConfig()
   }
 
   return (

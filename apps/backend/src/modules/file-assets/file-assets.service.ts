@@ -130,16 +130,16 @@ export class FileAssetsService {
     return { deduped: false, asset: created };
   }
 
-  async createReference(deviceId: string, dto: CreateReferenceDto) {
+  async createReference(userId: string, dto: CreateReferenceDto) {
     await this.ensureAssetExists(dto.assetId);
 
     const existing = await this.prisma.fileReference.findUnique({
       where: {
-        assetId_bizType_bizId_deviceId: {
+        assetId_bizType_bizId_userId: {
           assetId: dto.assetId,
           bizType: dto.bizType,
           bizId: dto.bizId,
-          deviceId,
+          userId,
         },
       },
     });
@@ -151,7 +151,7 @@ export class FileAssetsService {
           assetId: dto.assetId,
           bizType: dto.bizType,
           bizId: dto.bizId,
-          deviceId,
+          userId,
         },
       });
 
@@ -167,14 +167,14 @@ export class FileAssetsService {
     });
   }
 
-  async deleteReference(deviceId: string, dto: DeleteReferenceDto) {
+  async deleteReference(userId: string, dto: DeleteReferenceDto) {
     const existing = await this.prisma.fileReference.findUnique({
       where: {
-        assetId_bizType_bizId_deviceId: {
+        assetId_bizType_bizId_userId: {
           assetId: dto.assetId,
           bizType: dto.bizType,
           bizId: dto.bizId,
-          deviceId,
+          userId,
         },
       },
     });
@@ -208,7 +208,7 @@ export class FileAssetsService {
     });
   }
 
-  async setCurrentAvatar(deviceId: string, dto: SetCurrentAvatarDto) {
+  async setCurrentAvatar(userId: string, dto: SetCurrentAvatarDto) {
     const asset = await this.ensureAssetExists(dto.assetId);
     if (asset.group !== FileAssetGroup.avatar) {
       throw new BadRequestException('仅支持设置 avatar 分组文件为头像');
@@ -217,8 +217,8 @@ export class FileAssetsService {
     const currentRefs = await this.prisma.fileReference.findMany({
       where: {
         bizType: 'avatar',
-        bizId: deviceId,
-        deviceId,
+        bizId: userId,
+        userId,
       },
     });
 
@@ -227,8 +227,8 @@ export class FileAssetsService {
         await tx.fileReference.deleteMany({
           where: {
             bizType: 'avatar',
-            bizId: deviceId,
-            deviceId,
+            bizId: userId,
+            userId,
           },
         });
         await Promise.all(
@@ -243,11 +243,11 @@ export class FileAssetsService {
 
       const alreadyBound = await tx.fileReference.findUnique({
         where: {
-          assetId_bizType_bizId_deviceId: {
+          assetId_bizType_bizId_userId: {
             assetId: dto.assetId,
             bizType: 'avatar',
-            bizId: deviceId,
-            deviceId,
+            bizId: userId,
+            userId,
           },
         },
       });
@@ -257,8 +257,8 @@ export class FileAssetsService {
           data: {
             assetId: dto.assetId,
             bizType: 'avatar',
-            bizId: deviceId,
-            deviceId,
+            bizId: userId,
+            userId,
           },
         });
         await tx.fileAsset.update({
@@ -271,15 +271,15 @@ export class FileAssetsService {
       }
     });
 
-    return this.getCurrentAvatar(deviceId);
+    return this.getCurrentAvatar(userId);
   }
 
-  async getCurrentAvatar(deviceId: string) {
+  async getCurrentAvatar(userId: string) {
     const ref = await this.prisma.fileReference.findFirst({
       where: {
         bizType: 'avatar',
-        bizId: deviceId,
-        deviceId,
+        bizId: userId,
+        userId,
       },
       orderBy: { createdAt: 'desc' },
     });

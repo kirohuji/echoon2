@@ -47,11 +47,9 @@ MVP 阶段建议聚焦三件事：
 - 首次进入必须弹出题库绑定 Dialog（含 4 个配置项联动）
 - 顶部导航与个人入口必须保持全局可达
 - 练习页快捷键必须完整支持：`Space/A/T/F/←/→/Enter`
-- 本地持久化键必须按需求文档落地：
-  - `guide-exam-config`
-  - `guide-exam-favorites`
-  - `guide-exam-words`
-  - `guide-exam-preferences`
+- 持久化与数据源：
+  - 题库绑定：登录后 `GET /bootstrap` 写入内存 `config.store`（不再使用 `guide-exam-config` localStorage）
+  - `guide-exam-favorites` / `guide-exam-words` / `guide-exam-preferences`：按需求文档的本地键（可与后端同步演进）
 - 业务规则必须保持：
   - 进入练习页自动回到顶部
   - 开启自动播放后，切题自动播放
@@ -250,8 +248,7 @@ apps/frontend/src
 MVP 推荐 `zustand`，按需求文档拆三类状态：
 
 1. `config.store`
-   - 题库绑定配置（province/language/examType/interviewForm）
-   - 对应本地键：`guide-exam-config`
+   - 题库绑定配置（province/language/examType/interviewForm），由 `GET /bootstrap` 与 `POST /config/bind` 驱动；**不**再 `persist` 到 `guide-exam-config`
 2. `learning-asset.store`
    - 收藏题目 ID 集合（`guide-exam-favorites`）
    - 生词 term 集合（`guide-exam-words`）
@@ -262,8 +259,8 @@ MVP 推荐 `zustand`，按需求文档拆三类状态：
 
 持久化策略：
 
-- 配置、收藏、生词、偏好全部 `localStorage`
-- 用户登录态（若后续接入账号）单独设计，不影响当前需求主链路
+- 题库绑定：服务端为准，前端仅内存；收藏、生词、偏好仍可用 `localStorage`（`persist`）
+- 用户登录态：Better Auth + Bearer；业务 API 需登录
 
 ---
 

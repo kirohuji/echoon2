@@ -6,7 +6,7 @@ import { PracticeActionDto } from './dto/practice-action.dto';
 export class PracticeService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getTopicQuestions(deviceId: string, topicId: string) {
+  async getTopicQuestions(userId: string, topicId: string) {
     const topic = await this.prisma.questionTopic.findUnique({
       where: { id: topicId },
     });
@@ -25,7 +25,7 @@ export class PracticeService {
 
     const progresses = await this.prisma.practiceProgress.findMany({
       where: {
-        deviceId,
+        userId,
         questionId: { in: items.map((i) => i.id) },
       },
     });
@@ -57,7 +57,7 @@ export class PracticeService {
     };
   }
 
-  async getQuestionDetail(deviceId: string, questionId: string) {
+  async getQuestionDetail(userId: string, questionId: string) {
     const item = await this.prisma.questionItem.findUnique({
       where: { id: questionId },
       include: {
@@ -73,17 +73,17 @@ export class PracticeService {
     }
 
     const progress = await this.prisma.practiceProgress.findUnique({
-      where: { deviceId_questionId: { deviceId, questionId } },
+      where: { userId_questionId: { userId, questionId } },
     });
 
     const isFavorited = await this.prisma.favoriteQuestion.findUnique({
-      where: { deviceId_questionId: { deviceId, questionId } },
+      where: { userId_questionId: { userId, questionId } },
     });
 
     await this.prisma.practiceProgress.upsert({
-      where: { deviceId_questionId: { deviceId, questionId } },
+      where: { userId_questionId: { userId, questionId } },
       create: {
-        deviceId,
+        userId,
         questionId,
         seenAt: new Date(),
       },
@@ -94,13 +94,13 @@ export class PracticeService {
 
     await this.prisma.dailyActivity.upsert({
       where: {
-        deviceId_date: {
-          deviceId,
+        userId_date: {
+          userId,
           date: new Date(new Date().toISOString().split('T')[0]),
         },
       },
       create: {
-        deviceId,
+        userId,
         date: new Date(new Date().toISOString().split('T')[0]),
         count: 1,
       },
@@ -118,10 +118,10 @@ export class PracticeService {
     };
   }
 
-  async recordAction(deviceId: string, dto: PracticeActionDto) {
+  async recordAction(userId: string, dto: PracticeActionDto) {
     const record = await this.prisma.practiceRecord.create({
       data: {
-        deviceId,
+        userId,
         questionId: dto.questionId,
         actionType: dto.actionType,
         payload: dto.payload ?? undefined,
@@ -131,9 +131,9 @@ export class PracticeService {
     if (dto.actionType === 'rate' && dto.payload?.score !== undefined) {
       const score = Number(dto.payload.score);
       await this.prisma.practiceProgress.upsert({
-        where: { deviceId_questionId: { deviceId, questionId: dto.questionId } },
+        where: { userId_questionId: { userId, questionId: dto.questionId } },
         create: {
-          deviceId,
+          userId,
           questionId: dto.questionId,
           masteryScore: score,
           seenAt: new Date(),
@@ -147,9 +147,10 @@ export class PracticeService {
     return record;
   }
 
-  async lookupDictionary(term: string) {
+  async lookupDictionary(userId: string, term: string) {
     const words = await this.prisma.vocabularyWord.findMany({
       where: {
+        userId,
         term: { contains: term, mode: 'insensitive' },
       },
       orderBy: { createdAt: 'desc' },

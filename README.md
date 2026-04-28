@@ -10,7 +10,7 @@
 | UI | shadcn/ui (base-nova) + Tailwind CSS + next-themes |
 | 表单 | react-hook-form + zod |
 | 表格 | @tanstack/react-table |
-| 状态 | Zustand (persist) |
+| 状态 | Zustand（题库绑定由登录后 `GET /bootstrap` 注入内存；部分偏好/收藏仍可用 persist） |
 | 国际化 | i18next + react-i18next |
 | 后端 | NestJS 10 |
 | 数据库 | PostgreSQL + Prisma 6 |
@@ -49,7 +49,7 @@ echoon2/
 
 ## API 基础路径
 
-所有接口以 `/api/v1/guide-exam` 为前缀。认证方式：`x-device-id` header（匿名 deviceId）。
+所有接口以 `/api/v1/guide-exam` 为前缀。认证方式：Better Auth 会话 + `Authorization: Bearer <token>`；业务数据按登录用户 `userId` 落库。
 
 ## 前端路由
 

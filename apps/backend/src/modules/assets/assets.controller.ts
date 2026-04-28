@@ -3,64 +3,54 @@ import {
   Controller,
   Delete,
   Get,
-  Headers,
   Param,
   Post,
   Query,
+  Req,
 } from '@nestjs/common';
+import type { Request } from 'express';
 import { AssetsService } from './assets.service';
 import { AddWordDto } from './dto/add-word.dto';
 import { PaginationDto } from '../../common/dto/pagination.dto';
+import { requireAuthSession } from '../auth/session.util';
 
 @Controller('assets')
 export class AssetsController {
   constructor(private readonly assetsService: AssetsService) {}
 
   @Get('favorites')
-  getFavorites(
-    @Headers('x-device-id') deviceId: string,
-    @Query() pagination: PaginationDto,
-  ) {
-    return this.assetsService.getFavorites(deviceId, pagination);
+  async getFavorites(@Req() req: Request, @Query() pagination: PaginationDto) {
+    const session = await requireAuthSession(req);
+    return this.assetsService.getFavorites(session.user.id, pagination);
   }
 
   @Post('favorites/:questionId')
-  addFavorite(
-    @Headers('x-device-id') deviceId: string,
-    @Param('questionId') questionId: string,
-  ) {
-    return this.assetsService.addFavorite(deviceId, questionId);
+  async addFavorite(@Req() req: Request, @Param('questionId') questionId: string) {
+    const session = await requireAuthSession(req);
+    return this.assetsService.addFavorite(session.user.id, questionId);
   }
 
   @Delete('favorites/:questionId')
-  removeFavorite(
-    @Headers('x-device-id') deviceId: string,
-    @Param('questionId') questionId: string,
-  ) {
-    return this.assetsService.removeFavorite(deviceId, questionId);
+  async removeFavorite(@Req() req: Request, @Param('questionId') questionId: string) {
+    const session = await requireAuthSession(req);
+    return this.assetsService.removeFavorite(session.user.id, questionId);
   }
 
   @Get('words')
-  getWords(
-    @Headers('x-device-id') deviceId: string,
-    @Query() pagination: PaginationDto,
-  ) {
-    return this.assetsService.getWords(deviceId, pagination);
+  async getWords(@Req() req: Request, @Query() pagination: PaginationDto) {
+    const session = await requireAuthSession(req);
+    return this.assetsService.getWords(session.user.id, pagination);
   }
 
   @Post('words')
-  addWord(
-    @Headers('x-device-id') deviceId: string,
-    @Body() dto: AddWordDto,
-  ) {
-    return this.assetsService.addWord(deviceId, dto);
+  async addWord(@Req() req: Request, @Body() dto: AddWordDto) {
+    const session = await requireAuthSession(req);
+    return this.assetsService.addWord(session.user.id, dto);
   }
 
   @Delete('words/:term')
-  removeWord(
-    @Headers('x-device-id') deviceId: string,
-    @Param('term') term: string,
-  ) {
-    return this.assetsService.removeWord(deviceId, term);
+  async removeWord(@Req() req: Request, @Param('term') term: string) {
+    const session = await requireAuthSession(req);
+    return this.assetsService.removeWord(session.user.id, term);
   }
 }

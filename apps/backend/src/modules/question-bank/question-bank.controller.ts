@@ -1,7 +1,7 @@
-import { Controller, Get, Headers, Query, Req } from '@nestjs/common';
+import { Controller, Get, Query, Req } from '@nestjs/common';
 import type { Request } from 'express';
 import { QuestionBankService } from './question-bank.service';
-import { getOptionalAuthSession } from '../auth/session.util';
+import { requireAuthSession } from '../auth/session.util';
 
 @Controller('question-bank')
 export class QuestionBankController {
@@ -10,15 +10,10 @@ export class QuestionBankController {
   @Get('home')
   async getHome(
     @Req() req: Request,
-    @Headers('x-device-id') deviceId: string,
     @Query('mode') mode?: string,
     @Query('keyword') keyword?: string,
   ) {
-    const session = await getOptionalAuthSession(req);
-    return this.questionBankService.getHome(
-      { deviceId, userId: session?.user?.id },
-      mode,
-      keyword,
-    );
+    const session = await requireAuthSession(req);
+    return this.questionBankService.getHome(session.user.id, mode, keyword);
   }
 }

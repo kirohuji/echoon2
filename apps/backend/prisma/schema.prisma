@@ -21,6 +21,14 @@ model User {
   sessions            Session[]
   accounts            Account[]
   bindingConfig       UserBindingConfig?
+  favoriteQuestions   FavoriteQuestion[]
+  vocabularyWords     VocabularyWord[]
+  practiceRecords     PracticeRecord[]
+  practiceProgresses  PracticeProgress[]
+  mockExamRecords     MockExamRecord[]
+  dailyActivities     DailyActivity[]
+  userPreference      UserPreference?
+  fileReferences      FileReference[]
 
   @@unique([email])
   @@map("user")
@@ -141,9 +149,8 @@ model QuestionContent {
 
 model UserBindingConfig {
   id            String   @id @default(cuid())
-  user          User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId        String?  @unique
-  deviceId      String?  @unique
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId        String   @unique
   province      String
   language      String
   examType      String
@@ -156,49 +163,53 @@ model UserBindingConfig {
 
 model FavoriteQuestion {
   id         String   @id @default(cuid())
-  deviceId   String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     String
   question   QuestionItem @relation(fields: [questionId], references: [id])
   questionId String
   createdAt  DateTime @default(now())
-  @@unique([deviceId, questionId])
-  @@index([deviceId, createdAt(sort: Desc)])
+  @@unique([userId, questionId])
+  @@index([userId, createdAt(sort: Desc)])
   @@map("favorite_question")
 }
 
 model VocabularyWord {
   id               String   @id @default(cuid())
-  deviceId         String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId           String
   term             String
   definition       String?
   sourceQuestion   QuestionItem? @relation(fields: [sourceQuestionId], references: [id])
   sourceQuestionId String?
   createdAt        DateTime @default(now())
-  @@unique([deviceId, term])
-  @@index([deviceId, createdAt(sort: Desc)])
+  @@unique([userId, term])
+  @@index([userId, createdAt(sort: Desc)])
   @@map("vocabulary_word")
 }
 
 model PracticeRecord {
   id         String   @id @default(cuid())
-  deviceId   String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     String
   question   QuestionItem @relation(fields: [questionId], references: [id])
   questionId String
   actionType String
   payload    Json?
   createdAt  DateTime @default(now())
-  @@index([deviceId, createdAt(sort: Desc)])
+  @@index([userId, createdAt(sort: Desc)])
   @@map("practice_record")
 }
 
 model PracticeProgress {
   id           String   @id @default(cuid())
-  deviceId     String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId       String
   question     QuestionItem @relation(fields: [questionId], references: [id])
   questionId   String
   masteryScore Int      @default(0)
   seenAt       DateTime?
   updatedAt    DateTime @updatedAt
-  @@unique([deviceId, questionId])
+  @@unique([userId, questionId])
   @@map("practice_progress")
 }
 
@@ -230,13 +241,14 @@ model MockPaperQuestion {
 
 model MockExamRecord {
   id       String   @id @default(cuid())
-  deviceId String
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId   String
   paper    MockPaper @relation(fields: [paperId], references: [id])
   paperId  String
   score    Int
   weakness String[]
   takenAt  DateTime @default(now())
-  @@index([deviceId, takenAt(sort: Desc)])
+  @@index([userId, takenAt(sort: Desc)])
   @@map("mock_exam_record")
 }
 
@@ -244,16 +256,18 @@ model MockExamRecord {
 
 model DailyActivity {
   id       String   @id @default(cuid())
-  deviceId String
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId   String
   date     DateTime @db.Date
   count    Int      @default(1)
-  @@unique([deviceId, date])
+  @@unique([userId, date])
   @@map("daily_activity")
 }
 
 model UserPreference {
   id        String   @id @default(cuid())
-  deviceId  String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String   @unique
   autoPlay  Boolean  @default(false)
   language  String   @default("zh-CN")
   theme     String   @default("system")
@@ -311,10 +325,11 @@ model FileReference {
   assetId   String
   bizType   String
   bizId     String
-  deviceId  String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
   createdAt DateTime  @default(now())
-  @@unique([assetId, bizType, bizId, deviceId])
-  @@index([bizType, bizId, deviceId])
+  @@unique([assetId, bizType, bizId, userId])
+  @@index([bizType, bizId, userId])
   @@map("file_reference")
 }
 

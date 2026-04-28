@@ -12,9 +12,9 @@ export class MembershipService {
     return plans;
   }
 
-  async getCurrentMembership(deviceId: string) {
+  async getCurrentMembership(userId: string) {
     return {
-      deviceId,
+      userId,
       plan: null,
       isActive: false,
       expiredAt: null,

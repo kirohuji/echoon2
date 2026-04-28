@@ -1,5 +1,7 @@
-import { Controller, Get, Headers } from '@nestjs/common';
+import { Controller, Get, Req } from '@nestjs/common';
+import type { Request } from 'express';
 import { MembershipService } from './membership.service';
+import { requireAuthSession } from '../auth/session.util';
 
 @Controller('membership')
 export class MembershipController {
@@ -11,8 +13,9 @@ export class MembershipController {
   }
 
   @Get('current')
-  getCurrentMembership(@Headers('x-device-id') deviceId: string) {
-    return this.membershipService.getCurrentMembership(deviceId);
+  async getCurrentMembership(@Req() req: Request) {
+    const session = await requireAuthSession(req);
+    return this.membershipService.getCurrentMembership(session.user.id);
   }
 
   @Get('benefits')

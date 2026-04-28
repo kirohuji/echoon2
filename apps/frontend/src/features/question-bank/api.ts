@@ -1,4 +1,5 @@
 import { get, post } from '@/lib/request'
+import type { BootstrapPayload } from '@/stores/config.store'
 
 export interface ConfigOptions {
   provinces: { label: string; value: string }[]
@@ -60,7 +61,7 @@ export interface QuestionBankHome {
   otherTopics: OtherTopic[]
 }
 
-export const getBootstrap = () => get('/bootstrap')
+export const getBootstrap = (): Promise<BootstrapPayload> => get('/bootstrap')
 
 export const getConfigOptions = (): Promise<ConfigOptions> => get('/config/options')
 

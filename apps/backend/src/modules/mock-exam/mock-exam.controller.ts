@@ -1,51 +1,47 @@
-import { Body, Controller, Get, Headers, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query, Req } from '@nestjs/common';
+import type { Request } from 'express';
 import { MockExamService } from './mock-exam.service';
 import { StartExamDto, SubmitExamDto } from './dto/submit-exam.dto';
 import { PaginationDto } from '../../common/dto/pagination.dto';
+import { requireAuthSession } from '../auth/session.util';
 
 @Controller('mock')
 export class MockExamController {
   constructor(private readonly mockExamService: MockExamService) {}
 
   @Get('papers')
-  getPapers(@Headers('x-device-id') deviceId: string) {
-    return this.mockExamService.getPapers(deviceId);
+  async getPapers(@Req() req: Request) {
+    const session = await requireAuthSession(req);
+    return this.mockExamService.getPapers(session.user.id);
   }
 
   @Get('recent-scores')
-  getRecentScores(
-    @Headers('x-device-id') deviceId: string,
-    @Query() pagination: PaginationDto,
-  ) {
-    return this.mockExamService.getRecentScores(deviceId, pagination);
+  async getRecentScores(@Req() req: Request, @Query() pagination: PaginationDto) {
+    const session = await requireAuthSession(req);
+    return this.mockExamService.getRecentScores(session.user.id, pagination);
   }
 
   @Get('scores')
-  getScores(
-    @Headers('x-device-id') deviceId: string,
-    @Query('limit') limit?: string,
-  ) {
-    return this.mockExamService.getScores(deviceId, limit ? parseInt(limit, 10) : 10);
+  async getScores(@Req() req: Request, @Query('limit') limit?: string) {
+    const session = await requireAuthSession(req);
+    return this.mockExamService.getScores(session.user.id, limit ? parseInt(limit, 10) : 10);
   }
 
   @Get('dashboard')
-  getDashboard(@Headers('x-device-id') deviceId: string) {
-    return this.mockExamService.getDashboard(deviceId);
+  async getDashboard(@Req() req: Request) {
+    const session = await requireAuthSession(req);
+    return this.mockExamService.getDashboard(session.user.id);
   }
 
   @Post('start')
-  startExam(
-    @Headers('x-device-id') deviceId: string,
-    @Body() dto: StartExamDto,
-  ) {
-    return this.mockExamService.startExam(deviceId, dto);
+  async startExam(@Req() req: Request, @Body() dto: StartExamDto) {
+    const session = await requireAuthSession(req);
+    return this.mockExamService.startExam(session.user.id, dto);
   }
 
   @Post('submit')
-  submitExam(
-    @Headers('x-device-id') deviceId: string,
-    @Body() dto: SubmitExamDto,
-  ) {
-    return this.mockExamService.submitExam(deviceId, dto);
+  async submitExam(@Req() req: Request, @Body() dto: SubmitExamDto) {
+    const session = await requireAuthSession(req);
+    return this.mockExamService.submitExam(session.user.id, dto);
   }
 }

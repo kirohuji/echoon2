@@ -52,34 +52,34 @@ export class ProfileService {
     return user;
   }
 
-  async getOverview(deviceId: string) {
+  async getOverview(userId: string) {
     const config = await this.prisma.userBindingConfig.findUnique({
-      where: { deviceId },
+      where: { userId },
       include: { bank: true },
     });
 
     const totalPracticed = await this.prisma.practiceProgress.count({
-      where: { deviceId, seenAt: { not: null } },
+      where: { userId, seenAt: { not: null } },
     });
 
     const masteredCount = await this.prisma.practiceProgress.count({
-      where: { deviceId, masteryScore: { gte: 60 } },
+      where: { userId, masteryScore: { gte: 60 } },
     });
 
     const favoritesCount = await this.prisma.favoriteQuestion.count({
-      where: { deviceId },
+      where: { userId },
     });
 
     const wordsCount = await this.prisma.vocabularyWord.count({
-      where: { deviceId },
+      where: { userId },
     });
 
     const mockExamCount = await this.prisma.mockExamRecord.count({
-      where: { deviceId },
+      where: { userId },
     });
 
     const latestExam = await this.prisma.mockExamRecord.findFirst({
-      where: { deviceId },
+      where: { userId },
       orderBy: { takenAt: 'desc' },
       include: {
         paper: { select: { title: true } },
@@ -87,7 +87,7 @@ export class ProfileService {
     });
 
     const avgScoreResult = await this.prisma.mockExamRecord.aggregate({
-      where: { deviceId },
+      where: { userId },
       _avg: { score: true },
     });
 
@@ -95,7 +95,7 @@ export class ProfileService {
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     const recentActivity = await this.prisma.dailyActivity.findMany({
       where: {
-        deviceId,
+        userId,
         date: { gte: sevenDaysAgo },
       },
       orderBy: { date: 'desc' },
@@ -104,7 +104,7 @@ export class ProfileService {
     const streakDays = this.calculateStreak(recentActivity);
 
     return {
-      deviceId,
+      userId,
       bank: config?.bank ?? null,
       stats: {
         totalPracticed,
@@ -154,13 +154,13 @@ export class ProfileService {
     return streak;
   }
 
-  async getActivityHeatmap(deviceId: string) {
+  async getActivityHeatmap(userId: string) {
     const oneYearAgo = new Date();
     oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
 
     const activities = await this.prisma.dailyActivity.findMany({
       where: {
-        deviceId,
+        userId,
         date: { gte: oneYearAgo },
       },
       orderBy: { date: 'asc' },
@@ -174,11 +174,11 @@ export class ProfileService {
     };
   }
 
-  async getPracticeRecords(deviceId: string, pagination: PaginationDto) {
+  async getPracticeRecords(userId: string, pagination: PaginationDto) {
     const { page = 1, pageSize = 20 } = pagination;
     const skip = (page - 1) * pageSize;
 
-    const where: any = { deviceId };
+    const where: Record<string, unknown> = { userId };
     if (pagination.keyword) {
       where.actionType = { contains: pagination.keyword, mode: 'insensitive' };
     }

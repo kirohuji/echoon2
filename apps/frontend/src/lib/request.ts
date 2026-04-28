@@ -1,31 +1,12 @@
 import axios from 'axios'
 import { clearBearerToken, getBearerToken } from '@/features/auth/client'
 
-function createDeviceId(): string {
-  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-    return crypto.randomUUID()
+if (typeof window !== 'undefined') {
+  try {
+    localStorage.removeItem('guide-exam-device-id')
+  } catch {
+    /* ignore */
   }
-
-  if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
-    const bytes = new Uint8Array(16)
-    crypto.getRandomValues(bytes)
-    bytes[6] = (bytes[6] & 0x0f) | 0x40
-    bytes[8] = (bytes[8] & 0x3f) | 0x80
-    const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('')
-    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`
-  }
-
-  return `device-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`
-}
-
-function getOrCreateDeviceId(): string {
-  const key = 'guide-exam-device-id'
-  let id = localStorage.getItem(key)
-  if (!id) {
-    id = createDeviceId()
-    localStorage.setItem(key, id)
-  }
-  return id
 }
 
 const instance = axios.create({
@@ -35,7 +16,6 @@ const instance = axios.create({
 })
 
 instance.interceptors.request.use((config) => {
-  config.headers['x-device-id'] = getOrCreateDeviceId()
   const token = getBearerToken()
   if (token) {
     config.headers.Authorization = `Bearer ${token}`

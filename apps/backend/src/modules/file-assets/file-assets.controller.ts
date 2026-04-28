@@ -3,16 +3,18 @@ import {
   Controller,
   Delete,
   Get,
-  Headers,
   Param,
   Post,
+  Req,
 } from '@nestjs/common';
+import type { Request } from 'express';
 import { CompleteUploadDto } from './dto/complete-upload.dto';
 import { CreateCosPolicyDto } from './dto/create-cos-policy.dto';
 import { CreateReferenceDto } from './dto/create-reference.dto';
 import { DeleteReferenceDto } from './dto/delete-reference.dto';
 import { FileAssetsService } from './file-assets.service';
 import { SetCurrentAvatarDto } from './dto/set-current-avatar.dto';
+import { requireAuthSession } from '../auth/session.util';
 
 @Controller('file-assets')
 export class FileAssetsController {
@@ -29,32 +31,27 @@ export class FileAssetsController {
   }
 
   @Post('references')
-  createReference(
-    @Headers('x-device-id') deviceId: string,
-    @Body() dto: CreateReferenceDto,
-  ) {
-    return this.fileAssetsService.createReference(deviceId || 'anonymous', dto);
+  async createReference(@Req() req: Request, @Body() dto: CreateReferenceDto) {
+    const session = await requireAuthSession(req);
+    return this.fileAssetsService.createReference(session.user.id, dto);
   }
 
   @Delete('references')
-  deleteReference(
-    @Headers('x-device-id') deviceId: string,
-    @Body() dto: DeleteReferenceDto,
-  ) {
-    return this.fileAssetsService.deleteReference(deviceId || 'anonymous', dto);
+  async deleteReference(@Req() req: Request, @Body() dto: DeleteReferenceDto) {
+    const session = await requireAuthSession(req);
+    return this.fileAssetsService.deleteReference(session.user.id, dto);
   }
 
   @Get('avatar/current')
-  getCurrentAvatar(@Headers('x-device-id') deviceId: string) {
-    return this.fileAssetsService.getCurrentAvatar(deviceId || 'anonymous');
+  async getCurrentAvatar(@Req() req: Request) {
+    const session = await requireAuthSession(req);
+    return this.fileAssetsService.getCurrentAvatar(session.user.id);
   }
 
   @Post('avatar/current')
-  setCurrentAvatar(
-    @Headers('x-device-id') deviceId: string,
-    @Body() dto: SetCurrentAvatarDto,
-  ) {
-    return this.fileAssetsService.setCurrentAvatar(deviceId || 'anonymous', dto);
+  async setCurrentAvatar(@Req() req: Request, @Body() dto: SetCurrentAvatarDto) {
+    const session = await requireAuthSession(req);
+    return this.fileAssetsService.setCurrentAvatar(session.user.id, dto);
   }
 
   @Get(':id/private-url')

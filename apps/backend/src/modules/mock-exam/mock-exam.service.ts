@@ -7,12 +7,12 @@ import { StartExamDto, SubmitExamDto } from './dto/submit-exam.dto';
 export class MockExamService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getPapers(deviceId: string) {
+  async getPapers(userId: string) {
     const config = await this.prisma.userBindingConfig.findUnique({
-      where: { deviceId },
+      where: { userId },
     });
 
-    const where: any = {};
+    const where: Record<string, unknown> = {};
     if (config?.bankId) {
       where.bankId = config.bankId;
     }
@@ -28,7 +28,7 @@ export class MockExamService {
 
     const records = await this.prisma.mockExamRecord.findMany({
       where: {
-        deviceId,
+        userId,
         paperId: { in: papers.map((p) => p.id) },
       },
       orderBy: { takenAt: 'desc' },
@@ -53,13 +53,13 @@ export class MockExamService {
     }));
   }
 
-  async getRecentScores(deviceId: string, pagination: PaginationDto) {
+  async getRecentScores(userId: string, pagination: PaginationDto) {
     const { page = 1, pageSize = 20 } = pagination;
     const skip = (page - 1) * pageSize;
 
     const [list, total] = await this.prisma.$transaction([
       this.prisma.mockExamRecord.findMany({
-        where: { deviceId },
+        where: { userId },
         orderBy: { takenAt: 'desc' },
         skip,
         take: pageSize,
@@ -69,15 +69,15 @@ export class MockExamService {
           },
         },
       }),
-      this.prisma.mockExamRecord.count({ where: { deviceId } }),
+      this.prisma.mockExamRecord.count({ where: { userId } }),
     ]);
 
     return toPageResult(list, total, pagination);
   }
 
-  async getScores(deviceId: string, limit: number) {
+  async getScores(userId: string, limit: number) {
     const records = await this.prisma.mockExamRecord.findMany({
-      where: { deviceId },
+      where: { userId },
       orderBy: { takenAt: 'desc' },
       take: limit,
       include: {
@@ -99,9 +99,9 @@ export class MockExamService {
     }));
   }
 
-  async getDashboard(deviceId: string) {
+  async getDashboard(userId: string) {
     const records = await this.prisma.mockExamRecord.findMany({
-      where: { deviceId },
+      where: { userId },
       select: { score: true },
     });
 
@@ -118,7 +118,7 @@ export class MockExamService {
     return { avgScore, totalMocks, passRate, bestScore };
   }
 
-  async startExam(deviceId: string, dto: StartExamDto) {
+  async startExam(_userId: string, dto: StartExamDto) {
     const paper = await this.prisma.mockPaper.findUnique({
       where: { id: dto.paperId },
       include: {
@@ -160,7 +160,7 @@ export class MockExamService {
     };
   }
 
-  async submitExam(deviceId: string, dto: SubmitExamDto) {
+  async submitExam(userId: string, dto: SubmitExamDto) {
     const paper = await this.prisma.mockPaper.findUnique({
       where: { id: dto.paperId },
     });
@@ -171,7 +171,7 @@ export class MockExamService {
 
     const record = await this.prisma.mockExamRecord.create({
       data: {
-        deviceId,
+        userId,
         paperId: dto.paperId,
         score: dto.score,
         weakness: dto.weakness ?? [],
@@ -180,13 +180,13 @@ export class MockExamService {
 
     await this.prisma.dailyActivity.upsert({
       where: {
-        deviceId_date: {
-          deviceId,
+        userId_date: {
+          userId,
           date: new Date(new Date().toISOString().split('T')[0]),
         },
       },
       create: {
-        deviceId,
+        userId,
         date: new Date(new Date().toISOString().split('T')[0]),
         count: 1,
       },
@@ -196,7 +196,7 @@ export class MockExamService {
     });
 
     const allScores = await this.prisma.mockExamRecord.findMany({
-      where: { deviceId, paperId: dto.paperId },
+      where: { userId, paperId: dto.paperId },
       orderBy: { takenAt: 'desc' },
       take: 10,
       select: { score: true, takenAt: true },
