@@ -44,6 +44,7 @@ import { useAuth } from '@/providers/auth-provider'
 import { usePreferencesStore } from '@/stores/preferences.store'
 import { useWordsStore, type WordEntry } from '@/stores/assets.store'
 import { useConfigStore } from '@/stores/config.store'
+import { useLayoutStore } from '@/stores/layout.store'
 import {
   lookupWord, getBestPhonetic, getFirstAudio,
   type DictEntry, type Meaning,
@@ -52,7 +53,7 @@ import { enrichWord, type WordEnrichmentResult, type WordExampleItem } from '@/l
 import { synthesizeText } from '@/lib/tts-api'
 import { cn } from '@/lib/cn'
 import i18n from '@/lib/i18n'
-import { getCurrentAvatar, setCurrentAvatar, uploadFileToCosAndComplete } from '@/features/file-assets/api'
+import { getCurrentAvatar } from '@/features/file-assets/api'
 
 type Tab = 'overview' | 'records' | 'favorites' | 'words' | 'settings'
 type MobileView = Tab | 'home'
@@ -77,6 +78,18 @@ export function ProfilePage() {
   const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState<Tab>('overview')
   const [mobileView, setMobileView] = useState<MobileView>('home')
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
+  const setBottomNavVisible = useLayoutStore((s) => s.setBottomNavVisible)
+
+  useEffect(() => {
+    getUserProfile().then(setUserProfile).catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    setBottomNavVisible(mobileView === 'home')
+  }, [mobileView, setBottomNavVisible])
+
+  const nickname = userProfile?.name || userProfile?.username || '导游备考者'
 
   return (
     <div>
@@ -229,20 +242,24 @@ function IosSection({ header, children }: { header?: string; children: React.Rea
 function MobileProfileHome({ onNavigate }: { onNavigate: (view: MobileView) => void }) {
   const { theme, setTheme } = useTheme()
   const { language, setLanguage } = usePreferencesStore()
+  const navigate = useNavigate()
   const [overview, setOverview] = useState<ProfileOverview | null>(null)
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [showThemeDialog, setShowThemeDialog] = useState(false)
   const [showLanguageDialog, setShowLanguageDialog] = useState(false)
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
-  const [avatarUploading, setAvatarUploading] = useState(false)
-  const avatarInputRef = useRef<HTMLInputElement | null>(null)
 
   useEffect(() => {
-    getProfileOverview()
-      .then(setOverview)
-      .catch(() => {})
-      .finally(() => setIsLoading(false))
-    getCurrentAvatar().then((res) => setAvatarUrl(res?.url ?? null)).catch(() => {})
+    Promise.allSettled([
+      getProfileOverview(),
+      getUserProfile(),
+      getCurrentAvatar(),
+    ]).then(([ovRes, upRes, avRes]) => {
+      if (ovRes.status === 'fulfilled') setOverview(ovRes.value)
+      if (upRes.status === 'fulfilled') setUserProfile(upRes.value)
+      if (avRes.status === 'fulfilled') setAvatarUrl(avRes.value?.url ?? null)
+    }).finally(() => setIsLoading(false))
   }, [])
 
   const navItems = [
@@ -259,29 +276,10 @@ function MobileProfileHome({ onNavigate }: { onNavigate: (view: MobileView) => v
     i18n.changeLanguage(lang)
   }
 
-  const nickname = overview?.nickname || '导游备考者'
+  const nickname = userProfile?.name || userProfile?.username || '导游备考者'
 
-  const onPickAvatar = () => {
-    avatarInputRef.current?.click()
-  }
-
-  const onAvatarFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
-    event.currentTarget.value = ''
-    if (!file.type.startsWith('image/')) return
-    if (file.size > 5 * 1024 * 1024) return
-
-    setAvatarUploading(true)
-    try {
-      const asset = await uploadFileToCosAndComplete({ file, group: 'avatar' })
-      const current = await setCurrentAvatar(asset.id)
-      setAvatarUrl(current.url)
-    } catch (error) {
-      console.error('avatar upload failed', error)
-    } finally {
-      setAvatarUploading(false)
-    }
+  const onTapAvatar = () => {
+    navigate('/account')
   }
 
   return (
@@ -291,17 +289,9 @@ function MobileProfileHome({ onNavigate }: { onNavigate: (view: MobileView) => v
         <div className="flex items-center gap-3">
           {/* 头像 */}
           <div className="relative">
-            <input
-              ref={avatarInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={onAvatarFileChange}
-            />
             <button
               type="button"
-              disabled={avatarUploading}
-              onClick={onPickAvatar}
+              onClick={onTapAvatar}
               className="group relative flex h-[72px] w-[72px] items-center justify-center overflow-hidden rounded-full bg-primary/10 ring-2 ring-primary/15"
             >
               {avatarUrl ? (
@@ -311,7 +301,7 @@ function MobileProfileHome({ onNavigate }: { onNavigate: (view: MobileView) => v
               )}
               <span className="absolute bottom-0 left-0 right-0 flex items-center justify-center gap-1 bg-black/50 py-1 text-[10px] text-white opacity-0 transition-opacity group-hover:opacity-100">
                 <Camera className="h-3 w-3" />
-                {avatarUploading ? '上传中' : '更换'}
+                更换
               </span>
             </button>
           </div>

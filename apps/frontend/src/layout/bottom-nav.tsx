@@ -2,6 +2,7 @@ import React from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { BookOpen, FileText, User } from 'lucide-react'
 import { cn } from '@/lib/cn'
+import { useLayoutStore } from '@/stores/layout.store'
 
 const navItems = [
   { label: '题库', path: '/', icon: BookOpen },
@@ -11,11 +12,14 @@ const navItems = [
 
 export function BottomNav() {
   const location = useLocation()
+  const visible = useLayoutStore((s) => s.bottomNavVisible)
 
   const isActive = (path: string) => {
     if (path === '/') return location.pathname === '/'
     return location.pathname.startsWith(path)
   }
+
+  if (!visible) return null
 
   return (
     <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-border/60 bg-background/95 backdrop-blur-xl pb-[env(safe-area-inset-bottom)]">

@@ -196,7 +196,7 @@ export function HomePage() {
         <MobileCarousel />
 
         {/* 分类宫格 */}
-        <div className="rounded-2xl bg-card p-3 shadow-sm">
+        {/* <div className="rounded-2xl bg-card p-3 shadow-sm">
           <div className="grid grid-cols-5 gap-y-3">
             {categoryItems.map(({ label, icon: Icon, path }) => (
               <Link
@@ -211,7 +211,7 @@ export function HomePage() {
               </Link>
             ))}
           </div>
-        </div>
+        </div> */}
 
         {/* 今日更新 */}
         <MobileSectionCard
