@@ -1,4 +1,5 @@
 import { get, post } from '@/lib/request';
+import instance from '@/lib/request';
 
 export interface AdminNotificationItem {
   id: string;
@@ -45,4 +46,13 @@ export async function createNotification(data: {
 
 export async function searchUsers(keyword: string) {
   return get<SearchUserResult[]>('/admin/notifications/search-users', { keyword });
+}
+
+export async function uploadNotificationImage(file: File): Promise<{ url: string; assetId: string }> {
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await instance.post('/admin/notifications/upload-image', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return res.data?.data ?? res.data;
 }

@@ -1,24 +1,28 @@
-import React, { useEffect, useState, useCallback } from 'react'
+import React, { useEffect, useState, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Bell, Plus, Send, Trash2, Search, Users, Globe, X,
-  Loader2, ArrowLeft, CheckCircle2, UserPlus,
+  Bell, Plus, Send, Search, Users, Globe, X,
+  Loader2, ArrowLeft, UserPlus, ImageIcon,
 } from 'lucide-react'
+import MDEditor from '@uiw/react-md-editor'
+import '@uiw/react-md-editor/markdown-editor.css'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@/components/ui/dialog'
 import { cn } from '@/lib/cn'
 import {
-  listNotifications, createNotification, searchUsers,
+  listNotifications, createNotification, searchUsers, uploadNotificationImage,
   type AdminNotificationItem, type SearchUserResult,
 } from '@/features/admin/api-notifications'
 import { useAuth } from '@/providers/auth-provider'
+
+// ---------- 编辑器样式覆盖：去掉蓝色聚焦环 ----------
+const noRingInput = 'focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none'
 
 export function AdminNotificationsPage() {
   const navigate = useNavigate()
@@ -41,6 +45,10 @@ export function AdminNotificationsPage() {
   const [searchResults, setSearchResults] = useState<SearchUserResult[]>([])
   const [selectedUsers, setSelectedUsers] = useState<SearchUserResult[]>([])
   const [searching, setSearching] = useState(false)
+
+  // Image upload state
+  const [uploadingImage, setUploadingImage] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const fetchList = useCallback(async () => {
     setLoading(true)
@@ -72,6 +80,46 @@ export function AdminNotificationsPage() {
   const removeUser = (userId: string) => {
     setSelectedUsers((prev) => prev.filter((u) => u.id !== userId))
   }
+
+  // ---- 图片上传处理 ----
+  const handleImageFile = async (file: File) => {
+    if (!file.type.startsWith('image/')) return
+    setUploadingImage(true)
+    try {
+      const { url } = await uploadNotificationImage(file)
+      // 在光标位置插入 markdown 图片语法
+      const imageMd = `\n![${file.name}](${url})\n`
+      setFormContent((prev) => prev + imageMd)
+    } catch {
+      // silently fail
+    } finally {
+      setUploadingImage(false)
+    }
+  }
+
+  const handleToolbarImage = () => {
+    fileInputRef.current?.click()
+  }
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) handleImageFile(file)
+    e.target.value = ''
+  }
+
+  // 粘贴图片
+  const handleEditorPaste = useCallback(async (e: React.ClipboardEvent) => {
+    const items = e.clipboardData?.items
+    if (!items) return
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.startsWith('image/')) {
+        e.preventDefault()
+        const file = items[i].getAsFile()
+        if (file) await handleImageFile(file)
+        return
+      }
+    }
+  }, [])
 
   const handleCreate = async () => {
     if (!formTitle.trim() || !formContent.trim()) return
@@ -167,15 +215,16 @@ export function AdminNotificationsPage() {
         </CardContent>
       </Card>
 
-      {/* 新建通知弹窗 */}
+      {/* ====== 新建通知弹窗 ====== */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-3xl max-h-[92vh] flex flex-col p-0">
+          <DialogHeader className="flex-shrink-0 px-6 pt-5 pb-0">
             <DialogTitle>新建通知</DialogTitle>
-            <DialogDescription>向用户发送系统通知，支持 Markdown 格式</DialogDescription>
+            <DialogDescription>向用户发送系统通知，支持 Markdown 与图片嵌入</DialogDescription>
           </DialogHeader>
 
-          <div className="flex-1 space-y-4 overflow-y-auto py-2">
+          <div className="flex-1 space-y-4 overflow-y-auto px-6 py-4">
+            {/* 标题 */}
             <div className="space-y-1.5">
               <label className="text-xs font-medium">标题</label>
               <Input
@@ -183,20 +232,54 @@ export function AdminNotificationsPage() {
                 value={formTitle}
                 onChange={(e) => setFormTitle(e.target.value)}
                 maxLength={100}
+                className={noRingInput}
               />
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium">内容（支持 Markdown）</label>
-              <Textarea
-                placeholder="通知内容，支持 Markdown 格式..."
-                value={formContent}
-                onChange={(e) => setFormContent(e.target.value)}
-                rows={6}
-                className="font-mono text-sm"
+            {/* Markdown 编辑器 */}
+            <div className="space-y-1.5" onPaste={handleEditorPaste}>
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-medium">内容（Markdown）</label>
+                <div className="flex items-center gap-2">
+                  {uploadingImage && (
+                    <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                      <Loader2 className="h-3 w-3 animate-spin" /> 图片上传中...
+                    </span>
+                  )}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 gap-1 text-[10px] text-muted-foreground hover:text-foreground"
+                    onClick={handleToolbarImage}
+                    disabled={uploadingImage}
+                  >
+                    <ImageIcon className="h-3 w-3" />
+                    插入图片
+                  </Button>
+                </div>
+              </div>
+              {/* 隐藏的文件选择器 */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleFileChange}
               />
+              <div data-color-mode="light" className="[&_.w-md-editor]:shadow-none [&_.w-md-editor]:border [&_.w-md-editor]:border-border [&_.w-md-editor]:rounded-lg [&_.w-md-editor-toolbar]:rounded-t-lg [&_.w-md-editor-text-pre>code]:!text-sm [&_.w-md-editor-text-input]:!text-sm">
+                <MDEditor
+                  value={formContent}
+                  onChange={(val) => setFormContent(val || '')}
+                  height={360}
+                  preview="live"
+                  visibleDragbar={false}
+                  hideToolbar={false}
+                />
+              </div>
             </div>
 
+            {/* 发送范围 */}
             <div className="space-y-1.5">
               <label className="text-xs font-medium">发送范围</label>
               <div className="flex rounded-lg bg-muted p-0.5">
@@ -232,7 +315,7 @@ export function AdminNotificationsPage() {
                       value={searchKeyword}
                       onChange={(e) => setSearchKeyword(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && handleSearchUsers()}
-                      className="pl-8 h-8 text-xs"
+                      className={cn('pl-8 h-8 text-xs', noRingInput)}
                     />
                   </div>
                   <Button size="sm" onClick={handleSearchUsers} disabled={searching} className="h-8 text-xs">
@@ -273,7 +356,7 @@ export function AdminNotificationsPage() {
             )}
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="flex-shrink-0 px-6 pb-5 pt-2">
             <Button variant="outline" onClick={() => setCreateOpen(false)}>取消</Button>
             <Button onClick={handleCreate} disabled={sending || !formTitle.trim() || !formContent.trim()}>
               {sending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}

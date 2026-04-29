@@ -1,4 +1,8 @@
-import { Controller, Post, Get, Body, Query, Req, ForbiddenException } from '@nestjs/common';
+import {
+  Controller, Post, Get, Body, Query, Req, ForbiddenException,
+  UploadedFile, UseInterceptors,
+} from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import type { Request } from 'express';
 import { NotificationService } from './notification.service';
 import { CreateNotificationDto } from './dto/create-notification.dto';
@@ -33,5 +37,16 @@ export class NotificationAdminController {
   async searchUsers(@Req() req: Request, @Query('keyword') keyword: string) {
     await this.requireAdmin(req);
     return this.notificationService.searchUsers(keyword || '');
+  }
+
+  @Post('upload-image')
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 10 * 1024 * 1024 } }))
+  async uploadImage(
+    @Req() req: Request,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    await this.requireAdmin(req);
+    if (!file) throw new ForbiddenException('请选择图片文件');
+    return this.notificationService.uploadNotificationImage(file);
   }
 }

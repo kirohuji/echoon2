@@ -4,12 +4,15 @@ import { PaginationDto, toPageResult } from '../../common/dto/pagination.dto';
 import { CreateNotificationDto } from './dto/create-notification.dto';
 import { QueryNotificationDto } from './dto/query-notification.dto';
 import { NotificationGateway } from './notification.gateway';
+import { FileAssetsService } from '../file-assets/file-assets.service';
+import { FileAssetGroup } from '@prisma/client';
 
 @Injectable()
 export class NotificationService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly gateway: NotificationGateway,
+    private readonly fileAssets: FileAssetsService,
   ) {}
 
   /** 管理员：创建并发送通知 */
@@ -187,5 +190,19 @@ export class NotificationService {
       select: { id: true, email: true, name: true, username: true, image: true },
       take: 20,
     });
+  }
+
+  /** 管理员：上传通知内嵌图片 */
+  async uploadNotificationImage(file: Express.Multer.File) {
+    const asset = await this.fileAssets.createAssetFromBuffer({
+      buffer: file.buffer,
+      filename: file.originalname,
+      mimeType: file.mimetype,
+      group: FileAssetGroup.notification,
+    });
+    return {
+      url: `https://${asset.bucket}.cos.${asset.region}.myqcloud.com/${asset.cosKey}`,
+      assetId: asset.id,
+    };
   }
 }

@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import type { NotificationItem } from '@/features/notification/api'
 import { useIsMobile } from '@/hooks/use-mobile'
+import { MarkdownRenderer } from '@/components/common/markdown-renderer'
 
 export function NotificationDetailPage() {
   const location = useLocation()
@@ -93,9 +94,7 @@ export function NotificationDetailPage() {
         {/* 内容 */}
         <div className="px-5 py-5">
           <div className="rounded-xl bg-muted/20 border border-border/50 p-5">
-            <div className="prose prose-sm dark:prose-invert max-w-none text-sm leading-relaxed whitespace-pre-wrap text-foreground/85">
-              {item.content}
-            </div>
+            <MarkdownRenderer content={item.content} />
           </div>
 
           {item.readAt && (

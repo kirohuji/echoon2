@@ -1,19 +1,19 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react'
-import { Bell, CheckCheck, MailOpen, Mail, Inbox, Clock, ArrowRight } from 'lucide-react'
+import { Bell, CheckCheck, MailOpen, Mail, Inbox, Clock, ArrowRight, ArrowLeft, User, Volume2, CheckCircle2, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/cn'
 import {
   getUserNotifications, markAsRead, markAllAsRead,
   type NotificationItem,
 } from '@/features/notification/api'
 import { useNotificationStore } from '@/features/notification/store'
-import { NotificationDetailSheet } from './notification-detail-sheet'
-import { useIsMobile } from '@/hooks/use-mobile'
+import { MarkdownRenderer } from '@/components/common/markdown-renderer'
 
 type TabValue = 'all' | 'unread' | 'read'
 
@@ -58,7 +58,6 @@ function NotificationItemRow({
       )}
     >
       <div className="flex items-start gap-3">
-        {/* 未读指示器 */}
         <div className="relative mt-1 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-muted/80">
           {!item.isRead ? (
             <span className="absolute -right-0.5 -top-0.5 flex h-3 w-3">
@@ -69,7 +68,6 @@ function NotificationItemRow({
           <Bell className={cn('h-4 w-4', item.isRead ? 'text-muted-foreground/50' : 'text-primary')} />
         </div>
 
-        {/* 内容区 */}
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
             <p
@@ -100,7 +98,6 @@ function NotificationItemRow({
           </div>
         </div>
 
-        {/* 箭头 */}
         <ArrowRight className="mt-2.5 h-3.5 w-3.5 flex-shrink-0 text-muted-foreground/30 transition-transform group-hover:translate-x-0.5" />
       </div>
     </button>
@@ -148,14 +145,12 @@ function NotificationList({
     [tab]
   )
 
-  // Reset when tab changes
   useEffect(() => {
     setPage(1)
     setList([])
     loadList(1, true)
   }, [tab, loadList])
 
-  // Infinite scroll
   useEffect(() => {
     const sentinel = sentinelRef.current
     if (!sentinel) return
@@ -189,7 +184,6 @@ function NotificationList({
 
   return (
     <div className="flex flex-col h-full">
-      {/* 操作栏 */}
       {tab !== 'read' && hasUnread && (
         <div className="flex items-center justify-between px-4 py-2 border-b border-border/30">
           <span className="text-xs text-muted-foreground">
@@ -207,7 +201,6 @@ function NotificationList({
         </div>
       )}
 
-      {/* 列表 */}
       <ScrollArea className="flex-1">
         {loading && list.length === 0 ? (
           <div className="space-y-2 p-4">
@@ -250,7 +243,6 @@ function NotificationList({
           </div>
         )}
 
-        {/* Infinite scroll sentinel */}
         <div ref={sentinelRef} className="h-4" />
 
         {loading && list.length > 0 && (
@@ -267,22 +259,122 @@ function NotificationList({
   )
 }
 
+// ---------- 通知详情内联视图 ----------
+function NotificationDetailView({
+  item,
+  onBack,
+}: {
+  item: NotificationItem
+  onBack: () => void
+}) {
+  const formattedDate = new Date(item.createdAt).toLocaleString('zh-CN', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+
+  return (
+    <div className="flex flex-col h-full">
+      {/* 顶部导航 */}
+      <div className="flex-shrink-0 flex items-center gap-3 px-5 pt-4 pb-3 border-b border-border/30">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 -ml-1"
+          onClick={onBack}
+        >
+          <ArrowLeft className="h-4 w-4" />
+        </Button>
+        <span className="text-sm font-semibold">通知详情</span>
+      </div>
+
+      <ScrollArea className="flex-1">
+        <div className="px-5 pt-4 pb-6">
+          {/* 头部信息 */}
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-primary/10">
+              <Bell className="h-5 w-5 text-primary" />
+            </div>
+            <div className="min-w-0">
+              <h3 className="text-base font-bold leading-snug">{item.title}</h3>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <Badge
+                  variant={item.type === 'broadcast' ? 'outline' : 'secondary'}
+                  className="h-5 gap-1 text-[10px] px-1.5 font-normal"
+                >
+                  {item.type === 'broadcast' ? (
+                    <Volume2 className="h-3 w-3" />
+                  ) : (
+                    <User className="h-3 w-3" />
+                  )}
+                  {item.type === 'broadcast' ? '系统广播' : '定向通知'}
+                </Badge>
+                <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground/60">
+                  <Clock className="h-3 w-3" />
+                  {formattedDate}
+                </span>
+                {item.isRead && (
+                  <span className="inline-flex items-center gap-1 text-[11px] text-primary/70">
+                    <CheckCircle2 className="h-3 w-3" />
+                    已读
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <Separator className="mt-4 mb-4" />
+
+          {/* Markdown 渲染内容 */}
+          <div className="rounded-xl border border-border/50 bg-muted/20 p-4">
+            <MarkdownRenderer content={item.content} />
+          </div>
+
+          {item.readAt && (
+            <div className="mt-4 flex items-center gap-2 rounded-lg bg-primary/[0.03] px-3 py-2.5">
+              <CheckCircle2 className="h-4 w-4 text-primary/60" />
+              <span className="text-xs text-muted-foreground/70">
+                已于 {new Date(item.readAt).toLocaleTimeString('zh-CN', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })} 阅读
+              </span>
+            </div>
+          )}
+        </div>
+      </ScrollArea>
+    </div>
+  )
+}
+
 export function NotificationBell() {
   const [open, setOpen] = useState(false)
   const [tab, setTab] = useState<TabValue>('all')
   const [detailItem, setDetailItem] = useState<NotificationItem | null>(null)
-  const [detailOpen, setDetailOpen] = useState(false)
-  const isMobile = useIsMobile()
 
   const unreadCount = useNotificationStore((s) => s.unreadCount)
 
   const handleOpenDetail = (item: NotificationItem) => {
     setDetailItem(item)
-    setDetailOpen(true)
     if (!item.isRead) {
       markAsRead(item.id).then(() => {
         useNotificationStore.getState().fetchUnreadCount()
       }).catch(() => {})
+    }
+  }
+
+  const handleBack = () => {
+    setDetailItem(null)
+  }
+
+  // Reset to list when dialog closes
+  const handleOpenChange = (v: boolean) => {
+    setOpen(v)
+    if (!v) {
+      // Delay reset so close animation doesn't flicker
+      setTimeout(() => setDetailItem(null), 200)
     }
   }
 
@@ -293,7 +385,7 @@ export function NotificationBell() {
         variant="ghost"
         size="icon"
         className="relative h-9 w-9"
-        onClick={() => setOpen(true)}
+        onClick={() => { setDetailItem(null); setOpen(true) }}
       >
         <Bell className="h-[18px] w-[18px]" />
         {unreadCount > 0 && (
@@ -303,70 +395,63 @@ export function NotificationBell() {
         )}
       </Button>
 
-      {/* 通知中心对话框 */}
-      <Dialog open={open} onOpenChange={setOpen}>
+      {/* 通知中心对话框 — 单层：列表 / 详情 */}
+      <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent
           className={cn(
             'flex flex-col overflow-hidden p-0',
-            isMobile
-              ? 'fixed inset-0 z-50 h-full w-full max-w-none rounded-none border-0'
-              : 'sm:max-w-[520px] h-[600px] max-h-[80vh]'
+            'sm:max-w-[520px] h-[600px] max-h-[85vh]'
           )}
         >
-          <DialogHeader className="flex-shrink-0 px-5 pt-4 pb-0">
-            <div className="flex items-center justify-between">
-              <DialogTitle className="text-base font-semibold">通知中心</DialogTitle>
-              {unreadCount > 0 && (
-                <Badge variant="secondary" className="h-5 gap-1 px-2 text-[10px] font-normal">
-                  <span className="h-1.5 w-1.5 rounded-full bg-destructive" />
-                  {unreadCount} 条未读
-                </Badge>
-              )}
-            </div>
-          </DialogHeader>
+          {detailItem ? (
+            <NotificationDetailView
+              item={detailItem}
+              onBack={handleBack}
+            />
+          ) : (
+            <>
+              <DialogHeader className="flex-shrink-0 px-5 pt-4 pb-0">
+                <div className="flex items-center justify-between">
+                  <DialogTitle className="text-base font-semibold">通知中心</DialogTitle>
+                  {unreadCount > 0 && (
+                    <Badge variant="secondary" className="h-5 gap-1 px-2 text-[10px] font-normal">
+                      <span className="h-1.5 w-1.5 rounded-full bg-destructive" />
+                      {unreadCount} 条未读
+                    </Badge>
+                  )}
+                </div>
+              </DialogHeader>
 
-          {/* Tabs行 */}
-          <Tabs
-            value={tab}
-            onValueChange={(v) => setTab(v as TabValue)}
-            className="flex flex-col flex-1 overflow-hidden"
-          >
-            <div className="flex-shrink-0 px-5 pt-3 pb-2">
-              <TabsList className="h-9 w-full bg-muted/60 p-0.5">
-                {tabConfig.map(({ value, label, icon: Icon }) => (
-                  <TabsTrigger
-                    key={value}
-                    value={value}
-                    className="flex-1 gap-1.5 text-xs data-[state=active]:shadow-sm"
-                  >
-                    <Icon className="h-3.5 w-3.5" />
-                    {label}
-                  </TabsTrigger>
+              <Tabs
+                value={tab}
+                onValueChange={(v) => setTab(v as TabValue)}
+                className="flex flex-col flex-1 overflow-hidden"
+              >
+                <div className="flex-shrink-0 px-5 pt-3 pb-2">
+                  <TabsList className="h-9 w-full bg-muted/60 p-0.5">
+                    {tabConfig.map(({ value, label, icon: Icon }) => (
+                      <TabsTrigger
+                        key={value}
+                        value={value}
+                        className="flex-1 gap-1.5 text-xs data-[state=active]:shadow-sm"
+                      >
+                        <Icon className="h-3.5 w-3.5" />
+                        {label}
+                      </TabsTrigger>
+                    ))}
+                  </TabsList>
+                </div>
+
+                {tabConfig.map(({ value }) => (
+                  <TabsContent key={value} value={value} className="flex-1 overflow-hidden mt-0 data-[state=active]:flex data-[state=active]:flex-col">
+                    <NotificationList tab={value} onOpenDetail={handleOpenDetail} />
+                  </TabsContent>
                 ))}
-              </TabsList>
-            </div>
-
-            {tabConfig.map(({ value }) => (
-              <TabsContent key={value} value={value} className="flex-1 overflow-hidden mt-0 data-[state=active]:flex data-[state=active]:flex-col">
-                <NotificationList tab={value} onOpenDetail={handleOpenDetail} />
-              </TabsContent>
-            ))}
-          </Tabs>
+              </Tabs>
+            </>
+          )}
         </DialogContent>
       </Dialog>
-
-      {/* 通知详情 Sheet */}
-      <NotificationDetailSheet
-        item={detailItem}
-        open={detailOpen}
-        onClose={() => {
-          setDetailOpen(false)
-          setDetailItem(null)
-        }}
-        onMarkRead={() => {
-          useNotificationStore.getState().fetchUnreadCount()
-        }}
-      />
     </>
   )
 }

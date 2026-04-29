@@ -9,6 +9,7 @@ import {
 import { cn } from '@/lib/cn'
 import type { NotificationItem } from '@/features/notification/api'
 import { useIsMobile } from '@/hooks/use-mobile'
+import { MarkdownRenderer } from '@/components/common/markdown-renderer'
 
 interface Props {
   item: NotificationItem | null
@@ -62,14 +63,14 @@ export function NotificationDetailSheet({ item, open, onClose, onMarkRead }: Pro
                 </SheetDescription>
               </div>
             </div>
-            <Button
+            {/* <Button
               variant="ghost"
               size="icon"
               className="h-8 w-8 flex-shrink-0 -mr-1"
               onClick={onClose}
             >
               <X className="h-4 w-4" />
-            </Button>
+            </Button> */}
           </div>
 
           {/* 元信息 */}
@@ -103,9 +104,7 @@ export function NotificationDetailSheet({ item, open, onClose, onMarkRead }: Pro
         {/* 内容 */}
         <div className="flex-1 overflow-y-auto px-5 py-4">
           <div className="rounded-xl border border-border/50 bg-muted/20 p-4">
-            <div className="prose prose-sm dark:prose-invert max-w-none text-sm leading-relaxed whitespace-pre-wrap text-foreground/85">
-              {item.content}
-            </div>
+            <MarkdownRenderer content={item.content} />
           </div>
 
           {item.readAt && (

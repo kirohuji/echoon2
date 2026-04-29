@@ -300,6 +300,7 @@ enum FileAssetGroup {
   avatar
   library
   tts
+  notification
 }
 
 enum FileAssetStatus {
