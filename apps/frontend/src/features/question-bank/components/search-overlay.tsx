@@ -93,16 +93,16 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-background">
       {/* top bar */}
-      <div className="flex items-center gap-3 border-b border-border/60 px-3 py-2">
+      <div className="flex items-center gap-2 px-3 py-1">
         <button
           type="button"
           onClick={onClose}
-          className="inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full hover:bg-muted/60 active:bg-muted"
+          className="inline-flex h-8 w-6 flex-shrink-0 items-center justify-center rounded-full hover:bg-muted/60 active:bg-muted"
         >
-          <ChevronLeft className="h-5 w-5" />
+          <ChevronLeft className="h-4.5 w-4.5" />
         </button>
 
-        <div className="relative flex-1">
+        <div className="relative min-w-0 flex-1 py-3">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             ref={inputRef}
@@ -110,7 +110,7 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
             onChange={(e) => setKeyword(e.target.value)}
             placeholder={t('home.hero.searchPlaceholder')}
             className={cn(
-              'pl-9 rounded-full bg-muted/60 border-0 focus-visible:ring-1',
+              'pl-9 rounded-full bg-muted/60 border-0 focus-visible:ring-0 focus-visible:ring-offset-0',
               keyword && 'pr-9'
             )}
           />
@@ -176,15 +176,14 @@ export function SearchOverlay({ open, onClose }: SearchOverlayProps) {
                 热门搜索
               </h3>
               <div className="flex flex-wrap gap-2">
-                {HOT_SEARCHES.map((item, idx) => (
+                {HOT_SEARCHES.map((item) => (
                   <button
                     key={item}
                     type="button"
                     onClick={() => handleHistoryTap(item)}
                     className={cn(
                       'rounded-full px-3 py-1.5 text-xs transition-colors',
-                      'bg-muted/40 text-muted-foreground hover:bg-muted/80 hover:text-foreground',
-                      idx < 3 && 'bg-primary/5 text-primary hover:bg-primary/10'
+                      'bg-muted/40 text-muted-foreground hover:bg-muted/80 hover:text-foreground'
                     )}
                   >
                     {item}
