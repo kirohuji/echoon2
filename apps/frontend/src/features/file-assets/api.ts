@@ -19,15 +19,44 @@ type CompleteUploadResponse = {
   asset: { id: string };
 };
 
-export async function getCurrentAvatar() {
-  return get<{ assetId: string; url: string; expiresInSeconds: number } | null>('/file-assets/avatar/current');
+type CurrentAvatar = { assetId: string; url: string; expiresInSeconds: number } | null;
+
+let currentAvatarCache:
+  | { data: CurrentAvatar; expiresAtMs: number }
+  | null = null;
+
+function getAvatarCacheTtlMs(data: CurrentAvatar) {
+  if (!data) return 15_000;
+  const safetySeconds = 5;
+  const seconds = Math.max(5, data.expiresInSeconds - safetySeconds);
+  return seconds * 1000;
+}
+
+export async function getCurrentAvatar(options?: { force?: boolean }) {
+  const force = options?.force ?? false;
+  const now = Date.now();
+  if (!force && currentAvatarCache && currentAvatarCache.expiresAtMs > now) {
+    return currentAvatarCache.data;
+  }
+
+  const data = await get<CurrentAvatar>('/file-assets/avatar/current');
+  currentAvatarCache = {
+    data,
+    expiresAtMs: Date.now() + getAvatarCacheTtlMs(data),
+  };
+  return data;
 }
 
 export async function setCurrentAvatar(assetId: string) {
-  return post<{ assetId: string; url: string; expiresInSeconds: number }>(
+  const data = await post<{ assetId: string; url: string; expiresInSeconds: number }>(
     '/file-assets/avatar/current',
     { assetId },
   );
+  currentAvatarCache = {
+    data,
+    expiresAtMs: Date.now() + getAvatarCacheTtlMs(data),
+  };
+  return data;
 }
 
 export async function uploadFileToCosAndComplete(params: {
