@@ -14,6 +14,7 @@ import { PracticeAiModule } from './modules/practice-ai/practice-ai.module';
 import { FileAssetsModule } from './modules/file-assets/file-assets.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { NotificationModule } from './modules/notification/notification.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { AdminModule } from './modules/admin/admin.module';
     FileAssetsModule,
     AuthModule,
     AdminModule,
+    NotificationModule,
   ],
 })
 export class AppModule {}

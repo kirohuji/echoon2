@@ -6,6 +6,7 @@ import { Sun, Moon, Monitor, User, Shield } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/cn'
 import { useAuth } from '@/providers/auth-provider'
+import { NotificationBell } from '@/features/notification/components/notification-bell'
 
 const navItems = [
   { key: 'library', path: '/' },
@@ -61,6 +62,8 @@ export function Header() {
         </nav>
 
         <div className="flex items-center gap-2">
+          <NotificationBell />
+
           {isAdmin && (
             <Link to="/admin/users">
               <Button

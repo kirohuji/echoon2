@@ -1,0 +1,180 @@
+import { Injectable } from '@nestjs/common';
+import { PrismaService } from '../../common/prisma/prisma.service';
+import { PaginationDto, toPageResult } from '../../common/dto/pagination.dto';
+import { CreateNotificationDto } from './dto/create-notification.dto';
+import { NotificationGateway } from './notification.gateway';
+
+@Injectable()
+export class NotificationService {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly gateway: NotificationGateway,
+  ) {}
+
+  /** 管理员：创建并发送通知 */
+  async createNotification(adminUserId: string, dto: CreateNotificationDto) {
+    // 创建通知本体
+    const notification = await this.prisma.notification.create({
+      data: {
+        title: dto.title,
+        content: dto.content,
+        type: dto.type,
+        sentById: adminUserId,
+      },
+    });
+
+    // 指定用户：写入 target 表
+    if (dto.type === 'targeted' && dto.targetUserIds?.length) {
+      await this.prisma.notificationTarget.createMany({
+        data: dto.targetUserIds.map((userId) => ({
+          notificationId: notification.id,
+          userId,
+        })),
+      });
+    }
+
+    // WebSocket 实时推送
+    this.gateway.pushNotification(notification.id, dto.type, dto.targetUserIds);
+
+    return notification;
+  }
+
+  /** 用户：获取我的通知列表（含已读状态） */
+  async getUserNotifications(userId: string, pagination: PaginationDto) {
+    const { page = 1, pageSize = 20 } = pagination;
+    const skip = (page - 1) * pageSize;
+
+    const notifications = (await this.prisma.$queryRawUnsafe(
+      `SELECT n.*,
+              nr."readAt" IS NOT NULL AS "isRead",
+              nr."readAt"
+       FROM notification n
+       LEFT JOIN notification_read nr
+         ON nr."notificationId" = n.id AND nr."userId" = $1
+       WHERE n.type = 'broadcast'
+          OR n.id IN (SELECT "notificationId" FROM notification_target WHERE "userId" = $1)
+       ORDER BY n."createdAt" DESC
+       LIMIT $2 OFFSET $3`,
+      userId,
+      pageSize,
+      skip,
+    )) as Array<{
+      id: string; title: string; content: string; type: string;
+      sentById: string; createdAt: Date; updatedAt: Date;
+      isRead: boolean; readAt: Date | null;
+    }>;
+
+    const countResult = (await this.prisma.$queryRawUnsafe(
+      `SELECT COUNT(*) as count
+       FROM notification n
+       WHERE n.type = 'broadcast'
+          OR n.id IN (SELECT "notificationId" FROM notification_target WHERE "userId" = $1)`,
+      userId,
+    )) as Array<{ count: bigint }>;
+
+    return toPageResult(
+      notifications.map((n) => ({
+        id: n.id,
+        title: n.title,
+        content: n.content,
+        type: n.type,
+        sentById: n.sentById,
+        createdAt: n.createdAt,
+        updatedAt: n.updatedAt,
+        isRead: n.isRead,
+        readAt: n.readAt,
+      })),
+      Number(countResult[0]?.count ?? 0),
+      pagination,
+    );
+  }
+
+  /** 用户：标记通知为已读 */
+  async markAsRead(userId: string, notificationId: string) {
+    await this.prisma.notificationRead.upsert({
+      where: {
+        notificationId_userId: { notificationId, userId },
+      },
+      create: { notificationId, userId },
+      update: {},
+    });
+  }
+
+  /** 用户：批量标记已读 */
+  async markAllAsRead(userId: string) {
+    // 获取用户所有未读通知
+    const unreadNotifications = (await this.prisma.$queryRawUnsafe(
+      `SELECT n.id
+       FROM notification n
+       LEFT JOIN notification_read nr
+         ON nr."notificationId" = n.id AND nr."userId" = $1
+       WHERE nr.id IS NULL
+         AND (n.type = 'broadcast'
+              OR n.id IN (SELECT "notificationId" FROM notification_target WHERE "userId" = $1))`,
+      userId,
+    )) as Array<{ id: string }>;
+
+    if (unreadNotifications.length === 0) return;
+
+    await this.prisma.notificationRead.createMany({
+      data: unreadNotifications.map((n) => ({
+        notificationId: n.id,
+        userId,
+      })),
+      skipDuplicates: true,
+    });
+  }
+
+  /** 用户：获取未读数量 */
+  async getUnreadCount(userId: string): Promise<number> {
+    const result = (await this.prisma.$queryRawUnsafe(
+      `SELECT COUNT(*) as count
+       FROM notification n
+       LEFT JOIN notification_read nr
+         ON nr."notificationId" = n.id AND nr."userId" = $1
+       WHERE nr.id IS NULL
+         AND (n.type = 'broadcast'
+              OR n.id IN (SELECT "notificationId" FROM notification_target WHERE "userId" = $1))`,
+      userId,
+    )) as Array<{ count: bigint }>;
+
+    return Number(result[0]?.count ?? 0);
+  }
+
+  /** 管理员：获取所有通知列表（含已读统计） */
+  async listAllNotifications(pagination: PaginationDto) {
+    const { page = 1, pageSize = 20 } = pagination;
+    const skip = (page - 1) * pageSize;
+
+    const [list, total] = await this.prisma.$transaction([
+      this.prisma.notification.findMany({
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: pageSize,
+        include: {
+          sentBy: { select: { id: true, name: true, email: true } },
+          _count: { select: { reads: true, targets: true } },
+        },
+      }),
+      this.prisma.notification.count(),
+    ]);
+
+    return toPageResult(list, total, pagination);
+  }
+
+  /** 管理员：搜索用户（用于指定通知目标） */
+  async searchUsers(keyword: string) {
+    if (!keyword || keyword.length < 1) return [];
+    return this.prisma.user.findMany({
+      where: {
+        OR: [
+          { email: { contains: keyword, mode: 'insensitive' } },
+          { name: { contains: keyword, mode: 'insensitive' } },
+          { username: { contains: keyword, mode: 'insensitive' } },
+        ],
+      },
+      select: { id: true, email: true, name: true, username: true, image: true },
+      take: 20,
+    });
+  }
+}

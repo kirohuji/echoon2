@@ -1,7 +1,7 @@
 import React from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import {
-  Users, Database, FileText, Settings, BarChart3,
+  Users, Database, FileText, Settings, BarChart3, Bell,
   ChevronRight, ArrowLeft,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
@@ -20,6 +20,12 @@ const menuItems: MenuItem[] = [
     label: '用户管理',
     icon: Users,
     path: '/admin/users',
+  },
+  {
+    key: 'notifications',
+    label: '消息通知',
+    icon: Bell,
+    path: '/admin/notifications',
   },
   {
     key: 'question-bank',

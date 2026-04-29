@@ -11,6 +11,9 @@ import { ProfilePage } from '@/features/profile/pages/profile-page'
 import { MemberPage } from '@/features/membership/pages/member-page'
 import { AccountPage } from '@/features/account/pages/account-page'
 import { AdminUsersPage } from '@/features/admin/pages/admin-users-page'
+import { AdminNotificationsPage } from '@/features/admin/pages/admin-notifications-page'
+import { NotificationListPage } from '@/features/notification/pages/notification-list-page'
+import { NotificationDetailPage } from '@/features/notification/pages/notification-detail-page'
 import { LoginPage } from '@/features/auth/pages/login-page'
 import { RegisterPage } from '@/features/auth/pages/register-page'
 
@@ -24,6 +27,7 @@ export default function App() {
               {/* 管理员后台 — 独立布局 */}
               <Route path="/admin" element={<AdminLayout />}>
                 <Route path="users" element={<AdminUsersPage />} />
+                <Route path="notifications" element={<AdminNotificationsPage />} />
               </Route>
 
               {/* 用户端 — RootLayout */}
@@ -34,6 +38,8 @@ export default function App() {
                 <Route path="/profile" element={<ProfilePage />} />
                 <Route path="/account" element={<AccountPage />} />
                 <Route path="/member" element={<MemberPage />} />
+                <Route path="/notifications" element={<NotificationListPage />} />
+                <Route path="/notifications/:id" element={<NotificationDetailPage />} />
               </Route>
 
               {/* 认证页 — 无外层布局 */}

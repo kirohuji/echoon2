@@ -1,18 +1,32 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { BookOpen, FileText, User } from 'lucide-react'
+import { BookOpen, FileText, User, Bell } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { useLayoutStore } from '@/stores/layout.store'
+import { useNotificationStore } from '@/features/notification/store'
+import { useAuth } from '@/providers/auth-provider'
 
 const navItems = [
   { label: '题库', path: '/', icon: BookOpen },
   { label: '模考', path: '/mock', icon: FileText },
+  { label: '通知', path: '/notifications', icon: Bell },
   { label: '我的', path: '/profile', icon: User },
 ]
 
 export function BottomNav() {
   const location = useLocation()
   const visible = useLayoutStore((s) => s.bottomNavVisible)
+  const unreadCount = useNotificationStore((s) => s.unreadCount)
+  const fetchUnreadCount = useNotificationStore((s) => s.fetchUnreadCount)
+  const initSocket = useNotificationStore((s) => s.initSocket)
+  const { session } = useAuth()
+
+  useEffect(() => {
+    if (session?.user?.id) {
+      initSocket(session.user.id)
+      fetchUnreadCount()
+    }
+  }, [session?.user?.id, initSocket, fetchUnreadCount])
 
   const isActive = (path: string) => {
     if (path === '/') return location.pathname === '/'
@@ -31,11 +45,16 @@ export function BottomNav() {
               key={path}
               to={path}
               className={cn(
-                'flex flex-1 flex-col items-center justify-center gap-0.5 py-1 transition-colors',
+                'relative flex flex-1 flex-col items-center justify-center gap-0.5 py-1 transition-colors',
                 active ? 'text-primary' : 'text-muted-foreground'
               )}
             >
               <Icon className={cn('h-5 w-5', active && 'stroke-[2.2]')} />
+              {path === '/notifications' && unreadCount > 0 && (
+                <span className="absolute right-[calc(50%-20px)] top-0 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold text-destructive-foreground">
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </span>
+              )}
               <span className="text-[10px] font-medium">{label}</span>
             </Link>
           )
