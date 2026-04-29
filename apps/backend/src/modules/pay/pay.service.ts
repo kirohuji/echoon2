@@ -224,8 +224,8 @@ export class PayService {
     });
   }
 
-  /** 管理后台测试支付 - 自动用第一个套餐创建 1 元订单并模拟支付 */
-  async createTestOrder(userId: string): Promise<OrderResult & { confirmed: boolean }> {
+  /** 管理后台测试支付 - 真实调用支付宝生成 1 元订单 */
+  async createTestOrder(userId: string): Promise<OrderResult> {
     const plan = await this.prisma.membershipPlan.findFirst({
       where: { level: { not: 'free' } },
       orderBy: { sortOrder: 'asc' },
@@ -239,7 +239,7 @@ export class PayService {
     const random = Math.random().toString(36).substring(2, 8).toUpperCase();
     const orderNo = `TEST${timestamp}${random}`;
 
-    const order = await this.prisma.order.create({
+    await this.prisma.order.create({
       data: {
         orderNo,
         userId,
@@ -247,63 +247,39 @@ export class PayService {
         amount: 100, // 1 元 = 100 分
         paymentMethod: 'alipay',
         billingCycle: 'monthly',
-        status: 'paid',
-        paymentRef: `test_admin_${Date.now()}`,
-        paidAt: new Date(),
+        status: 'pending',
       },
     });
 
-    const now = new Date();
-    const expiryDate = new Date(now.getTime() + plan.durationDays * 24 * 60 * 60 * 1000);
+    const baseUrl = process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 3001}`;
+    const notifyUrl = `${baseUrl}/api/v1/guide-exam/pay/callback/alipay`;
+    const returnUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/#/member`;
 
-    const existingMembership = await this.prisma.userMembership.findUnique({
-      where: { userId },
+    const result = await this.alipayProvider.createPayment({
+      orderNo,
+      amount: 100,
+      subject: `[测试] ${plan.name} - 月付`,
+      body: `echoon2 测试支付 - ${plan.name}`,
+      notifyUrl,
+      returnUrl,
     });
 
-    if (existingMembership && existingMembership.status === 'active' && existingMembership.expiredAt > now) {
-      const newExpiry = new Date(existingMembership.expiredAt.getTime() + plan.durationDays * 24 * 60 * 60 * 1000);
-      await this.prisma.userMembership.update({
-        where: { userId },
-        data: { planId: plan.id, expiredAt: newExpiry, orderId: order.id },
+    if (!result.success) {
+      await this.prisma.order.update({
+        where: { orderNo },
+        data: { status: 'cancelled' },
       });
-    } else {
-      await this.prisma.userMembership.upsert({
-        where: { userId },
-        create: {
-          userId,
-          planId: plan.id,
-          status: 'active',
-          startedAt: now,
-          expiredAt: expiryDate,
-          orderId: order.id,
-        },
-        update: {
-          planId: plan.id,
-          status: 'active',
-          startedAt: now,
-          expiredAt: expiryDate,
-          orderId: order.id,
-          cancelledAt: null,
-        },
-      });
+      throw new BadRequestException('创建支付宝支付失败，请检查支付宝配置');
     }
 
-    if (plan.revenueCatEntitlementId) {
-      await this.revenueCatService.grantEntitlement({
-        userId,
-        entitlementId: plan.revenueCatEntitlementId,
-        durationDays: plan.durationDays,
-      });
-    }
-
-    this.logger.log(`[Admin测试支付] 完成: ${orderNo}, 用户=${userId}, 套餐=${plan.name}`);
+    this.logger.log(`[Admin测试支付] 已创建真实支付宝订单: ${orderNo}`);
 
     return {
-      orderNo: order.orderNo,
-      amount: order.amount,
-      paymentMethod: order.paymentMethod,
-      status: order.status,
-      confirmed: true,
+      orderNo,
+      amount: 100,
+      paymentMethod: 'alipay',
+      payUrl: result.payUrl,
+      status: 'pending',
     };
   }
 }

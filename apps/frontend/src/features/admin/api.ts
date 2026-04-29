@@ -150,7 +150,7 @@ export interface TestPaymentResult {
   amount: number;
   paymentMethod: string;
   status: string;
-  confirmed: boolean;
+  payUrl?: string;
 }
 
 export async function testPayment() {

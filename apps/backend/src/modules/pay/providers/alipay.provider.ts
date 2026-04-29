@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { AlipaySdk } from 'alipay-sdk';
 import { v4 as uuid } from 'uuid';
 import type {
   PaymentProvider,
@@ -6,12 +7,24 @@ import type {
   PaymentResult,
   CallbackVerification,
 } from './payment-provider.interface';
-import { AlipaySdk } from 'alipay-sdk';
+
+/** 确保密钥是 PEM 格式（带 BEGIN/END 头尾） */
+function toPem(key: string, label: 'PRIVATE KEY' | 'PUBLIC KEY'): string {
+  const trimmed = key.trim();
+  if (trimmed.startsWith('-----BEGIN')) return trimmed;
+  const body = trimmed.match(/.{1,64}/g)?.join('\n') || trimmed;
+  return `-----BEGIN ${label}-----\n${body}\n-----END ${label}-----`;
+}
+
+/** 去掉老版本的 /gateway.do 后缀，v4 用 endpoint 不带路径 */
+function cleanEndpoint(raw: string): string {
+  return raw.replace(/\/gateway\.do\/?$/, '');
+}
 
 @Injectable()
 export class AlipayProvider implements PaymentProvider {
   private readonly logger = new Logger(AlipayProvider.name);
-  private readonly client: any = null;
+  private readonly client: AlipaySdk | null = null;
 
   constructor() {
     const appId = process.env.ALIPAY_APP_ID;
@@ -20,18 +33,17 @@ export class AlipayProvider implements PaymentProvider {
 
     if (appId && privateKey && alipayPublicKey) {
       try {
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        this.client = new (AlipaySdk as any)({
+        this.client = new AlipaySdk({
           appId,
-          privateKey,
-          alipayPublicKey,
-          gateway: process.env.ALIPAY_GATEWAY || 'https://openapi.alipay.com/gateway.do',
-          signType: process.env.ALIPAY_SIGN_TYPE || 'RSA2',
+          privateKey: toPem(privateKey, 'PRIVATE KEY'),
+          alipayPublicKey: toPem(alipayPublicKey, 'PUBLIC KEY'),
+          gateway: cleanEndpoint(process.env.ALIPAY_GATEWAY || 'https://openapi.alipay.com/gateway.do'),
+          signType: (process.env.ALIPAY_SIGN_TYPE as 'RSA2' | 'RSA') || 'RSA2',
+          keyType: (process.env.ALIPAY_KEY_TYPE as 'PKCS1' | 'PKCS8') || 'PKCS8',
         });
         this.logger.log('支付宝 SDK 已初始化');
       } catch (e) {
-        console.error(e);
-        this.logger.warn('支付宝 SDK 加载失败，将使用模拟模式');
+        this.logger.error('支付宝 SDK 初始化失败', e);
       }
     } else {
       this.logger.warn('支付宝配置不完整，将使用模拟模式');
@@ -44,22 +56,24 @@ export class AlipayProvider implements PaymentProvider {
     }
 
     try {
-      const result = await this.client.exec('alipay.trade.page.pay', {
-        bizContent: {
-          out_trade_no: params.orderNo,
-          product_code: 'FAST_INSTANT_TRADE_PAY',
-          total_amount: (params.amount / 100).toFixed(2),
-          subject: params.subject,
-          body: params.body || params.subject,
-        },
+      const bizContent = {
+        out_trade_no: params.orderNo,
+        product_code: 'FAST_INSTANT_TRADE_PAY',
+        total_amount: (params.amount / 100).toFixed(2),
+        subject: params.subject,
+        body: params.body || params.subject,
+      };
+
+      // v4: pageExecute GET 模式返回支付链接 URL
+      const payUrl = (this.client as any).pageExecute('alipay.trade.page.pay', 'GET', {
+        bizContent,
         notifyUrl: params.notifyUrl,
         returnUrl: params.returnUrl,
-      });
+      }) as string;
 
-      return {
-        success: true,
-        payUrl: result,
-      };
+      this.logger.log(`[支付宝] 支付链接已生成: ${params.orderNo}`);
+
+      return { success: true, payUrl };
     } catch (error) {
       this.logger.error('支付宝创建支付失败', error);
       return { success: false };

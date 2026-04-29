@@ -69,7 +69,12 @@ export function AdminBillingPage() {
     setTestResult(null)
     try {
       const result = await testPayment()
-      setTestResult(`测试支付成功！订单号: ${result.orderNo}，金额: ¥${(result.amount / 100).toFixed(2)}，套餐已生效`)
+      if (result.payUrl) {
+        window.open(result.payUrl, '_blank')
+        setTestResult(`支付宝支付页面已打开！订单号: ${result.orderNo}，金额: ¥${(result.amount / 100).toFixed(2)}，支付完成后等待回调自动开通会员`)
+      } else {
+        setTestResult(`订单已创建: ${result.orderNo}，但未获取到支付链接，请检查支付宝配置`)
+      }
       fetchData()
     } catch (err: any) {
       setTestResult(`失败: ${err?.response?.data?.message || err?.message || '未知错误'}`)
@@ -122,7 +127,7 @@ export function AdminBillingPage() {
               <div>
                 <p className="text-sm font-semibold">测试支付</p>
                 <p className="text-xs text-muted-foreground">
-                  自动创建 1 元订单并模拟支付成功，为当前管理员账号开通会员
+                  自动创建 1 元订单并跳转支付宝支付页面，支付成功后自动开通会员
                 </p>
               </div>
             </div>
@@ -140,7 +145,7 @@ export function AdminBillingPage() {
           </div>
           {testResult && (
             <p className={`mt-3 text-sm rounded-lg px-3 py-2 ${
-              testResult.startsWith('测试支付成功') ? 'bg-emerald-500/10 text-emerald-700' : 'bg-destructive/10 text-destructive'
+              testResult.includes('已打开') ? 'bg-blue-500/10 text-blue-700' : testResult.startsWith('失败') ? 'bg-destructive/10 text-destructive' : 'bg-emerald-500/10 text-emerald-700'
             }`}>
               {testResult}
             </p>
