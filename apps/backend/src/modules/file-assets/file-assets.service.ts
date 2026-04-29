@@ -208,6 +208,42 @@ export class FileAssetsService {
     });
   }
 
+  /** 按分组列出文件资产（带分页），返回公开可访问 URL */
+  async listByGroup(
+    group: FileAssetGroup,
+    pagination: { page?: number; pageSize?: number },
+  ) {
+    const page = pagination.page ?? 1;
+    const pageSize = Math.min(pagination.pageSize ?? 20, 100);
+    const skip = (page - 1) * pageSize;
+
+    const [list, total] = await this.prisma.$transaction([
+      this.prisma.fileAsset.findMany({
+        where: { group, status: FileAssetStatus.active },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: pageSize,
+      }),
+      this.prisma.fileAsset.count({
+        where: { group, status: FileAssetStatus.active },
+      }),
+    ]);
+
+    return {
+      list: list.map((a) => ({
+        id: a.id,
+        url: `https://${a.bucket}.cos.${a.region}.myqcloud.com/${a.cosKey}`,
+        filename: a.filename,
+        mimeType: a.mimeType,
+        size: a.size,
+        createdAt: a.createdAt,
+      })),
+      total,
+      page,
+      pageSize,
+    };
+  }
+
   async setCurrentAvatar(userId: string, dto: SetCurrentAvatarDto) {
     const asset = await this.ensureAssetExists(dto.assetId);
     if (asset.group !== FileAssetGroup.avatar) {

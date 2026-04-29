@@ -1,8 +1,8 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react'
-import { Bell, CheckCheck, MailOpen, Mail, Inbox, Clock, ArrowRight, ArrowLeft, User, Volume2, CheckCircle2, X } from 'lucide-react'
+import React, { useEffect, useState, useCallback } from 'react'
+import { Bell, CheckCheck, MailOpen, Mail, Inbox, Clock, ArrowRight, ArrowLeft, User, Volume2, CheckCircle2 } from 'lucide-react'
+import { Virtuoso } from 'react-virtuoso'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -14,6 +14,7 @@ import {
 } from '@/features/notification/api'
 import { useNotificationStore } from '@/features/notification/store'
 import { MarkdownRenderer } from '@/components/common/markdown-renderer'
+import { useIsMobile } from '@/hooks/use-mobile'
 
 type TabValue = 'all' | 'unread' | 'read'
 
@@ -104,21 +105,24 @@ function NotificationItemRow({
   )
 }
 
+// ========== Virtuoso 虚拟列表 ==========
 function NotificationList({
   tab,
   onOpenDetail,
+  visible,
 }: {
   tab: TabValue
   onOpenDetail: (item: NotificationItem) => void
+  visible: boolean
 }) {
   const [list, setList] = useState<NotificationItem[]>([])
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(1)
   const [hasMore, setHasMore] = useState(true)
-  const pageSize = 15
+  const pageSize = 20
   const fetchUnreadCount = useNotificationStore((s) => s.fetchUnreadCount)
   const resetUnread = useNotificationStore((s) => s.resetUnread)
-  const sentinelRef = useRef<HTMLDivElement>(null)
+  const [loaded, setLoaded] = useState(false)
 
   const loadList = useCallback(
     async (pg: number, replace: boolean) => {
@@ -140,34 +144,28 @@ function NotificationList({
         if (replace) setList([])
       } finally {
         setLoading(false)
+        if (!loaded) setLoaded(true)
       }
     },
-    [tab]
+    [tab, loaded]
   )
 
+  // Reset when tab changes — but only if visible
   useEffect(() => {
+    if (!visible) return
     setPage(1)
     setList([])
+    setLoaded(false)
+    setHasMore(true)
     loadList(1, true)
-  }, [tab, loadList])
+  }, [tab, visible, loadList])
 
+  // Also load first page if becoming visible
   useEffect(() => {
-    const sentinel = sentinelRef.current
-    if (!sentinel) return
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && hasMore && !loading) {
-          const nextPage = page + 1
-          setPage(nextPage)
-          loadList(nextPage, false)
-        }
-      },
-      { rootMargin: '200px' }
-    )
-    observer.observe(sentinel)
-    return () => observer.disconnect()
-  }, [hasMore, loading, page, loadList])
+    if (visible && !loaded) {
+      loadList(1, true)
+    }
+  }, [visible, loaded, loadList])
 
   const handleMarkAll = async () => {
     try {
@@ -180,12 +178,73 @@ function NotificationList({
     } catch {}
   }
 
+  const handleEndReached = useCallback(() => {
+    if (loading || !hasMore) return
+    const nextPage = page + 1
+    setPage(nextPage)
+    loadList(nextPage, false)
+  }, [loading, hasMore, page, loadList])
+
   const hasUnread = list.some((n) => !n.isRead)
+
+  const Footer = useCallback(() => {
+    if (loading && list.length > 0) {
+      return (
+        <div className="flex justify-center py-4">
+          <div className="flex items-center gap-2">
+            <div className="h-1.5 w-1.5 animate-bounce rounded-full bg-primary/60 [animation-delay:0ms]" />
+            <div className="h-1.5 w-1.5 animate-bounce rounded-full bg-primary/60 [animation-delay:150ms]" />
+            <div className="h-1.5 w-1.5 animate-bounce rounded-full bg-primary/60 [animation-delay:300ms]" />
+          </div>
+        </div>
+      )
+    }
+    return null
+  }, [loading, list.length])
+
+  const EmptyPlaceholder = useCallback(() => {
+    if (loading && list.length === 0) {
+      return (
+        <div className="space-y-2 p-4">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="flex items-start gap-3 px-4 py-3">
+              <Skeleton className="h-9 w-9 rounded-full" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-3 w-full" />
+                <Skeleton className="h-3 w-1/2" />
+              </div>
+            </div>
+          ))}
+        </div>
+      )
+    }
+    if (!loading && list.length === 0) {
+      return (
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-muted/50">
+            {tab === 'unread' ? (
+              <Mail className="h-6 w-6 text-muted-foreground/30" />
+            ) : (
+              <Inbox className="h-6 w-6 text-muted-foreground/30" />
+            )}
+          </div>
+          <p className="text-sm font-medium text-muted-foreground">
+            {tab === 'unread' ? '暂无未读通知' : tab === 'read' ? '暂无已读通知' : '暂无通知'}
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground/50">
+            {tab === 'unread' ? '新通知会在这里显示' : '通知会出现在这里'}
+          </p>
+        </div>
+      )
+    }
+    return null
+  }, [loading, list.length, tab])
 
   return (
     <div className="flex flex-col h-full">
       {tab !== 'read' && hasUnread && (
-        <div className="flex items-center justify-between px-4 py-2 border-b border-border/30">
+        <div className="flex-shrink-0 flex items-center justify-between px-4 py-2 border-b border-border/30">
           <span className="text-xs text-muted-foreground">
             {list.filter((n) => !n.isRead).length} 条未读
           </span>
@@ -201,65 +260,29 @@ function NotificationList({
         </div>
       )}
 
-      <ScrollArea className="flex-1">
-        {loading && list.length === 0 ? (
-          <div className="space-y-2 p-4">
-            {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="flex items-start gap-3 px-4 py-3">
-                <Skeleton className="h-9 w-9 rounded-full" />
-                <div className="flex-1 space-y-2">
-                  <Skeleton className="h-4 w-3/4" />
-                  <Skeleton className="h-3 w-full" />
-                  <Skeleton className="h-3 w-1/2" />
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : list.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-muted/50">
-              {tab === 'unread' ? (
-                <Mail className="h-6 w-6 text-muted-foreground/30" />
-              ) : (
-                <Inbox className="h-6 w-6 text-muted-foreground/30" />
-              )}
-            </div>
-            <p className="text-sm font-medium text-muted-foreground">
-              {tab === 'unread' ? '暂无未读通知' : tab === 'read' ? '暂无已读通知' : '暂无通知'}
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground/50">
-              {tab === 'unread' ? '新通知会在这里显示' : '通知会出现在这里'}
-            </p>
-          </div>
-        ) : (
-          <div className="divide-y divide-border/20 px-2 py-1">
-            {list.map((item) => (
-              <NotificationItemRow
-                key={item.id}
-                item={item}
-                onClick={() => onOpenDetail(item)}
-              />
-            ))}
+      <Virtuoso
+        style={{ height: '100%' }}
+        totalCount={list.length}
+        endReached={handleEndReached}
+        overscan={300}
+        components={{
+          Footer,
+          EmptyPlaceholder,
+        }}
+        itemContent={(index) => (
+          <div className="px-2 py-0.5">
+            <NotificationItemRow
+              item={list[index]}
+              onClick={() => onOpenDetail(list[index])}
+            />
           </div>
         )}
-
-        <div ref={sentinelRef} className="h-4" />
-
-        {loading && list.length > 0 && (
-          <div className="flex justify-center py-4">
-            <div className="flex items-center gap-2">
-              <div className="h-1.5 w-1.5 animate-bounce rounded-full bg-primary/60 [animation-delay:0ms]" />
-              <div className="h-1.5 w-1.5 animate-bounce rounded-full bg-primary/60 [animation-delay:150ms]" />
-              <div className="h-1.5 w-1.5 animate-bounce rounded-full bg-primary/60 [animation-delay:300ms]" />
-            </div>
-          </div>
-        )}
-      </ScrollArea>
+      />
     </div>
   )
 }
 
-// ---------- 通知详情内联视图 ----------
+// ========== 通知详情内联视图 ==========
 function NotificationDetailView({
   item,
   onBack,
@@ -276,8 +299,7 @@ function NotificationDetailView({
   })
 
   return (
-    <div className="flex flex-col h-full">
-      {/* 顶部导航 */}
+    <div className="flex flex-col h-full bg-background">
       <div className="flex-shrink-0 flex items-center gap-3 px-5 pt-4 pb-3 border-b border-border/30">
         <Button
           variant="ghost"
@@ -290,61 +312,57 @@ function NotificationDetailView({
         <span className="text-sm font-semibold">通知详情</span>
       </div>
 
-      <ScrollArea className="flex-1">
-        <div className="px-5 pt-4 pb-6">
-          {/* 头部信息 */}
-          <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-primary/10">
-              <Bell className="h-5 w-5 text-primary" />
-            </div>
-            <div className="min-w-0">
-              <h3 className="text-base font-bold leading-snug">{item.title}</h3>
-              <div className="mt-2 flex flex-wrap items-center gap-2">
-                <Badge
-                  variant={item.type === 'broadcast' ? 'outline' : 'secondary'}
-                  className="h-5 gap-1 text-[10px] px-1.5 font-normal"
-                >
-                  {item.type === 'broadcast' ? (
-                    <Volume2 className="h-3 w-3" />
-                  ) : (
-                    <User className="h-3 w-3" />
-                  )}
-                  {item.type === 'broadcast' ? '系统广播' : '定向通知'}
-                </Badge>
-                <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground/60">
-                  <Clock className="h-3 w-3" />
-                  {formattedDate}
-                </span>
-                {item.isRead && (
-                  <span className="inline-flex items-center gap-1 text-[11px] text-primary/70">
-                    <CheckCircle2 className="h-3 w-3" />
-                    已读
-                  </span>
+      <div className="flex-1 overflow-y-auto px-5 pt-4 pb-6">
+        <div className="flex items-start gap-3">
+          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-primary/10">
+            <Bell className="h-5 w-5 text-primary" />
+          </div>
+          <div className="min-w-0">
+            <h3 className="text-base font-bold leading-snug">{item.title}</h3>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <Badge
+                variant={item.type === 'broadcast' ? 'outline' : 'secondary'}
+                className="h-5 gap-1 text-[10px] px-1.5 font-normal"
+              >
+                {item.type === 'broadcast' ? (
+                  <Volume2 className="h-3 w-3" />
+                ) : (
+                  <User className="h-3 w-3" />
                 )}
-              </div>
-            </div>
-          </div>
-
-          <Separator className="mt-4 mb-4" />
-
-          {/* Markdown 渲染内容 */}
-          <div className="rounded-xl border border-border/50 bg-muted/20 p-4">
-            <MarkdownRenderer content={item.content} />
-          </div>
-
-          {item.readAt && (
-            <div className="mt-4 flex items-center gap-2 rounded-lg bg-primary/[0.03] px-3 py-2.5">
-              <CheckCircle2 className="h-4 w-4 text-primary/60" />
-              <span className="text-xs text-muted-foreground/70">
-                已于 {new Date(item.readAt).toLocaleTimeString('zh-CN', {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })} 阅读
+                {item.type === 'broadcast' ? '系统广播' : '定向通知'}
+              </Badge>
+              <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground/60">
+                <Clock className="h-3 w-3" />
+                {formattedDate}
               </span>
+              {item.isRead && (
+                <span className="inline-flex items-center gap-1 text-[11px] text-primary/70">
+                  <CheckCircle2 className="h-3 w-3" />
+                  已读
+                </span>
+              )}
             </div>
-          )}
+          </div>
         </div>
-      </ScrollArea>
+
+        <Separator className="mt-4 mb-4" />
+
+        <div className="rounded-xl border border-border/50 bg-muted/20 p-4">
+          <MarkdownRenderer content={item.content} />
+        </div>
+
+        {item.readAt && (
+          <div className="mt-4 flex items-center gap-2 rounded-lg bg-primary/[0.03] px-3 py-2.5">
+            <CheckCircle2 className="h-4 w-4 text-primary/60" />
+            <span className="text-xs text-muted-foreground/70">
+              已于 {new Date(item.readAt).toLocaleTimeString('zh-CN', {
+                hour: '2-digit',
+                minute: '2-digit',
+              })} 阅读
+            </span>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
@@ -353,6 +371,7 @@ export function NotificationBell() {
   const [open, setOpen] = useState(false)
   const [tab, setTab] = useState<TabValue>('all')
   const [detailItem, setDetailItem] = useState<NotificationItem | null>(null)
+  const isMobile = useIsMobile()
 
   const unreadCount = useNotificationStore((s) => s.unreadCount)
 
@@ -369,18 +388,15 @@ export function NotificationBell() {
     setDetailItem(null)
   }
 
-  // Reset to list when dialog closes
   const handleOpenChange = (v: boolean) => {
     setOpen(v)
     if (!v) {
-      // Delay reset so close animation doesn't flicker
       setTimeout(() => setDetailItem(null), 200)
     }
   }
 
   return (
     <>
-      {/* 铃铛按钮 */}
       <Button
         variant="ghost"
         size="icon"
@@ -395,60 +411,75 @@ export function NotificationBell() {
         )}
       </Button>
 
-      {/* 通知中心对话框 — 单层：列表 / 详情 */}
       <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent
           className={cn(
             'flex flex-col overflow-hidden p-0',
-            'sm:max-w-[520px] h-[600px] max-h-[85vh]'
+            isMobile
+              ? 'fixed inset-0 z-50 h-full w-full max-w-none rounded-none border-0'
+              : 'sm:max-w-[520px] h-[620px] max-h-[85vh]'
           )}
         >
-          {detailItem ? (
-            <NotificationDetailView
-              item={detailItem}
-              onBack={handleBack}
-            />
-          ) : (
-            <>
-              <DialogHeader className="flex-shrink-0 px-5 pt-4 pb-0">
-                <div className="flex items-center justify-between">
-                  <DialogTitle className="text-base font-semibold">通知中心</DialogTitle>
-                  {unreadCount > 0 && (
-                    <Badge variant="secondary" className="h-5 gap-1 px-2 text-[10px] font-normal">
-                      <span className="h-1.5 w-1.5 rounded-full bg-destructive" />
-                      {unreadCount} 条未读
-                    </Badge>
-                  )}
-                </div>
-              </DialogHeader>
+          {/* 列表层 — 始终挂载，由 CSS 控制显隐 */}
+          <div
+            className={cn(
+              'flex flex-col flex-1 overflow-hidden transition-opacity duration-200',
+              detailItem ? 'pointer-events-none opacity-0 absolute inset-0' : ''
+            )}
+            aria-hidden={!!detailItem}
+          >
+            <DialogHeader className="flex-shrink-0 px-5 pt-4 pb-0">
+              <div className="flex items-center justify-between">
+                <DialogTitle className="text-base font-semibold">通知中心</DialogTitle>
+                {unreadCount > 0 && (
+                  <Badge variant="secondary" className="h-5 gap-1 px-2 text-[10px] font-normal">
+                    <span className="h-1.5 w-1.5 rounded-full bg-destructive" />
+                    {unreadCount} 条未读
+                  </Badge>
+                )}
+              </div>
+            </DialogHeader>
 
-              <Tabs
-                value={tab}
-                onValueChange={(v) => setTab(v as TabValue)}
-                className="flex flex-col flex-1 overflow-hidden"
-              >
-                <div className="flex-shrink-0 px-5 pt-3 pb-2">
-                  <TabsList className="h-9 w-full bg-muted/60 p-0.5">
-                    {tabConfig.map(({ value, label, icon: Icon }) => (
-                      <TabsTrigger
-                        key={value}
-                        value={value}
-                        className="flex-1 gap-1.5 text-xs data-[state=active]:shadow-sm"
-                      >
-                        <Icon className="h-3.5 w-3.5" />
-                        {label}
-                      </TabsTrigger>
-                    ))}
-                  </TabsList>
-                </div>
+            <Tabs
+              value={tab}
+              onValueChange={(v) => setTab(v as TabValue)}
+              className="flex flex-col flex-1 overflow-hidden"
+            >
+              <div className="flex-shrink-0 px-5 pt-3 pb-2">
+                <TabsList className="h-9 w-full bg-muted/60 p-0.5">
+                  {tabConfig.map(({ value, label, icon: Icon }) => (
+                    <TabsTrigger
+                      key={value}
+                      value={value}
+                      className="flex-1 gap-1.5 text-xs data-[state=active]:shadow-sm"
+                    >
+                      <Icon className="h-3.5 w-3.5" />
+                      {label}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              </div>
 
-                {tabConfig.map(({ value }) => (
-                  <TabsContent key={value} value={value} className="flex-1 overflow-hidden mt-0 data-[state=active]:flex data-[state=active]:flex-col">
-                    <NotificationList tab={value} onOpenDetail={handleOpenDetail} />
-                  </TabsContent>
-                ))}
-              </Tabs>
-            </>
+              {tabConfig.map(({ value }) => (
+                <TabsContent key={value} value={value} className="flex-1 overflow-hidden mt-0 data-[state=active]:flex data-[state=active]:flex-col">
+                  <NotificationList
+                    tab={value}
+                    onOpenDetail={handleOpenDetail}
+                    visible={open && !detailItem && tab === value}
+                  />
+                </TabsContent>
+              ))}
+            </Tabs>
+          </div>
+
+          {/* 详情层 — overlay */}
+          {detailItem && (
+            <div className="absolute inset-0 z-10 bg-background animate-in fade-in slide-in-from-right-4 duration-200">
+              <NotificationDetailView
+                item={detailItem}
+                onBack={handleBack}
+              />
+            </div>
           )}
         </DialogContent>
       </Dialog>

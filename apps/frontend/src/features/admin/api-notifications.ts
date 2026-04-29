@@ -56,3 +56,26 @@ export async function uploadNotificationImage(file: File): Promise<{ url: string
   });
   return res.data?.data ?? res.data;
 }
+
+export interface NotificationImageItem {
+  id: string;
+  url: string;
+  filename: string;
+  mimeType: string;
+  size: number;
+  createdAt: string;
+}
+
+export interface NotificationImageListResult {
+  list: NotificationImageItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export async function listNotificationImages(params: {
+  page?: number;
+  pageSize?: number;
+}) {
+  return get<NotificationImageListResult>('/admin/notifications/images', params);
+}

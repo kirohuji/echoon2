@@ -49,4 +49,17 @@ export class NotificationAdminController {
     if (!file) throw new ForbiddenException('请选择图片文件');
     return this.notificationService.uploadNotificationImage(file);
   }
+
+  @Get('images')
+  async listImages(
+    @Req() req: Request,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+  ) {
+    await this.requireAdmin(req);
+    return this.notificationService.listNotificationImages(
+      Number(page) || 1,
+      Number(pageSize) || 20,
+    );
+  }
 }

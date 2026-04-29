@@ -2,10 +2,11 @@ import React, { useEffect, useState, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Bell, Plus, Send, Search, Users, Globe, X,
-  Loader2, ArrowLeft, UserPlus, ImageIcon,
+  Loader2, ArrowLeft, UserPlus, ImageIcon, Library, Check,
 } from 'lucide-react'
 import MDEditor from '@uiw/react-md-editor'
 import '@uiw/react-md-editor/markdown-editor.css'
+import { VirtuosoGrid } from 'react-virtuoso'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -14,15 +15,149 @@ import { Skeleton } from '@/components/ui/skeleton'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@/components/ui/dialog'
+import {
+  Popover, PopoverContent, PopoverTrigger,
+} from '@/components/ui/popover'
 import { cn } from '@/lib/cn'
 import {
-  listNotifications, createNotification, searchUsers, uploadNotificationImage,
-  type AdminNotificationItem, type SearchUserResult,
+  listNotifications, createNotification, searchUsers,
+  uploadNotificationImage, listNotificationImages,
+  type AdminNotificationItem, type SearchUserResult, type NotificationImageItem,
 } from '@/features/admin/api-notifications'
 import { useAuth } from '@/providers/auth-provider'
 
 // ---------- 编辑器样式覆盖：去掉蓝色聚焦环 ----------
 const noRingInput = 'focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none'
+
+// ========== 图片库弹窗 ==========
+function ImageLibraryPopover({
+  onSelect,
+}: {
+  onSelect: (url: string, filename: string) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const [images, setImages] = useState<NotificationImageItem[]>([])
+  const [loading, setLoading] = useState(false)
+  const [page, setPage] = useState(1)
+  const [hasMore, setHasMore] = useState(true)
+  const pageSize = 20
+
+  const loadImages = useCallback(async (pg: number, append: boolean) => {
+    setLoading(true)
+    try {
+      const res = await listNotificationImages({ page: pg, pageSize })
+      if (append) {
+        setImages((prev) => [...prev, ...res.list])
+      } else {
+        setImages(res.list)
+      }
+      setHasMore(res.list.length === pageSize)
+    } catch {
+      if (!append) setImages([])
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (open) {
+      setPage(1)
+      setImages([])
+      setHasMore(true)
+      loadImages(1, false)
+    }
+  }, [open, loadImages])
+
+  const loadMore = useCallback(() => {
+    if (loading || !hasMore) return
+    const nextPage = page + 1
+    setPage(nextPage)
+    loadImages(nextPage, true)
+  }, [loading, hasMore, page, loadImages])
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-6 gap-1 text-[10px] text-muted-foreground hover:text-foreground"
+        >
+          <Library className="h-3 w-3" />
+          图片库
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent
+        side="bottom"
+        align="end"
+        className="w-[380px] p-0"
+        sideOffset={8}
+      >
+        <div className="flex items-center justify-between px-4 pt-3 pb-2">
+          <span className="text-xs font-medium">已上传图片</span>
+          <span className="text-[10px] text-muted-foreground">
+            {images.length} 张 · 点击插入
+          </span>
+        </div>
+        <div className="h-[320px]">
+          {loading && images.length === 0 ? (
+            <div className="flex items-center justify-center h-full">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : images.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+              <ImageIcon className="h-8 w-8 mb-2 opacity-30" />
+              <p className="text-xs">暂无图片</p>
+              <p className="text-[10px] mt-0.5">上传图片后会出现在这里</p>
+            </div>
+          ) : (
+            <VirtuosoGrid
+              style={{ height: '100%' }}
+              totalCount={images.length}
+              endReached={loadMore}
+              overscan={200}
+              components={{
+                // eslint-disable-next-line react/display-name
+                List: React.forwardRef((props, ref) => (
+                  <div
+                    ref={ref}
+                    {...props}
+                    className="grid grid-cols-3 gap-2 px-4"
+                  />
+                )),
+              }}
+              itemContent={(index) => {
+                const img = images[index]
+                return (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onSelect(img.url, img.filename)
+                      setOpen(false)
+                    }}
+                    className="group relative aspect-square rounded-lg overflow-hidden border border-border/60 bg-muted/30 hover:border-primary/40 transition-colors"
+                    title={img.filename}
+                  >
+                    <img
+                      src={img.url}
+                      alt={img.filename}
+                      className="h-full w-full object-cover"
+                      loading="lazy"
+                    />
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                      <Check className="h-4 w-4 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
+                  </button>
+                )
+              }}
+            />
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
+  )
+}
 
 export function AdminNotificationsPage() {
   const navigate = useNavigate()
@@ -40,13 +175,11 @@ export function AdminNotificationsPage() {
   const [formContent, setFormContent] = useState('')
   const [formType, setFormType] = useState<'broadcast' | 'targeted'>('broadcast')
 
-  // Targeted user selection
   const [searchKeyword, setSearchKeyword] = useState('')
   const [searchResults, setSearchResults] = useState<SearchUserResult[]>([])
   const [selectedUsers, setSelectedUsers] = useState<SearchUserResult[]>([])
   const [searching, setSearching] = useState(false)
 
-  // Image upload state
   const [uploadingImage, setUploadingImage] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -87,7 +220,6 @@ export function AdminNotificationsPage() {
     setUploadingImage(true)
     try {
       const { url } = await uploadNotificationImage(file)
-      // 在光标位置插入 markdown 图片语法
       const imageMd = `\n![${file.name}](${url})\n`
       setFormContent((prev) => prev + imageMd)
     } catch {
@@ -107,7 +239,11 @@ export function AdminNotificationsPage() {
     e.target.value = ''
   }
 
-  // 粘贴图片
+  const handleSelectFromLibrary = (url: string, filename: string) => {
+    const imageMd = `\n![${filename}](${url})\n`
+    setFormContent((prev) => prev + imageMd)
+  }
+
   const handleEditorPaste = useCallback(async (e: React.ClipboardEvent) => {
     const items = e.clipboardData?.items
     if (!items) return
@@ -240,10 +376,10 @@ export function AdminNotificationsPage() {
             <div className="space-y-1.5" onPaste={handleEditorPaste}>
               <div className="flex items-center justify-between">
                 <label className="text-xs font-medium">内容（Markdown）</label>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
                   {uploadingImage && (
                     <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                      <Loader2 className="h-3 w-3 animate-spin" /> 图片上传中...
+                      <Loader2 className="h-3 w-3 animate-spin" /> 上传中...
                     </span>
                   )}
                   <Button
@@ -255,11 +391,11 @@ export function AdminNotificationsPage() {
                     disabled={uploadingImage}
                   >
                     <ImageIcon className="h-3 w-3" />
-                    插入图片
+                    上传图片
                   </Button>
+                  <ImageLibraryPopover onSelect={handleSelectFromLibrary} />
                 </div>
               </div>
-              {/* 隐藏的文件选择器 */}
               <input
                 ref={fileInputRef}
                 type="file"

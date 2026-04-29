@@ -205,4 +205,9 @@ export class NotificationService {
       assetId: asset.id,
     };
   }
+
+  /** 管理员：列出通知图片库 */
+  async listNotificationImages(page = 1, pageSize = 20) {
+    return this.fileAssets.listByGroup(FileAssetGroup.notification, { page, pageSize });
+  }
 }
