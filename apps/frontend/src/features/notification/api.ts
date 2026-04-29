@@ -22,6 +22,7 @@ export interface NotificationListResult {
 export async function getUserNotifications(params: {
   page?: number;
   pageSize?: number;
+  isRead?: boolean;
 }) {
   return get<NotificationListResult>('/notifications', params);
 }

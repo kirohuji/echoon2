@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { PaginationDto, toPageResult } from '../../common/dto/pagination.dto';
 import { CreateNotificationDto } from './dto/create-notification.dto';
+import { QueryNotificationDto } from './dto/query-notification.dto';
 import { NotificationGateway } from './notification.gateway';
 
 @Injectable()
@@ -40,9 +41,19 @@ export class NotificationService {
   }
 
   /** 用户：获取我的通知列表（含已读状态） */
-  async getUserNotifications(userId: string, pagination: PaginationDto) {
-    const { page = 1, pageSize = 20 } = pagination;
+  async getUserNotifications(userId: string, query: QueryNotificationDto) {
+    const { page = 1, pageSize = 20, isRead } = query;
     const skip = (page - 1) * pageSize;
+
+    const baseWhere = `(n.type = 'broadcast'
+       OR n.id IN (SELECT "notificationId" FROM notification_target WHERE "userId" = $1))`;
+
+    let isReadClause = '';
+    if (isRead === true) {
+      isReadClause = `AND nr."readAt" IS NOT NULL`;
+    } else if (isRead === false) {
+      isReadClause = `AND nr."readAt" IS NULL`;
+    }
 
     const notifications = (await this.prisma.$queryRawUnsafe(
       `SELECT n.*,
@@ -51,8 +62,7 @@ export class NotificationService {
        FROM notification n
        LEFT JOIN notification_read nr
          ON nr."notificationId" = n.id AND nr."userId" = $1
-       WHERE n.type = 'broadcast'
-          OR n.id IN (SELECT "notificationId" FROM notification_target WHERE "userId" = $1)
+       WHERE ${baseWhere} ${isReadClause}
        ORDER BY n."createdAt" DESC
        LIMIT $2 OFFSET $3`,
       userId,
@@ -67,8 +77,9 @@ export class NotificationService {
     const countResult = (await this.prisma.$queryRawUnsafe(
       `SELECT COUNT(*) as count
        FROM notification n
-       WHERE n.type = 'broadcast'
-          OR n.id IN (SELECT "notificationId" FROM notification_target WHERE "userId" = $1)`,
+       LEFT JOIN notification_read nr
+         ON nr."notificationId" = n.id AND nr."userId" = $1
+       WHERE ${baseWhere} ${isReadClause}`,
       userId,
     )) as Array<{ count: bigint }>;
 
@@ -85,7 +96,7 @@ export class NotificationService {
         readAt: n.readAt,
       })),
       Number(countResult[0]?.count ?? 0),
-      pagination,
+      query,
     );
   }
 
