@@ -64,6 +64,20 @@ export function AdminBillingPage() {
     fetchData()
   }, [fetchData])
 
+  const handleTestPayment = async () => {
+    setTestLoading(true)
+    setTestResult(null)
+    try {
+      const result = await testPayment()
+      setTestResult(`测试支付成功！订单号: ${result.orderNo}，金额: ¥${(result.amount / 100).toFixed(2)}，套餐已生效`)
+      fetchData()
+    } catch (err: any) {
+      setTestResult(`失败: ${err?.response?.data?.message || err?.message || '未知错误'}`)
+    } finally {
+      setTestLoading(false)
+    }
+  }
+
   if (session && session.user.role !== 'admin') {
     return (
       <div className="flex flex-col items-center justify-center py-20">
@@ -96,6 +110,43 @@ export function AdminBillingPage() {
         <h1 className="text-2xl font-bold tracking-tight">账单管理</h1>
         <p className="text-sm text-muted-foreground">查看所有支付订单和收入统计</p>
       </div>
+
+      {/* 测试支付区域 */}
+      <Card className="shadow-none border-dashed">
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/10">
+                <FlaskConical className="h-5 w-5 text-amber-500" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold">测试支付</p>
+                <p className="text-xs text-muted-foreground">
+                  自动创建 1 元订单并模拟支付成功，为当前管理员账号开通会员
+                </p>
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleTestPayment}
+              disabled={testLoading}
+              className="shrink-0"
+            >
+              {testLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              <FlaskConical className="mr-2 h-4 w-4" />
+              测试 ¥1.00 支付
+            </Button>
+          </div>
+          {testResult && (
+            <p className={`mt-3 text-sm rounded-lg px-3 py-2 ${
+              testResult.startsWith('测试支付成功') ? 'bg-emerald-500/10 text-emerald-700' : 'bg-destructive/10 text-destructive'
+            }`}>
+              {testResult}
+            </p>
+          )}
+        </CardContent>
+      </Card>
 
       {/* 统计卡片 */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
