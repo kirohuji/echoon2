@@ -1,19 +1,23 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Check, X, Crown, Star, Zap, Shield, ChevronLeft, Sparkles } from 'lucide-react'
+import { Check, X, Crown, Star, Zap, Shield, ChevronLeft, Sparkles, Loader2, QrCode, ExternalLink, Monitor } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Separator } from '@/components/ui/separator'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import {
   getMemberPlans,
   getCurrentMembership,
   getMemberBenefits,
+  createOrder,
+  mockPayConfirm,
   type MemberPlan,
   type CurrentMembership,
   type MemberBenefit,
+  type OrderResult,
 } from '@/features/membership/api'
 import { cn } from '@/lib/cn'
 
@@ -25,6 +29,7 @@ const FALLBACK_BENEFITS: MemberBenefit[] = [
   { benefitId: '5', name: '收藏题目', freeSupport: true, standardSupport: true, advancedSupport: true },
   { benefitId: '6', name: '生词本', freeSupport: true, standardSupport: true, advancedSupport: true },
   { benefitId: '7', name: '客服支持', freeSupport: false, standardSupport: '工作日', advancedSupport: '全天' },
+  { benefitId: '8', name: 'AI 智能出卷', freeSupport: false, standardSupport: false, advancedSupport: true },
 ]
 
 const planIcons: Record<string, React.ElementType> = {
@@ -42,6 +47,13 @@ export function MemberPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('yearly')
 
+  // 支付弹窗
+  const [payOpen, setPayOpen] = useState(false)
+  const [payPlan, setPayPlan] = useState<MemberPlan | null>(null)
+  const [payResult, setPayResult] = useState<OrderResult | null>(null)
+  const [payLoading, setPayLoading] = useState(false)
+  const [payError, setPayError] = useState<string | null>(null)
+
   useEffect(() => {
     Promise.allSettled([getMemberPlans(), getCurrentMembership(), getMemberBenefits()]).then(
       ([plansRes, curRes, benRes]) => {
@@ -56,6 +68,53 @@ export function MemberPage() {
       }
     )
   }, [])
+
+  const handleUpgrade = useCallback((plan: MemberPlan) => {
+    setPayPlan(plan)
+    setPayResult(null)
+    setPayError(null)
+    setPayOpen(true)
+  }, [])
+
+  const handlePay = useCallback(async (method: 'alipay' | 'wechat') => {
+    if (!payPlan) return
+    setPayLoading(true)
+    setPayError(null)
+
+    try {
+      const result = await createOrder({
+        planId: payPlan.planId,
+        paymentMethod: method,
+        billingCycle,
+      })
+      setPayResult(result)
+
+      // 支付宝 PC 支付：在新窗口打开
+      if (result.payUrl && method === 'alipay') {
+        window.open(result.payUrl, '_blank')
+      }
+    } catch (err: any) {
+      setPayError(err?.response?.data?.message || '创建订单失败')
+    } finally {
+      setPayLoading(false)
+    }
+  }, [payPlan, billingCycle])
+
+  const handleMockConfirm = useCallback(async () => {
+    if (!payResult?.orderNo) return
+    setPayLoading(true)
+    try {
+      await mockPayConfirm(payResult.orderNo)
+      setPayOpen(false)
+      // 刷新会员状态
+      const cur = await getCurrentMembership()
+      setCurrent(cur)
+    } catch {
+      setPayError('模拟支付确认失败')
+    } finally {
+      setPayLoading(false)
+    }
+  }, [payResult])
 
   return (
     <div className="space-y-5 lg:space-y-6">
@@ -101,8 +160,8 @@ export function MemberPage() {
                     </Badge>
                   </div>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    {current?.expireDate
-                      ? `${new Date(current.expireDate).toLocaleDateString('zh-CN')} 到期`
+                    {current?.expiredAt
+                      ? `${new Date(current.expiredAt).toLocaleDateString('zh-CN')} 到期`
                       : '升级解锁更多功能'}
                   </p>
                 </div>
@@ -165,6 +224,7 @@ export function MemberPage() {
                   plan={plan}
                   isCurrent={current?.planId === plan.planId}
                   billingCycle={billingCycle}
+                  onUpgrade={() => handleUpgrade(plan)}
                 />
               ))}
             </div>
@@ -188,7 +248,6 @@ export function MemberPage() {
             </div>
           ) : (
             <div className="overflow-hidden rounded-xl border">
-              {/* 表头 */}
               <div className="grid grid-cols-4 items-center gap-2 bg-muted/50 px-4 py-2.5">
                 <span className="text-xs font-semibold text-muted-foreground">{t('member.columns.benefit')}</span>
                 <span className="text-center text-xs font-semibold text-muted-foreground">{t('member.columns.free')}</span>
@@ -242,6 +301,148 @@ export function MemberPage() {
           <p className="text-xs text-muted-foreground">{t('member.serviceFooter')}</p>
         </CardContent>
       </Card>
+
+      {/* 支付弹窗 */}
+      <Dialog open={payOpen} onOpenChange={setPayOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>确认支付</DialogTitle>
+            <DialogDescription>
+              选择支付方式完成购买
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* 支付信息 */}
+            <div className="rounded-xl border p-4 space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">套餐</span>
+                <span className="font-medium">{payPlan?.name}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">周期</span>
+                <span className="font-medium">
+                  {billingCycle === 'yearly' ? '年付 (83折)' : '月付'}
+                </span>
+              </div>
+              <Separator />
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">应付金额</span>
+                <span className="text-lg font-bold">
+                  ¥{((): string => {
+                    if (!payPlan) return '0.00'
+                    const price = billingCycle === 'yearly' && payPlan.yearlyPrice
+                      ? payPlan.yearlyPrice
+                      : payPlan.price
+                    return (price / 100).toFixed(2)
+                  })()}
+                </span>
+              </div>
+            </div>
+
+            {/* 支付结果 - QR 码 */}
+            {payResult?.qrCode && (
+              <div className="rounded-xl border p-6 flex flex-col items-center gap-4">
+                <QrCode className="h-24 w-24 text-muted-foreground" />
+                <p className="text-sm text-center text-muted-foreground">
+                  请使用微信扫描二维码完成支付
+                </p>
+                <p className="text-xs text-muted-foreground/60">
+                  订单号：{payResult.orderNo}
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleMockConfirm}
+                  disabled={payLoading}
+                  className="w-full"
+                >
+                  {payLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  （开发环境）模拟支付成功
+                </Button>
+              </div>
+            )}
+
+            {/* 支付宝已跳转 */}
+            {payResult?.payUrl && (
+              <div className="rounded-xl border bg-blue-500/5 p-4 text-center">
+                <Monitor className="mx-auto h-8 w-8 text-blue-500 mb-2" />
+                <p className="text-sm mb-1">已在新窗口打开支付宝支付页面</p>
+                <p className="text-xs text-muted-foreground mb-3">
+                  如果未自动打开，请点击下方按钮
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => window.open(payResult.payUrl, '_blank')}
+                  >
+                    <ExternalLink className="mr-2 h-4 w-4" />
+                    重新打开
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                    onClick={handleMockConfirm}
+                    disabled={payLoading}
+                  >
+                    {payLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    模拟支付成功
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* 错误信息 */}
+            {payError && (
+              <div className="rounded-xl border border-destructive/50 bg-destructive/5 p-3 text-sm text-destructive">
+                {payError}
+              </div>
+            )}
+
+            {/* 支付方式选择 */}
+            {!payResult && (
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => handlePay('alipay')}
+                  disabled={payLoading}
+                  className="flex flex-col items-center gap-2 rounded-xl border p-4 transition-colors hover:border-blue-500 hover:bg-blue-50 disabled:opacity-50"
+                >
+                  {payLoading ? (
+                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                  ) : (
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-500 text-white font-bold text-lg">
+                      支
+                    </div>
+                  )}
+                  <span className="text-sm font-medium">支付宝</span>
+                  <span className="text-xs text-muted-foreground">网页/扫码支付</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handlePay('wechat')}
+                  disabled={payLoading}
+                  className="flex flex-col items-center gap-2 rounded-xl border p-4 transition-colors hover:border-green-500 hover:bg-green-50 disabled:opacity-50"
+                >
+                  {payLoading ? (
+                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                  ) : (
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-500 text-white font-bold text-lg">
+                      微
+                    </div>
+                  )}
+                  <span className="text-sm font-medium">微信支付</span>
+                  <span className="text-xs text-muted-foreground">扫码支付</span>
+                </button>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
@@ -250,29 +451,30 @@ function PricingCard({
   plan,
   isCurrent,
   billingCycle,
+  onUpgrade,
 }: {
   plan: MemberPlan
   isCurrent: boolean
   billingCycle: 'monthly' | 'yearly'
+  onUpgrade: () => void
 }) {
   const { t } = useTranslation()
   const Icon = planIcons[plan.level] || Star
 
   const displayPrice =
-    billingCycle === 'yearly' && plan.level !== 'free'
-      ? Math.round((plan.price * 12 * 0.83) / 12)
-      : plan.price
+    billingCycle === 'yearly' && plan.level !== 'free' && plan.yearlyPrice
+      ? Math.round(plan.yearlyPrice / 100 / 12 * 100) / 100
+      : plan.price / 100
 
   return (
     <div
       className={cn(
         'relative flex flex-col rounded-xl border bg-card p-5 transition-all',
-        plan.highlighted && 'shadow-lg',
+        plan.highlighted && 'shadow-lg border-primary/30',
         isCurrent && 'shadow-sm',
         !plan.highlighted && !isCurrent && 'border-border hover:shadow-sm'
       )}
     >
-      {/* 推荐标签 */}
       {plan.highlighted && (
         <div className="absolute -top-2.5 left-1/2 -translate-x-1/2">
           <Badge className="bg-primary px-3 py-0.5 text-xs font-medium text-primary-foreground shadow-sm">
@@ -282,27 +484,21 @@ function PricingCard({
         </div>
       )}
 
-      {/* 头部 */}
       <div className="mb-4">
         <div className="mb-3 flex items-center gap-2.5">
           <div className={cn(
             'flex h-10 w-10 items-center justify-center rounded-xl border',
-            plan.highlighted ? 'border-border bg-muted/50' : 'border-border bg-muted/50'
+            plan.highlighted ? 'border-primary/30 bg-primary/5' : 'border-border bg-muted/50'
           )}>
             <Icon className={cn('h-5 w-5', plan.highlighted ? 'text-primary' : 'text-foreground')} />
           </div>
           <p className="text-lg font-bold">{plan.name}</p>
         </div>
         <p className="text-xs text-muted-foreground leading-relaxed">
-          {plan.level === 'free'
-            ? t('member.freeDesc')
-            : plan.level === 'standard'
-              ? t('member.standardDesc')
-              : t('member.advancedDesc')}
+          {plan.description}
         </p>
       </div>
 
-      {/* 价格 */}
       <div className="mb-4">
         <div className="flex items-end gap-0.5">
           <span className="text-3xl font-bold tracking-tight">¥{displayPrice}</span>
@@ -313,17 +509,16 @@ function PricingCard({
         </p>
       </div>
 
-      {/* 按钮 */}
       <Button
         variant={plan.level === 'free' ? 'outline' : plan.highlighted ? 'default' : 'outline'}
         size="lg"
         className="mb-4 w-full rounded-xl"
         disabled={isCurrent || plan.level === 'free'}
+        onClick={onUpgrade}
       >
         {isCurrent ? t('member.currentPlan') : plan.level === 'free' ? t('member.useFree') : t('member.upgrade')}
       </Button>
 
-      {/* 功能列表 */}
       <div className="mt-auto space-y-2.5 border-t pt-4">
         <p className="text-sm font-semibold">{t('member.featureTitle')}</p>
         <ul className="space-y-2">

@@ -38,6 +38,8 @@ model User {
   notificationReads   NotificationRead[]
   notificationTargets NotificationTarget[]
   sentNotifications   Notification[]
+  orders              Order[]
+  membership          UserMembership?
 
   @@unique([email])
   @@map("user")
@@ -284,14 +286,93 @@ model UserPreference {
   @@map("user_preference")
 }
 
+enum MembershipLevel {
+  free
+  standard
+  advanced
+}
+
 model MembershipPlan {
-  id        String   @id @default(cuid())
-  name      String
-  price     Int
-  period    String
-  features  String[]
-  sortOrder Int      @default(0)
+  id                       String           @id @default(cuid())
+  name                     String
+  level                    MembershipLevel  @default(standard)
+  price                    Int              /// 月付价格（分）
+  yearlyPrice              Int?             /// 年付价格（分）
+  period                   String
+  durationDays             Int              @default(30)
+  features                 String[]
+  revenueCatEntitlementId  String?          /// RevenueCat 权益 ID（跨端同步用）
+  highlighted              Boolean          @default(false)
+  sortOrder                Int              @default(0)
+  orders                   Order[]
+  memberships              UserMembership[]
+  createdAt                DateTime         @default(now())
+  updatedAt                DateTime         @updatedAt
   @@map("membership_plan")
+}
+
+/// 支付订单
+enum OrderStatus {
+  pending
+  paid
+  cancelled
+  refunded
+}
+
+enum PaymentMethod {
+  alipay
+  wechat
+}
+
+model Order {
+  id            String        @id @default(cuid())
+  orderNo       String        @unique /// 商户订单号
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId        String
+  plan          MembershipPlan @relation(fields: [planId], references: [id])
+  planId        String
+  amount        Int           /// 实付金额（分）
+  paymentMethod PaymentMethod
+  status        OrderStatus   @default(pending)
+  paymentRef    String?       /// 支付网关交易号
+  billingCycle  String        @default("monthly") /// monthly | yearly
+  paidAt        DateTime?
+  metadata      Json?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  membership    UserMembership?
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([status])
+  @@map("order")
+}
+
+/// 用户会员状态
+enum MembershipStatus {
+  active
+  expired
+  cancelled
+}
+
+model UserMembership {
+  id            String           @id @default(cuid())
+  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId        String           @unique
+  plan          MembershipPlan   @relation(fields: [planId], references: [id])
+  planId        String
+  status        MembershipStatus @default(active)
+  order         Order?           @relation(fields: [orderId], references: [id])
+  orderId        String?          @unique
+  rcCustomerId  String?          /// RevenueCat 用户 ID（跨端同步）
+  startedAt     DateTime         @default(now())
+  expiredAt     DateTime
+  autoRenew     Boolean          @default(false)
+  cancelledAt   DateTime?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  @@index([status, expiredAt])
+  @@map("user_membership")
 }
 
 // ---- 文件资产域 ----

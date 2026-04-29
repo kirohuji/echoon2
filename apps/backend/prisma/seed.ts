@@ -4,6 +4,9 @@ import { auth } from '../src/modules/auth/auth';
 const prisma = new PrismaClient();
 
 async function main() {
+  await prisma.notificationRead.deleteMany();
+  await prisma.notificationTarget.deleteMany();
+  await prisma.notification.deleteMany();
   await prisma.session.deleteMany();
   await prisma.account.deleteMany();
   await prisma.verification.deleteMany();
@@ -20,6 +23,8 @@ async function main() {
   await prisma.questionItem.deleteMany();
   await prisma.questionTopic.deleteMany();
   await prisma.userBindingConfig.deleteMany();
+  await prisma.userMembership.deleteMany();
+  await prisma.order.deleteMany();
   await prisma.membershipPlan.deleteMany();
   await prisma.questionBank.deleteMany();
 
@@ -347,20 +352,30 @@ async function main() {
   await prisma.membershipPlan.create({
     data: {
       name: '标准会员',
-      price: 98,
+      level: 'standard',
+      price: 9800,
+      yearlyPrice: 98000,
       period: 'month',
-      features: ['完整题库', '模考练习', '练习记录', '收藏题目', '生词本'],
+      durationDays: 30,
+      features: ['完整题库', '模考练习', '练习记录', '收藏题目', '生词本', 'AI 点评'],
       sortOrder: 1,
+      highlighted: false,
+      revenueCatEntitlementId: 'pro_standard',
     },
   });
 
   await prisma.membershipPlan.create({
     data: {
       name: '进阶会员',
-      price: 198,
+      level: 'advanced',
+      price: 19800,
+      yearlyPrice: 198000,
       period: 'month',
-      features: ['所有标准功能', 'AI 点评', '录音上传', '错题分析', '专项突破', '优先客服'],
+      durationDays: 30,
+      features: ['所有标准功能', '无限 AI 点评', '录音上传', '错题分析', '专项突破', '优先客服'],
       sortOrder: 2,
+      highlighted: true,
+      revenueCatEntitlementId: 'pro_advanced',
     },
   });
 

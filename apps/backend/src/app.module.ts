@@ -14,6 +14,7 @@ import { PracticeAiModule } from './modules/practice-ai/practice-ai.module';
 import { FileAssetsModule } from './modules/file-assets/file-assets.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { PayModule } from './modules/pay/pay.module';
 import { NotificationModule } from './modules/notification/notification.module';
 
 @Module({
@@ -33,6 +34,7 @@ import { NotificationModule } from './modules/notification/notification.module';
     FileAssetsModule,
     AuthModule,
     AdminModule,
+    PayModule,
     NotificationModule,
   ],
 })

@@ -7,6 +7,8 @@ import { UpdateUserRoleDto } from './dto/update-user-role.dto';
 export class AdminService {
   constructor(private readonly prisma: PrismaService) {}
 
+  // ─── 用户管理 ──────────────────────────────────────────────
+
   async listUsers(pagination: PaginationDto) {
     const { page = 1, pageSize = 20, keyword } = pagination;
     const skip = (page - 1) * pageSize;
@@ -35,6 +37,13 @@ export class AdminService {
           phoneNumberVerified: true,
           createdAt: true,
           updatedAt: true,
+          membership: {
+            select: {
+              status: true,
+              expiredAt: true,
+              plan: { select: { name: true, level: true } },
+            },
+          },
         },
         orderBy: { createdAt: 'desc' },
         skip,
@@ -61,11 +70,20 @@ export class AdminService {
         phoneNumberVerified: true,
         createdAt: true,
         updatedAt: true,
+        membership: {
+          select: {
+            status: true,
+            startedAt: true,
+            expiredAt: true,
+            plan: { select: { id: true, name: true, level: true } },
+          },
+        },
         _count: {
           select: {
             practiceRecords: true,
             mockExamRecords: true,
             vocabularyWords: true,
+            orders: true,
           },
         },
       },
@@ -98,5 +116,145 @@ export class AdminService {
         role: true,
       },
     });
+  }
+
+  // ─── 会员管理 ──────────────────────────────────────────────
+
+  async listMembers(pagination: PaginationDto) {
+    const { page = 1, pageSize = 20, keyword } = pagination;
+    const skip = (page - 1) * pageSize;
+
+    const where: Record<string, unknown> = {};
+    if (keyword) {
+      where.user = {
+        OR: [
+          { email: { contains: keyword, mode: 'insensitive' } },
+          { name: { contains: keyword, mode: 'insensitive' } },
+        ],
+      };
+    }
+
+    const [list, total] = await this.prisma.$transaction([
+      this.prisma.userMembership.findMany({
+        where,
+        include: {
+          user: {
+            select: { id: true, email: true, name: true, username: true },
+          },
+          plan: { select: { id: true, name: true, level: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: pageSize,
+      }),
+      this.prisma.userMembership.count({ where }),
+    ]);
+
+    return toPageResult(list, total, pagination);
+  }
+
+  async getMemberDetail(userId: string) {
+    const membership = await this.prisma.userMembership.findUnique({
+      where: { userId },
+      include: {
+        user: {
+          select: { id: true, email: true, name: true, username: true },
+        },
+        plan: true,
+      },
+    });
+
+    if (!membership) {
+      throw new NotFoundException('该用户暂无会员记录');
+    }
+
+    const orders = await this.prisma.order.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      take: 20,
+    });
+
+    return { ...membership, orders };
+  }
+
+  async cancelMembership(userId: string) {
+    const membership = await this.prisma.userMembership.findUnique({
+      where: { userId },
+    });
+
+    if (!membership) {
+      throw new NotFoundException('该用户暂无会员记录');
+    }
+
+    return this.prisma.userMembership.update({
+      where: { userId },
+      data: {
+        status: 'cancelled',
+        cancelledAt: new Date(),
+      },
+    });
+  }
+
+  // ─── 订单/账单管理 ──────────────────────────────────────────
+
+  async listOrders(pagination: PaginationDto & { status?: string }) {
+    const { page = 1, pageSize = 20, keyword, status } = pagination;
+    const skip = (page - 1) * pageSize;
+
+    const where: Record<string, unknown> = {};
+    if (status) {
+      where.status = status;
+    }
+    if (keyword) {
+      where.OR = [
+        { orderNo: { contains: keyword } },
+        { user: { email: { contains: keyword, mode: 'insensitive' } } },
+      ];
+    }
+
+    const [list, total] = await this.prisma.$transaction([
+      this.prisma.order.findMany({
+        where,
+        include: {
+          user: {
+            select: { id: true, email: true, name: true },
+          },
+          plan: { select: { id: true, name: true, level: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: pageSize,
+      }),
+      this.prisma.order.count({ where }),
+    ]);
+
+    return toPageResult(list, total, pagination);
+  }
+
+  async getOrderStats() {
+    const [total, totalAmount, paidOrders] = await this.prisma.$transaction([
+      this.prisma.order.count(),
+      this.prisma.order.aggregate({
+        _sum: { amount: true },
+        where: { status: 'paid' },
+      }),
+      this.prisma.order.count({ where: { status: 'paid' } }),
+    ]);
+
+    const recentOrders = await this.prisma.order.findMany({
+      take: 10,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        user: { select: { id: true, email: true, name: true } },
+        plan: { select: { name: true } },
+      },
+    });
+
+    return {
+      totalOrders: total,
+      paidOrders,
+      totalRevenue: totalAmount._sum.amount || 0,
+      recentOrders,
+    };
   }
 }

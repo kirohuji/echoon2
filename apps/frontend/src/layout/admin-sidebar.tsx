@@ -2,7 +2,7 @@ import React from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import {
   Users, Database, FileText, Settings, BarChart3, Bell,
-  ChevronRight, ArrowLeft,
+  ChevronRight, ArrowLeft, CreditCard, Receipt,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
@@ -20,6 +20,18 @@ const menuItems: MenuItem[] = [
     label: '用户管理',
     icon: Users,
     path: '/admin/users',
+  },
+  {
+    key: 'members',
+    label: '会员管理',
+    icon: CreditCard,
+    path: '/admin/members',
+  },
+  {
+    key: 'billing',
+    label: '账单管理',
+    icon: Receipt,
+    path: '/admin/billing',
   },
   {
     key: 'notifications',
