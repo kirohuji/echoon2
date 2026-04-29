@@ -157,12 +157,22 @@ export class NotificationService {
   }
 
   /** 管理员：获取所有通知列表（含已读统计） */
-  async listAllNotifications(pagination: PaginationDto) {
+  async listAllNotifications(pagination: PaginationDto, keyword?: string) {
     const { page = 1, pageSize = 20 } = pagination;
     const skip = (page - 1) * pageSize;
 
+    const where = keyword
+      ? {
+          OR: [
+            { title: { contains: keyword, mode: 'insensitive' as const } },
+            { content: { contains: keyword, mode: 'insensitive' as const } },
+          ],
+        }
+      : {};
+
     const [list, total] = await this.prisma.$transaction([
       this.prisma.notification.findMany({
+        where,
         orderBy: { createdAt: 'desc' },
         skip,
         take: pageSize,
@@ -171,7 +181,7 @@ export class NotificationService {
           _count: { select: { reads: true, targets: true } },
         },
       }),
-      this.prisma.notification.count(),
+      this.prisma.notification.count({ where }),
     ]);
 
     return toPageResult(list, total, pagination);

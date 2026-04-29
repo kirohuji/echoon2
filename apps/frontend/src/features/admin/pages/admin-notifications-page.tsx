@@ -119,10 +119,31 @@ function ViewNotificationDialog({ item, open, onClose }: { item: AdminNotificati
             <Badge variant={item.type === 'broadcast' ? 'default' : 'secondary'} className="text-[10px]">
               {item.type === 'broadcast' ? '广播' : '定向'}
             </Badge>
-            <span className="text-xs">{item.sentBy.name || item.sentBy.email}</span>
+            <span className="text-xs">发送者：{item.sentBy.name || item.sentBy.email}</span>
             <span className="text-xs">{new Date(item.createdAt).toLocaleString('zh-CN')}</span>
           </DialogDescription>
         </DialogHeader>
+
+        {/* 统计数据 */}
+        <div className="grid grid-cols-3 gap-3 px-5 py-3 border-b border-border">
+          <div className="rounded-xl border border-border/60 p-3 text-center">
+            <p className="text-2xl font-bold text-blue-500">{item._count.reads}</p>
+            <p className="text-xs text-muted-foreground">已读次数</p>
+          </div>
+          <div className="rounded-xl border border-border/60 p-3 text-center">
+            <p className="text-2xl font-bold text-purple-500">
+              {item.type === 'broadcast' ? '全部' : item._count.targets}
+            </p>
+            <p className="text-xs text-muted-foreground">目标用户</p>
+          </div>
+          <div className="rounded-xl border border-border/60 p-3 text-center">
+            <p className="text-lg font-bold text-emerald-500 leading-tight">
+              {new Date(item.createdAt).toLocaleDateString('zh-CN')}
+            </p>
+            <p className="text-xs text-muted-foreground">创建日期</p>
+          </div>
+        </div>
+
         <div className="flex-1 overflow-y-auto px-5 py-4">
           <MarkdownRenderer content={item.content} />
         </div>
@@ -210,6 +231,10 @@ export function AdminNotificationsPage() {
   const [pageSize, setPageSize] = useState(10)
   const [total, setTotal] = useState(0)
 
+  // Search
+  const [keyword, setKeyword] = useState('')
+  const [searchInput, setSearchInput] = useState('')
+
   // Stats
   const [stats, setStats] = useState<NotificationStats | null>(null)
 
@@ -235,12 +260,12 @@ export function AdminNotificationsPage() {
   const fetchList = useCallback(async () => {
     setLoading(true)
     try {
-      const result = await listNotifications({ page, pageSize })
+      const result = await listNotifications({ page, pageSize, keyword: keyword || undefined })
       setData(result.list)
       setTotal(result.total)
     } catch { setData([]) }
     finally { setLoading(false) }
-  }, [page, pageSize])
+  }, [page, pageSize, keyword])
 
   const fetchStats = useCallback(async () => {
     try { setStats(await getNotificationStats()) } catch {}
@@ -248,6 +273,15 @@ export function AdminNotificationsPage() {
 
   useEffect(() => { fetchList() }, [fetchList])
   useEffect(() => { fetchStats() }, [fetchStats])
+
+  const handleSearch = () => {
+    setPage(1)
+    setKeyword(searchInput)
+  }
+
+  const handleSearchKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') handleSearch()
+  }
 
   const handleDelete = async () => {
     if (!deleteItem) return
@@ -391,6 +425,34 @@ export function AdminNotificationsPage() {
         </Card>
       </div>
 
+      {/* 搜索栏 */}
+      <div className="flex items-center gap-3">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="搜索通知标题或内容..."
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            onKeyDown={handleSearchKeyDown}
+            className="pl-9"
+          />
+        </div>
+        <Button onClick={handleSearch} size="sm">搜索</Button>
+        {keyword && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setSearchInput('')
+              setKeyword('')
+              setPage(1)
+            }}
+          >
+            清除
+          </Button>
+        )}
+      </div>
+
       {/* 表格卡片 */}
       <Card>
         <CardHeader className="pb-2"><CardTitle className="text-base">通知列表</CardTitle></CardHeader>
@@ -399,7 +461,11 @@ export function AdminNotificationsPage() {
             <div className="space-y-2 p-4">{[1,2,3].map((i) => <Skeleton key={i} className="h-20 w-full" />)}</div>
           ) : data.length === 0 ? (
             <div className="flex flex-col items-center py-16 text-muted-foreground">
-              <Bell className="h-12 w-12 opacity-20" /><p className="mt-3 text-sm">暂无通知</p>
+              <Bell className="h-12 w-12 opacity-20" />
+              <p className="mt-4 text-sm font-medium">{keyword ? '没有匹配的通知' : '暂无通知'}</p>
+              <p className="mt-1 text-xs text-muted-foreground/60">
+                {keyword ? '尝试更换搜索关键词' : '创建通知后会显示在这里'}
+              </p>
             </div>
           ) : (
             <div className="divide-y divide-border">
@@ -423,15 +489,15 @@ export function AdminNotificationsPage() {
                     </div>
                   </div>
                   {/* 操作按钮 */}
-                  <div className="flex items-center gap-0.5 flex-shrink-0">
-                    <Button variant="ghost" size="icon" className="h-8 w-8" title="查看" onClick={() => setViewItem(item)}>
-                      <Eye className="h-4 w-4" />
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => setViewItem(item)}>
+                      <Eye className="h-3.5 w-3.5 mr-1" />查看
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8" title="编辑" onClick={() => setEditItem(item)}>
-                      <Pencil className="h-4 w-4" />
+                    <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => setEditItem(item)}>
+                      <Pencil className="h-3.5 w-3.5 mr-1" />编辑
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" title="删除" onClick={() => setDeleteItem(item)}>
-                      <Trash2 className="h-4 w-4" />
+                    <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => setDeleteItem(item)}>
+                      <Trash2 className="h-3.5 w-3.5 mr-1" />删除
                     </Button>
                   </div>
                 </div>

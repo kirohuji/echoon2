@@ -31,6 +31,7 @@ export interface SearchUserResult {
 export async function listNotifications(params: {
   page?: number;
   pageSize?: number;
+  keyword?: string;
 }) {
   return get<AdminNotificationListResult>('/admin/notifications', params);
 }
