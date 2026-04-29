@@ -3,6 +3,7 @@ import { ThemeProvider } from '@/providers/theme-provider'
 import { AuthProvider } from '@/providers/auth-provider'
 import { AuthRouteGate } from '@/providers/auth-route-guard'
 import { RootLayout } from '@/layout/root-layout'
+import { AdminLayout } from '@/layout/admin-layout'
 import { HomePage } from '@/features/question-bank/pages/home-page'
 import { PracticePage } from '@/features/practice/pages/practice-page'
 import { MockPage } from '@/features/mock-exam/pages/mock-page'
@@ -19,19 +20,26 @@ export default function App() {
       <AuthProvider>
         <HashRouter>
           <AuthRouteGate>
-            <RootLayout>
-              <Routes>
+            <Routes>
+              {/* 管理员后台 — 独立布局 */}
+              <Route path="/admin" element={<AdminLayout />}>
+                <Route path="users" element={<AdminUsersPage />} />
+              </Route>
+
+              {/* 用户端 — RootLayout */}
+              <Route element={<RootLayout />}>
                 <Route path="/" element={<HomePage />} />
                 <Route path="/practice/:topicId" element={<PracticePage />} />
                 <Route path="/mock" element={<MockPage />} />
                 <Route path="/profile" element={<ProfilePage />} />
                 <Route path="/account" element={<AccountPage />} />
                 <Route path="/member" element={<MemberPage />} />
-                <Route path="/admin/users" element={<AdminUsersPage />} />
-                <Route path="/auth/login" element={<LoginPage />} />
-                <Route path="/auth/register" element={<RegisterPage />} />
-              </Routes>
-            </RootLayout>
+              </Route>
+
+              {/* 认证页 — 无外层布局 */}
+              <Route path="/auth/login" element={<LoginPage />} />
+              <Route path="/auth/register" element={<RegisterPage />} />
+            </Routes>
           </AuthRouteGate>
         </HashRouter>
       </AuthProvider>

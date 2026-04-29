@@ -28,8 +28,6 @@ export function Header() {
     return currentPath.startsWith(path)
   }
 
-  const isAdminPage = currentPath.startsWith('/admin')
-
   const themeOptions = [
     { value: 'light', label: t('profile.themeLight'), icon: Sun },
     { value: 'dark', label: t('profile.themeDark'), icon: Moon },
@@ -64,14 +62,14 @@ export function Header() {
 
         <div className="flex items-center gap-2">
           {isAdmin && (
-            <Link to={isAdminPage ? '/' : '/admin/users'}>
+            <Link to="/admin/users">
               <Button
-                variant={isAdminPage ? 'default' : 'outline'}
+                variant="outline"
                 size="sm"
                 className="h-8 gap-1.5 text-xs"
               >
                 <Shield className="h-3.5 w-3.5" />
-                {isAdminPage ? '返回前台' : '后台管理'}
+                后台管理
               </Button>
             </Link>
           )}

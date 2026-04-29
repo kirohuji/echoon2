@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Users, Search, Shield, ShieldAlert, ChevronLeft, ChevronRight,
-  Mail, Phone, Calendar, BarChart3, BookOpen, GraduationCap,
+  Mail, Phone, Calendar,
   Loader2, ArrowLeft, CheckCircle2, XCircle,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,18 +19,10 @@ import {
   type AdminUser, type AdminUserDetail, type AdminUsersResult,
 } from '@/features/admin/api';
 import { useAuth } from '@/providers/auth-provider';
-import { useLayoutStore } from '@/stores/layout.store';
 
 export function AdminUsersPage() {
   const navigate = useNavigate();
   const { session } = useAuth();
-  const setBottomNavVisible = useLayoutStore((s) => s.setBottomNavVisible);
-
-  // 进入管理页时隐藏底部导航，离开时恢复
-  useEffect(() => {
-    setBottomNavVisible(false);
-    return () => setBottomNavVisible(true);
-  }, [setBottomNavVisible]);
 
   const [data, setData] = useState<AdminUsersResult | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -84,19 +76,9 @@ export function AdminUsersPage() {
   return (
     <div className="space-y-6">
       {/* 页面标题 */}
-      <div className="flex items-center gap-3">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-9 w-9"
-          onClick={() => navigate('/')}
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">用户管理</h1>
-          <p className="text-sm text-muted-foreground">管理系统中的所有用户账号</p>
-        </div>
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">用户管理</h1>
+        <p className="text-sm text-muted-foreground">管理系统中的所有用户账号</p>
       </div>
 
       {/* 统计卡片 */}
