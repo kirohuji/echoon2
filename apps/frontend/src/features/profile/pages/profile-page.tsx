@@ -60,6 +60,7 @@ import {
   listLinkedAccounts, linkSocialAccount, unlinkAccount,
   type LinkedAccount,
 } from '@/features/account/api'
+import { useIsMobile } from '@/hooks/use-mobile'
 
 type Tab = 'overview' | 'records' | 'favorites' | 'words' | 'account' | 'settings'
 type MobileView = Tab | 'home'
@@ -84,6 +85,7 @@ const mobileTitles: Record<Tab, string> = {
 
 export function ProfilePage() {
   const { t } = useTranslation()
+  const isMobile = useIsMobile()
   const [activeTab, setActiveTab] = useState<Tab>('overview')
   const [mobileView, setMobileView] = useState<MobileView>('home')
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
@@ -91,9 +93,10 @@ export function ProfilePage() {
   const setBottomNavVisible = useLayoutStore((s) => s.setBottomNavVisible)
 
   useEffect(() => {
+    if (isMobile) return
     getUserProfile().then(setUserProfile).catch(() => {})
     getCurrentAvatar().then((res) => setAvatarUrl(res?.url ?? null)).catch(() => {})
-  }, [])
+  }, [isMobile])
 
   useEffect(() => {
     setBottomNavVisible(mobileView === 'home')
@@ -103,84 +106,84 @@ export function ProfilePage() {
 
   return (
     <div>
-      {/* ══════════════ 手机端视图 ══════════════ */}
-      <div className="lg:hidden">
-        {mobileView === 'home' ? (
-          <MobileProfileHome onNavigate={setMobileView} />
-        ) : (
-          <div className="space-y-4">
-            {/* iOS 风格返回栏 */}
-            <div className="relative flex items-center justify-center">
-              <button
-                type="button"
-                aria-label="返回"
-                onClick={() => setMobileView('home')}
-                className="absolute left-0 inline-flex h-8 w-8 items-center justify-center rounded-full hover:bg-muted/60 active:bg-muted"
-              >
-                <ChevronLeft className="h-5 w-5" />
-              </button>
-              <h1 className="text-base font-semibold">
-                {mobileTitles[mobileView as Tab]}
-              </h1>
-            </div>
-            {mobileView === 'overview' && <OverviewTab />}
-            {mobileView === 'records' && <RecordsTab />}
-            {mobileView === 'favorites' && <FavoritesTab />}
-            {mobileView === 'words' && <WordsTab />}
-            {mobileView === 'account' && <AccountTab />}
-            {mobileView === 'settings' && <MobileSettingsView />}
-          </div>
-        )}
-      </div>
-
-      {/* ══════════════ 桌面端视图（保持原样） ══════════════ */}
-      <div className="hidden lg:grid grid-cols-1 gap-6 lg:grid-cols-4">
-        {/* 左侧边栏 */}
-        <div className="md:col-span-1">
-          <Card>
-            <CardContent className="p-4">
-              <div className="mb-4 flex flex-col items-center gap-2 text-center">
-                <Avatar className="h-16 w-16 ring-2 ring-border ring-offset-2 ring-offset-background">
-                  <AvatarImage src={avatarUrl || undefined} alt="avatar" />
-                  <AvatarFallback className="bg-primary/10">
-                    <User className="h-8 w-8 text-primary" />
-                  </AvatarFallback>
-                </Avatar>
-                <p className="font-semibold">{nickname}</p>
-                <Badge variant="secondary" className="text-xs">免费用户</Badge>
+      {isMobile ? (
+        <div>
+          {mobileView === 'home' ? (
+            <MobileProfileHome onNavigate={setMobileView} />
+          ) : (
+            <div className="space-y-4">
+              {/* iOS 风格返回栏 */}
+              <div className="relative flex items-center justify-center">
+                <button
+                  type="button"
+                  aria-label="返回"
+                  onClick={() => setMobileView('home')}
+                  className="absolute left-0 inline-flex h-8 w-8 items-center justify-center rounded-full hover:bg-muted/60 active:bg-muted"
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                </button>
+                <h1 className="text-base font-semibold">
+                  {mobileTitles[mobileView as Tab]}
+                </h1>
               </div>
-              <Separator className="mb-4" />
-              <nav className="space-y-1">
-                {tabs.map(({ key, icon: Icon }) => (
-                  <button
-                    key={key}
-                    onClick={() => setActiveTab(key)}
-                    className={cn(
-                      'flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors',
-                      activeTab === key
-                        ? 'bg-primary text-primary-foreground'
-                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                    )}
-                  >
-                    <Icon className="h-4 w-4" />
-                    {t(`profile.${key}`)}
-                  </button>
-                ))}
-              </nav>
-            </CardContent>
-          </Card>
+              {mobileView === 'overview' && <OverviewTab />}
+              {mobileView === 'records' && <RecordsTab />}
+              {mobileView === 'favorites' && <FavoritesTab />}
+              {mobileView === 'words' && <WordsTab />}
+              {mobileView === 'account' && <AccountTab />}
+              {mobileView === 'settings' && <MobileSettingsView />}
+            </div>
+          )}
         </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
+          {/* 左侧边栏 */}
+          <div className="md:col-span-1">
+            <Card>
+              <CardContent className="p-4">
+                <div className="mb-4 flex flex-col items-center gap-2 text-center">
+                  <Avatar className="h-16 w-16 ring-2 ring-border ring-offset-2 ring-offset-background">
+                    <AvatarImage src={avatarUrl || undefined} alt="avatar" />
+                    <AvatarFallback className="bg-primary/10">
+                      <User className="h-8 w-8 text-primary" />
+                    </AvatarFallback>
+                  </Avatar>
+                  <p className="font-semibold">{nickname}</p>
+                  <Badge variant="secondary" className="text-xs">免费用户</Badge>
+                </div>
+                <Separator className="mb-4" />
+                <nav className="space-y-1">
+                  {tabs.map(({ key, icon: Icon }) => (
+                    <button
+                      key={key}
+                      onClick={() => setActiveTab(key)}
+                      className={cn(
+                        'flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors',
+                        activeTab === key
+                          ? 'bg-primary text-primary-foreground'
+                          : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                      )}
+                    >
+                      <Icon className="h-4 w-4" />
+                      {t(`profile.${key}`)}
+                    </button>
+                  ))}
+                </nav>
+              </CardContent>
+            </Card>
+          </div>
 
-        {/* 右侧内容 */}
-        <div className="md:col-span-3">
-          {activeTab === 'overview' && <OverviewTab />}
-          {activeTab === 'records' && <RecordsTab />}
-          {activeTab === 'favorites' && <FavoritesTab />}
-          {activeTab === 'words' && <WordsTab />}
-          {activeTab === 'account' && <AccountTab />}
-          {activeTab === 'settings' && <SettingsTab />}
+          {/* 右侧内容 */}
+          <div className="md:col-span-3">
+            {activeTab === 'overview' && <OverviewTab />}
+            {activeTab === 'records' && <RecordsTab />}
+            {activeTab === 'favorites' && <FavoritesTab />}
+            {activeTab === 'words' && <WordsTab />}
+            {activeTab === 'account' && <AccountTab />}
+            {activeTab === 'settings' && <SettingsTab />}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }
