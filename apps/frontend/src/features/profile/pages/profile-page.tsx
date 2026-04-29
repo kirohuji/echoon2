@@ -8,6 +8,7 @@ import {
   Sparkles, BookOpen, Link2, ExternalLink, Brain, BarChart2, CheckSquare,
   GraduationCap, CheckCircle2, Lightbulb, Crown, Sun, Moon, Monitor,
   Globe, Database, Zap, TrendingUp, Target, Flame, Camera,
+  IdCard, PencilLine, LogOut, ShieldAlert, Phone, Mail,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -20,11 +21,12 @@ import { Select, SelectItem } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@/components/ui/dialog'
 import {
   Drawer, DrawerContent, DrawerHeader, DrawerTitle,
 } from '@/components/ui/drawer'
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { ConfigDataTable, type ColumnConfig } from '@/components/common/config-datatable'
 import { BindingDialog } from '@/features/question-bank/components/binding-dialog'
 import {
@@ -53,9 +55,13 @@ import { enrichWord, type WordEnrichmentResult, type WordExampleItem } from '@/l
 import { synthesizeText } from '@/lib/tts-api'
 import { cn } from '@/lib/cn'
 import i18n from '@/lib/i18n'
-import { getCurrentAvatar } from '@/features/file-assets/api'
+import { getCurrentAvatar, uploadFileToCosAndComplete, setCurrentAvatar } from '@/features/file-assets/api'
+import {
+  listLinkedAccounts, linkSocialAccount, unlinkAccount,
+  type LinkedAccount,
+} from '@/features/account/api'
 
-type Tab = 'overview' | 'records' | 'favorites' | 'words' | 'settings'
+type Tab = 'overview' | 'records' | 'favorites' | 'words' | 'account' | 'settings'
 type MobileView = Tab | 'home'
 
 const tabs: { key: Tab; icon: React.ElementType }[] = [
@@ -63,6 +69,7 @@ const tabs: { key: Tab; icon: React.ElementType }[] = [
   { key: 'records', icon: ClipboardList },
   { key: 'favorites', icon: Star },
   { key: 'words', icon: BookMarked },
+  { key: 'account', icon: IdCard },
   { key: 'settings', icon: Settings },
 ]
 
@@ -71,7 +78,8 @@ const mobileTitles: Record<Tab, string> = {
   records: '练习记录',
   favorites: '收藏题库',
   words: '生词本',
-  settings: '设置',
+  account: '账户管理',
+  settings: '偏好设置',
 }
 
 export function ProfilePage() {
@@ -79,10 +87,12 @@ export function ProfilePage() {
   const [activeTab, setActiveTab] = useState<Tab>('overview')
   const [mobileView, setMobileView] = useState<MobileView>('home')
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const setBottomNavVisible = useLayoutStore((s) => s.setBottomNavVisible)
 
   useEffect(() => {
     getUserProfile().then(setUserProfile).catch(() => {})
+    getCurrentAvatar().then((res) => setAvatarUrl(res?.url ?? null)).catch(() => {})
   }, [])
 
   useEffect(() => {
@@ -117,6 +127,7 @@ export function ProfilePage() {
             {mobileView === 'records' && <RecordsTab />}
             {mobileView === 'favorites' && <FavoritesTab />}
             {mobileView === 'words' && <WordsTab />}
+            {mobileView === 'account' && <AccountTab />}
             {mobileView === 'settings' && <MobileSettingsView />}
           </div>
         )}
@@ -129,10 +140,13 @@ export function ProfilePage() {
           <Card>
             <CardContent className="p-4">
               <div className="mb-4 flex flex-col items-center gap-2 text-center">
-                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
-                  <User className="h-8 w-8 text-primary" />
-                </div>
-                <p className="font-semibold">导游备考者</p>
+                <Avatar className="h-16 w-16 ring-2 ring-border ring-offset-2 ring-offset-background">
+                  <AvatarImage src={avatarUrl || undefined} alt="avatar" />
+                  <AvatarFallback className="bg-primary/10">
+                    <User className="h-8 w-8 text-primary" />
+                  </AvatarFallback>
+                </Avatar>
+                <p className="font-semibold">{nickname}</p>
                 <Badge variant="secondary" className="text-xs">免费用户</Badge>
               </div>
               <Separator className="mb-4" />
@@ -163,6 +177,7 @@ export function ProfilePage() {
           {activeTab === 'records' && <RecordsTab />}
           {activeTab === 'favorites' && <FavoritesTab />}
           {activeTab === 'words' && <WordsTab />}
+          {activeTab === 'account' && <AccountTab />}
           {activeTab === 'settings' && <SettingsTab />}
         </div>
       </div>
@@ -267,6 +282,7 @@ function MobileProfileHome({ onNavigate }: { onNavigate: (view: MobileView) => v
     { key: 'records' as Tab, icon: ClipboardList, label: '练习记录', iconBg: 'bg-emerald-500' },
     { key: 'favorites' as Tab, icon: Star, label: '收藏题库', iconBg: 'bg-orange-400' },
     { key: 'words' as Tab, icon: BookMarked, label: '生词本', iconBg: 'bg-purple-500' },
+    { key: 'account' as Tab, icon: IdCard, label: '账户管理', iconBg: 'bg-sky-400' },
   ]
   const themeLabel: Record<string, string> = { light: '浅色', dark: '深色', system: '跟随系统' }
   const langLabel: Record<string, string> = { 'zh-CN': '中文', en: 'English' }
@@ -370,7 +386,13 @@ function MobileProfileHome({ onNavigate }: { onNavigate: (view: MobileView) => v
             iconBg={iconBg}
             label={label}
             last={idx === navItems.length - 1}
-            onTap={() => onNavigate(key)}
+            onTap={() => {
+              if (key === 'account') {
+                navigate('/account')
+              } else {
+                onNavigate(key)
+              }
+            }}
           />
         ))}
       </IosSection>
@@ -606,34 +628,42 @@ function OverviewTab() {
     })
   }, [])
 
-  const stats = overview
-    ? [
-        { label: '练习天数', value: overview.totalPracticeDays },
-        { label: '累计做题', value: overview.totalQuestionsAnswered },
-        { label: '收藏题目', value: overview.totalFavorites },
-        { label: '生词本', value: overview.totalWords },
-        { label: '连续打卡', value: `${overview.streakDays}天` },
-        { label: '日均做题', value: overview.avgDailyQuestions },
-      ]
-    : []
+  const stats = [
+    { label: '练习天数', value: overview?.totalPracticeDays ?? 0, icon: Calendar, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+    { label: '累计做题', value: overview?.totalQuestionsAnswered ?? 0, icon: CheckSquare, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+    { label: '收藏题目', value: overview?.totalFavorites ?? 0, icon: Star, color: 'text-amber-500', bg: 'bg-amber-500/10' },
+    { label: '生词本', value: overview?.totalWords ?? 0, icon: BookMarked, color: 'text-purple-500', bg: 'bg-purple-500/10' },
+    { label: '连续打卡', value: `${overview?.streakDays ?? 0}天`, icon: Flame, color: 'text-orange-500', bg: 'bg-orange-500/10' },
+    { label: '日均做题', value: overview?.avgDailyQuestions ?? 0, icon: TrendingUp, color: 'text-cyan-500', bg: 'bg-cyan-500/10' },
+  ]
 
   return (
     <div className="space-y-6">
       <Card>
-        <CardHeader>
+        <CardHeader className="pb-3">
           <CardTitle className="text-base">{t('profile.practiceStats')}</CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="grid grid-cols-3 gap-4">
-              {[1, 2, 3, 4, 5, 6].map((i) => <Skeleton key={i} className="h-16" />)}
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-3">
+              {[1, 2, 3, 4, 5, 6].map((i) => <Skeleton key={i} className="h-[88px] rounded-xl" />)}
             </div>
           ) : (
-            <div className="grid grid-cols-3 gap-4">
-              {stats.map(({ label, value }) => (
-                <div key={label} className="rounded-xl bg-muted/50 p-3 text-center">
-                  <div className="text-2xl font-bold">{value}</div>
-                  <div className="text-xs text-muted-foreground mt-1">{label}</div>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-3">
+              {stats.map(({ label, value, icon: Icon, color, bg }) => (
+                <div
+                  key={label}
+                  className="flex items-start gap-3 rounded-xl border border-border/60 bg-card p-4 transition-colors hover:border-border"
+                >
+                  <div className={cn('flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg', bg)}>
+                    <Icon className={cn('h-4.5 w-4.5', color)} />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xl font-bold leading-tight tracking-tight tabular-nums">
+                      {value}
+                    </p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">{label}</p>
+                  </div>
                 </div>
               ))}
             </div>
@@ -643,18 +673,25 @@ function OverviewTab() {
 
       {overview?.currentBank && (
         <Card>
-          <CardHeader className="pb-2">
+          <CardHeader className="pb-3">
             <CardTitle className="text-base">{t('profile.currentBank')}</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="font-medium">{overview.currentBank.bankName}</p>
-            <p className="text-xs text-muted-foreground">ID: {overview.currentBank.bankId}</p>
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                <GraduationCap className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className="font-semibold">{overview.currentBank.bankName}</p>
+                <p className="text-xs text-muted-foreground">当前正在使用的备考题库</p>
+              </div>
+            </div>
           </CardContent>
         </Card>
       )}
 
       <Card>
-        <CardHeader className="pb-2">
+        <CardHeader className="pb-3">
           <CardTitle className="text-base">{t('profile.activityHeatmap')}</CardTitle>
         </CardHeader>
         <CardContent>
@@ -667,34 +704,94 @@ function OverviewTab() {
 
 function ActivityHeatmap({ days }: { days: ActivityDay[] }) {
   if (days.length === 0) {
-    return <p className="text-sm text-muted-foreground">暂无活跃记录</p>
+    return (
+      <div className="flex flex-col items-center py-8 text-center">
+        <BarChart2 className="mb-2 h-10 w-10 text-muted-foreground/30" />
+        <p className="text-sm text-muted-foreground">暂无活跃记录</p>
+        <p className="text-xs text-muted-foreground/60">开始练习后这里会显示你的活跃度</p>
+      </div>
+    )
   }
 
   const levelColors = [
     'bg-muted',
-    'bg-green-200 dark:bg-green-900',
-    'bg-green-400 dark:bg-green-700',
-    'bg-green-500 dark:bg-green-600',
-    'bg-green-600 dark:bg-green-500',
+    'bg-primary/20',
+    'bg-primary/45',
+    'bg-primary/70',
+    'bg-primary',
   ]
 
+  // Group days into weeks (columns of 7, starting from Monday)
+  const weeks: ActivityDay[][] = []
+  let currentWeek: ActivityDay[] = []
+
+  days.forEach((day, i) => {
+    currentWeek.push(day)
+    if (currentWeek.length === 7 || i === days.length - 1) {
+      weeks.push(currentWeek)
+      currentWeek = []
+    }
+  })
+
+  const monthLabels: { label: string; col: number }[] = []
+  weeks.forEach((week, wi) => {
+    const firstDay = week[0]
+    if (firstDay) {
+      const d = new Date(firstDay.date)
+      const monthKey = `${d.getFullYear()}-${d.getMonth()}`
+      const prev = monthLabels[monthLabels.length - 1]
+      const prevMonth = prev ? prev.label.split('-')[1] : ''
+      if (monthLabels.length === 0 || `${d.getMonth() + 1}月` !== prevMonth) {
+        monthLabels.push({ label: `${d.getMonth() + 1}月`, col: wi })
+      }
+    }
+  })
+
   return (
-    <div className="overflow-x-auto">
-      <div className="flex gap-0.5 flex-wrap">
-        {days.map((day) => (
-          <div
-            key={day.date}
-            title={`${day.date}: ${day.count} 次`}
-            className={cn('h-3 w-3 rounded-sm', levelColors[day.level])}
-          />
-        ))}
+    <div>
+      <div className="overflow-x-auto pb-1">
+        {/* Month labels */}
+        <div className="mb-1 flex text-[10px] text-muted-foreground" style={{ gap: '3px' }}>
+          {weeks.map((_, wi) => {
+            const ml = monthLabels.find((m) => m.col === wi)
+            return (
+              <div key={wi} className="h-3 w-3 flex-shrink-0">
+                {ml && (
+                  <span className="absolute text-[10px] leading-none">{ml.label}</span>
+                )}
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Grid */}
+        <div className="flex" style={{ gap: '3px' }}>
+          {weeks.map((week, wi) => (
+            <div key={wi} className="flex flex-col" style={{ gap: '3px' }}>
+              {Array.from({ length: 7 }).map((_, di) => {
+                const day = week[di]
+                return (
+                  <div
+                    key={di}
+                    title={day ? `${day.date}: ${day.count} 次练习` : ''}
+                    className={cn(
+                      'h-3 w-3 flex-shrink-0 rounded-sm transition-colors',
+                      day ? levelColors[day.level] || levelColors[0] : 'bg-transparent'
+                    )}
+                  />
+                )
+              })}
+            </div>
+          ))}
+        </div>
       </div>
-      <div className="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
-        <span>少</span>
+
+      <div className="mt-3 flex items-center justify-end gap-1.5 text-xs text-muted-foreground">
+        <span className="text-[10px]">少</span>
         {levelColors.map((c, i) => (
           <div key={i} className={cn('h-3 w-3 rounded-sm', c)} />
         ))}
-        <span>多</span>
+        <span className="text-[10px]">多</span>
       </div>
     </div>
   )
@@ -1544,12 +1641,457 @@ function WordsTab() {
   )
 }
 
+// ─── PC 端：昵称编辑弹窗 ──────────────────────────────────────────────────
+function NicknameEditDialog({
+  open,
+  onOpenChange,
+  currentName,
+  onSaved,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  currentName: string
+  onSaved: (name: string) => void
+}) {
+  const { t } = useTranslation()
+  const [name, setName] = useState(currentName)
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    setName(currentName)
+  }, [currentName, open])
+
+  const handleSave = async () => {
+    if (!name.trim() || name.trim() === currentName) {
+      onOpenChange(false)
+      return
+    }
+    setSaving(true)
+    try {
+      await updateUserProfile({ name: name.trim() })
+      onSaved(name.trim())
+      onOpenChange(false)
+    } catch {
+      // silent
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>{t('profile.editNicknameTitle')}</DialogTitle>
+          <DialogDescription>修改后将会在所有页面展示新的昵称</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-2 py-2">
+          <Input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="请输入昵称"
+            maxLength={20}
+            autoFocus
+          />
+          <p className="text-right text-xs text-muted-foreground">{name.length}/20</p>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>{t('common.cancel')}</Button>
+          <Button onClick={handleSave} disabled={saving || !name.trim()}>
+            {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {t('common.save')}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+// ─── PC 端：账户管理页 ────────────────────────────────────────────────────
+function AccountTab() {
+  const { t } = useTranslation()
+  const navigate = useNavigate()
+  const { session, signOut } = useAuth()
+  const sessionUser = session?.user ?? null
+  const [profile, setProfile] = useState<UserProfile | null>(null)
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
+  const [avatarUploading, setAvatarUploading] = useState(false)
+  const [nicknameDialogOpen, setNicknameDialogOpen] = useState(false)
+  const [linkedAccounts, setLinkedAccounts] = useState<LinkedAccount[]>([])
+  const [linkingProvider, setLinkingProvider] = useState<string | null>(null)
+  const [unlinkingId, setUnlinkingId] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const avatarInputRef = useRef<HTMLInputElement | null>(null)
+
+  const loadData = useCallback(async () => {
+    try {
+      const [p, avatar, accounts] = await Promise.all([
+        getUserProfile(),
+        getCurrentAvatar(),
+        listLinkedAccounts().catch(() => [] as LinkedAccount[]),
+      ])
+      setProfile(p)
+      setAvatarUrl(avatar?.url ?? null)
+      setLinkedAccounts(accounts)
+    } catch {
+      // ignore
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
+  useEffect(() => { loadData() }, [loadData])
+
+  useEffect(() => {
+    const handleFocus = () => {
+      listLinkedAccounts().then(setLinkedAccounts).catch(() => {})
+    }
+    window.addEventListener('focus', handleFocus)
+    return () => window.removeEventListener('focus', handleFocus)
+  }, [])
+
+  const onPickAvatar = () => avatarInputRef.current?.click()
+
+  const onAvatarFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+    event.currentTarget.value = ''
+    if (!file.type.startsWith('image/')) return
+    if (file.size > 5 * 1024 * 1024) return
+
+    setAvatarUploading(true)
+    try {
+      const asset = await uploadFileToCosAndComplete({ file, group: 'avatar' })
+      const current = await setCurrentAvatar(asset.id)
+      setAvatarUrl(current.url)
+    } catch {
+      // ignore
+    } finally {
+      setAvatarUploading(false)
+    }
+  }
+
+  const handleLinkSocial = async (provider: 'wechat' | 'apple') => {
+    try {
+      setLinkingProvider(provider)
+      await linkSocialAccount(provider)
+    } catch {
+      setLinkingProvider(null)
+    }
+  }
+
+  const handleUnlink = async (accountId: string) => {
+    if (unlinkingId) return
+    setUnlinkingId(accountId)
+    try {
+      await unlinkAccount(accountId)
+      setLinkedAccounts((prev) => prev.filter((a) => a.id !== accountId))
+    } catch {
+      // ignore
+    } finally {
+      setUnlinkingId(null)
+    }
+  }
+
+  const handleNicknameSaved = (name: string) => {
+    setProfile((prev) => prev ? { ...prev, name } : prev)
+  }
+
+  const wechatBound = linkedAccounts.some((a) => a.provider === 'wechat')
+  const appleBound = linkedAccounts.some((a) => a.provider === 'apple')
+  const wechatAccount = linkedAccounts.find((a) => a.provider === 'wechat')
+  const appleAccount = linkedAccounts.find((a) => a.provider === 'apple')
+
+  const nickname = profile?.name || sessionUser?.name || t('profile.notBound')
+  const phoneNumber = profile?.phoneNumber || sessionUser?.phoneNumber || null
+  const email = profile?.email || sessionUser?.email || null
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        {[1, 2, 3].map((i) => (
+          <Card key={i}>
+            <CardHeader><Skeleton className="h-5 w-24" /></CardHeader>
+            <CardContent className="space-y-4">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      <NicknameEditDialog
+        open={nicknameDialogOpen}
+        onOpenChange={setNicknameDialogOpen}
+        currentName={nickname}
+        onSaved={handleNicknameSaved}
+      />
+
+      {/* 头像 */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">{t('profile.avatar')}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-5">
+            <input
+              ref={avatarInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={onAvatarFileChange}
+            />
+            <button
+              type="button"
+              disabled={avatarUploading}
+              onClick={onPickAvatar}
+              className="group relative flex-shrink-0"
+            >
+              <Avatar className="h-20 w-20 ring-2 ring-border ring-offset-2 ring-offset-background transition-shadow group-hover:ring-primary/50">
+                <AvatarImage src={avatarUrl || undefined} alt="avatar" />
+                <AvatarFallback className="bg-primary/10">
+                  <User className="h-10 w-10 text-primary" />
+                </AvatarFallback>
+              </Avatar>
+              <span className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100">
+                {avatarUploading ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  <Camera className="h-5 w-5" />
+                )}
+              </span>
+            </button>
+            <div>
+              <p className="text-sm font-medium">{t('profile.changeAvatar')}</p>
+              <p className="text-xs text-muted-foreground mt-1">{t('profile.avatarHint')}</p>
+              {avatarUploading && (
+                <p className="mt-1.5 flex items-center gap-1.5 text-xs text-primary">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  上传中...
+                </p>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 基本信息 */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">{t('profile.basicInfo')}</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-blue-500/10">
+                <PencilLine className="h-4 w-4 text-blue-500" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-medium">{t('profile.nickname')}</p>
+                <p className="text-xs text-muted-foreground truncate">{nickname}</p>
+              </div>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="flex-shrink-0"
+              onClick={() => setNicknameDialogOpen(true)}
+            >
+              {t('profile.editNickname')}
+            </Button>
+          </div>
+
+          <Separator />
+
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-green-500/10">
+                <Phone className="h-4 w-4 text-green-500" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-medium">{t('profile.phone')}</p>
+                <p className="text-xs text-muted-foreground">{phoneNumber || t('profile.notBound')}</p>
+              </div>
+            </div>
+            {phoneNumber && (
+              <Badge variant={profile?.phoneNumberVerified ? 'outline' : 'secondary'} className="flex-shrink-0 text-xs">
+                {profile?.phoneNumberVerified ? (
+                  <span className="flex items-center gap-1">
+                    <CheckCircle2 className="h-3 w-3 text-green-500" />
+                    {t('profile.verified')}
+                  </span>
+                ) : (
+                  t('profile.unverified')
+                )}
+              </Badge>
+            )}
+          </div>
+
+          <Separator />
+
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-purple-500/10">
+                <Mail className="h-4 w-4 text-purple-500" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-medium">{t('profile.email')}</p>
+                <p className="text-xs text-muted-foreground truncate">{email || t('profile.notBound')}</p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 账号绑定 */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">{t('profile.accountBinding')}</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* 微信 */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-[#07C160]/15">
+                <span className="text-sm font-bold text-[#07C160]">微</span>
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-medium">{t('profile.wechat')}</p>
+                <p className="text-xs text-muted-foreground">
+                  {wechatBound ? `已绑定${wechatAccount?.name ? `：${wechatAccount.name}` : ''}` : t('profile.wechatBind')}
+                </p>
+              </div>
+            </div>
+            {wechatBound ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="flex-shrink-0 text-destructive hover:text-destructive"
+                disabled={unlinkingId === wechatAccount?.id}
+                onClick={() => wechatAccount && handleUnlink(wechatAccount.id)}
+              >
+                {unlinkingId === wechatAccount?.id ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  t('profile.unbind')
+                )}
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-shrink-0 border-[#07C160]/30 text-[#07C160] hover:bg-[#07C160]/10"
+                disabled={linkingProvider === 'wechat'}
+                onClick={() => handleLinkSocial('wechat')}
+              >
+                {linkingProvider === 'wechat' ? (
+                  <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
+                ) : (
+                  <ExternalLink className="mr-1.5 h-3 w-3" />
+                )}
+                {t('profile.bind')}
+              </Button>
+            )}
+          </div>
+
+          <Separator />
+
+          {/* Apple */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-foreground/10">
+                <span className="text-sm font-bold text-foreground">A</span>
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-medium">{t('profile.appleId')}</p>
+                <p className="text-xs text-muted-foreground">
+                  {appleBound ? `已绑定${appleAccount?.name ? `：${appleAccount.name}` : ''}` : t('profile.appleIdBind')}
+                </p>
+              </div>
+            </div>
+            {appleBound ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="flex-shrink-0 text-destructive hover:text-destructive"
+                disabled={unlinkingId === appleAccount?.id}
+                onClick={() => appleAccount && handleUnlink(appleAccount.id)}
+              >
+                {unlinkingId === appleAccount?.id ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  t('profile.unbind')
+                )}
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-shrink-0"
+                disabled={linkingProvider === 'apple'}
+                onClick={() => handleLinkSocial('apple')}
+              >
+                {linkingProvider === 'apple' ? (
+                  <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
+                ) : (
+                  <ExternalLink className="mr-1.5 h-3 w-3" />
+                )}
+                {t('profile.bind')}
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 账号安全 */}
+      <Card className="border-destructive/20">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base text-destructive">
+            <ShieldAlert className="h-4 w-4" />
+            {t('profile.dangerZone')}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium">{t('profile.logout')}</p>
+              <p className="text-xs text-muted-foreground">{t('profile.logoutWarning')}</p>
+            </div>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => {
+                signOut()
+                navigate('/')
+              }}
+            >
+              <LogOut className="mr-1.5 h-4 w-4" />
+              {t('profile.logout')}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
 function SettingsTab() {
   const { t } = useTranslation()
   const { theme, setTheme } = useTheme()
   const { autoPlay, setAutoPlay, language, setLanguage } = usePreferencesStore()
   const { config } = useConfigStore()
   const [showBinding, setShowBinding] = useState(false)
+  const [autoSpeakOnLookup, setAutoSpeakOnLookup] = useState(true)
+  const [pronunciationType, setPronunciationType] = useState<'us' | 'uk'>('us')
+  const [autoCopyWord, setAutoCopyWord] = useState(false)
+  const [wifiOnlyMedia, setWifiOnlyMedia] = useState(true)
+  const [dailyGoal, setDailyGoal] = useState('20')
+  const [learningPreference, setLearningPreference] = useState('balanced')
+  const [personalizedRecommendation, setPersonalizedRecommendation] = useState(true)
 
   const handleLanguageChange = (lang: string) => {
     setLanguage(lang)
@@ -1560,9 +2102,10 @@ function SettingsTab() {
     <div className="space-y-6">
       <BindingDialog open={showBinding} onClose={() => setShowBinding(false)} />
 
+      {/* 学习偏好 */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">{t('profile.settings')}</CardTitle>
+          <CardTitle className="text-base">{t('profile.autoSpeak')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-5">
           <div className="flex items-center justify-between">
@@ -1575,6 +2118,102 @@ function SettingsTab() {
 
           <Separator />
 
+          <div className="flex items-center justify-between">
+            <div>
+              <Label>{t('profile.autoSpeak')}</Label>
+              <p className="text-xs text-muted-foreground">查词时自动朗读单词发音</p>
+            </div>
+            <Switch checked={autoSpeakOnLookup} onCheckedChange={setAutoSpeakOnLookup} />
+          </div>
+
+          <Separator />
+
+          <div className="space-y-2">
+            <Label>{t('profile.pronunciationType')}</Label>
+            <Select
+              value={pronunciationType}
+              onChange={(e) => setPronunciationType(e.target.value as 'us' | 'uk')}
+              className="w-48"
+            >
+              <SelectItem value="us">{t('profile.pronunciationUs')}</SelectItem>
+              <SelectItem value="uk">{t('profile.pronunciationUk')}</SelectItem>
+            </Select>
+          </div>
+
+          <Separator />
+
+          <div className="flex items-center justify-between">
+            <div>
+              <Label>{t('profile.autoCopyWord')}</Label>
+              <p className="text-xs text-muted-foreground">查词后自动将单词复制到剪切板</p>
+            </div>
+            <Switch checked={autoCopyWord} onCheckedChange={setAutoCopyWord} />
+          </div>
+
+          <Separator />
+
+          <div className="flex items-center justify-between">
+            <div>
+              <Label>{t('profile.wifiOnlyMedia')}</Label>
+              <p className="text-xs text-muted-foreground">仅在 WiFi 环境下播放和下载音频</p>
+            </div>
+            <Switch checked={wifiOnlyMedia} onCheckedChange={setWifiOnlyMedia} />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 学习目标 */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">{t('profile.dailyGoal')}</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <div className="space-y-2">
+            <Label>{t('profile.dailyGoal')}</Label>
+            <Select
+              value={dailyGoal}
+              onChange={(e) => setDailyGoal(e.target.value)}
+              className="w-48"
+            >
+              <SelectItem value="10">{t('profile.dailyGoal10')}</SelectItem>
+              <SelectItem value="20">{t('profile.dailyGoal20')}</SelectItem>
+              <SelectItem value="30">{t('profile.dailyGoal30')}</SelectItem>
+            </Select>
+          </div>
+
+          <Separator />
+
+          <div className="space-y-2">
+            <Label>{t('profile.learningPreference')}</Label>
+            <Select
+              value={learningPreference}
+              onChange={(e) => setLearningPreference(e.target.value)}
+              className="w-48"
+            >
+              <SelectItem value="balanced">{t('profile.balanceMode')}</SelectItem>
+              <SelectItem value="exam">{t('profile.examMode')}</SelectItem>
+              <SelectItem value="speaking">{t('profile.speakingMode')}</SelectItem>
+            </Select>
+          </div>
+
+          <Separator />
+
+          <div className="flex items-center justify-between">
+            <div>
+              <Label>{t('profile.personalizedRecommendation')}</Label>
+              <p className="text-xs text-muted-foreground">根据学习数据智能推荐练习内容</p>
+            </div>
+            <Switch checked={personalizedRecommendation} onCheckedChange={setPersonalizedRecommendation} />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 外观与语言 */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">{t('profile.theme')}</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-5">
           <div className="space-y-2">
             <Label>{t('profile.theme')}</Label>
             <Select
@@ -1601,33 +2240,50 @@ function SettingsTab() {
               <SelectItem value="en">{t('profile.langEn')}</SelectItem>
             </Select>
           </div>
+        </CardContent>
+      </Card>
 
-          <Separator />
-
-          <AuthSettingsPanel compact={false} />
-
-          <Separator />
-
-          <div>
-            <div className="flex items-center justify-between">
-              <div>
-                <Label>{t('profile.currentBank')}</Label>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {config?.bankName || '未配置题库'}
-                </p>
-              </div>
-              <Button variant="outline" size="sm" onClick={() => setShowBinding(true)}>
-                {t('profile.adjustBinding')}
-              </Button>
+      {/* 题库设置 */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">{t('profile.currentBank')}</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium">
+                {config?.bankName || '未配置题库'}
+              </p>
+              {config && (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <Badge variant="secondary" className="text-xs">{config.province}</Badge>
+                  <Badge variant="secondary" className="text-xs">{config.language}</Badge>
+                  <Badge variant="secondary" className="text-xs">{config.examType}</Badge>
+                  <Badge variant="secondary" className="text-xs">{config.interviewForm}</Badge>
+                </div>
+              )}
             </div>
-            {config && (
-              <div className="mt-3 rounded-xl bg-muted/50 p-3 text-xs text-muted-foreground space-y-1">
-                <div>省份：{config.province}</div>
-                <div>语种：{config.language}</div>
-                <div>考试类型：{config.examType}</div>
-                <div>面试形式：{config.interviewForm}</div>
-              </div>
-            )}
+            <Button variant="outline" size="sm" onClick={() => setShowBinding(true)}>
+              {t('profile.adjustBinding')}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 数据管理 */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">{t('profile.dataManagement')}</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium">{t('profile.clearCache')}</p>
+              <p className="text-xs text-muted-foreground">清理本地存储的音频缓存文件</p>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => {}}>
+              {t('common.confirm')}
+            </Button>
           </div>
         </CardContent>
       </Card>
