@@ -14,6 +14,7 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ConfigDataTable, type ColumnConfig } from '@/components/common/config-datatable'
 import { BindingDialog } from '@/features/question-bank/components/binding-dialog'
+import { SearchOverlay } from '@/features/question-bank/components/search-overlay'
 import { getQuestionBankHome, type QuestionBankHome, type ScenicCard, type OtherTopic } from '@/features/question-bank/api'
 import { useConfigStore } from '@/stores/config.store'
 import { useAssetsStore } from '@/stores/assets.store'
@@ -56,6 +57,7 @@ export function HomePage() {
   const { isFavorite, addFavorite, removeFavorite } = useAssetsStore()
 
   const [showBinding, setShowBinding] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false)
   const [homeData, setHomeData] = useState<QuestionBankHome | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
@@ -178,6 +180,11 @@ export function HomePage() {
         forceOpen={!isConfigured}
       />
 
+      <SearchOverlay
+        open={searchOpen}
+        onClose={() => setSearchOpen(false)}
+      />
+
       {/* ══════════════ 手机端视图 ══════════════ */}
       <div className="lg:hidden space-y-3">
 
@@ -186,9 +193,9 @@ export function HomePage() {
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder={t('home.hero.searchPlaceholder')}
-            value={keyword}
-            onChange={(e) => setKeyword(e.target.value)}
-            className="pl-9 rounded-full bg-muted/60 border-0 focus-visible:ring-1"
+            readOnly
+            onFocus={() => setSearchOpen(true)}
+            className="pl-9 rounded-full bg-muted/60 border-0 focus-visible:ring-1 cursor-pointer"
           />
         </div>
 
