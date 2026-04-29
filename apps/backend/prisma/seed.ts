@@ -380,6 +380,12 @@ async function main() {
     },
   });
 
+  // 将管理员账号的 role 设为 admin
+  await prisma.user.update({
+    where: { email: 'z1309014381@gmail.com' },
+    data: { role: 'admin' },
+  });
+
   console.log('Seed complete!');
 }
 

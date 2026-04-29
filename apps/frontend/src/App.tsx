@@ -9,6 +9,7 @@ import { MockPage } from '@/features/mock-exam/pages/mock-page'
 import { ProfilePage } from '@/features/profile/pages/profile-page'
 import { MemberPage } from '@/features/membership/pages/member-page'
 import { AccountPage } from '@/features/account/pages/account-page'
+import { AdminUsersPage } from '@/features/admin/pages/admin-users-page'
 import { LoginPage } from '@/features/auth/pages/login-page'
 import { RegisterPage } from '@/features/auth/pages/register-page'
 
@@ -26,6 +27,7 @@ export default function App() {
                 <Route path="/profile" element={<ProfilePage />} />
                 <Route path="/account" element={<AccountPage />} />
                 <Route path="/member" element={<MemberPage />} />
+                <Route path="/admin/users" element={<AdminUsersPage />} />
                 <Route path="/auth/login" element={<LoginPage />} />
                 <Route path="/auth/register" element={<RegisterPage />} />
               </Routes>

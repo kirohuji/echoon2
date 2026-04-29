@@ -13,6 +13,7 @@ import { TtsModule } from './modules/tts/tts.module';
 import { PracticeAiModule } from './modules/practice-ai/practice-ai.module';
 import { FileAssetsModule } from './modules/file-assets/file-assets.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { AdminModule } from './modules/admin/admin.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { AuthModule } from './modules/auth/auth.module';
     PracticeAiModule,
     FileAssetsModule,
     AuthModule,
+    AdminModule,
   ],
 })
 export class AppModule {}

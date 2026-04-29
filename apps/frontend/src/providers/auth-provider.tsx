@@ -12,6 +12,7 @@ interface SessionUser {
   phoneNumber?: string
   phoneNumberVerified?: boolean
   emailVerified?: boolean
+  role?: 'user' | 'admin'
 }
 
 interface Session {

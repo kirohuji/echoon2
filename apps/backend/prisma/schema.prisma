@@ -7,6 +7,11 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum UserRole {
+  user
+  admin
+}
+
 model User {
   id                  String    @id
   name                String
@@ -16,6 +21,7 @@ model User {
   username            String?   @unique
   phoneNumber         String?   @unique
   phoneNumberVerified Boolean   @default(false)
+  role                UserRole  @default(user)
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
   sessions            Session[]

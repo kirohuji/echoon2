@@ -2,9 +2,10 @@ import React, { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useTheme } from 'next-themes'
-import { Sun, Moon, Monitor, User } from 'lucide-react'
+import { Sun, Moon, Monitor, User, Shield } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/cn'
+import { useAuth } from '@/providers/auth-provider'
 
 const navItems = [
   { key: 'library', path: '/' },
@@ -17,6 +18,8 @@ export function Header() {
   const location = useLocation()
   const { theme, setTheme } = useTheme()
   const [themeMenuOpen, setThemeMenuOpen] = useState(false)
+  const { session } = useAuth()
+  const isAdmin = session?.user?.role === 'admin'
 
   const currentPath = location.pathname
 
@@ -24,6 +27,8 @@ export function Header() {
     if (path === '/') return currentPath === '/'
     return currentPath.startsWith(path)
   }
+
+  const isAdminPage = currentPath.startsWith('/admin')
 
   const themeOptions = [
     { value: 'light', label: t('profile.themeLight'), icon: Sun },
@@ -58,6 +63,19 @@ export function Header() {
         </nav>
 
         <div className="flex items-center gap-2">
+          {isAdmin && (
+            <Link to={isAdminPage ? '/' : '/admin/users'}>
+              <Button
+                variant={isAdminPage ? 'default' : 'outline'}
+                size="sm"
+                className="h-8 gap-1.5 text-xs"
+              >
+                <Shield className="h-3.5 w-3.5" />
+                {isAdminPage ? '返回前台' : '后台管理'}
+              </Button>
+            </Link>
+          )}
+
           <div className="relative">
             <Button
               variant="ghost"
