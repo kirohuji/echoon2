@@ -1,4 +1,4 @@
-import { get, post } from '@/lib/request';
+import { get, post, patch, del } from '@/lib/request';
 import instance from '@/lib/request';
 
 export interface AdminNotificationItem {
@@ -78,4 +78,26 @@ export async function listNotificationImages(params: {
   pageSize?: number;
 }) {
   return get<NotificationImageListResult>('/admin/notifications/images', params);
+}
+
+export interface NotificationStats {
+  total: number;
+  broadcast: number;
+  targeted: number;
+  totalReads: number;
+}
+
+export async function getNotificationStats() {
+  return get<NotificationStats>('/admin/notifications/stats');
+}
+
+export async function updateNotification(
+  id: string,
+  data: { title?: string; content?: string; type?: 'broadcast' | 'targeted' },
+) {
+  return patch(`/admin/notifications/${id}`, data);
+}
+
+export async function deleteNotification(id: string) {
+  return del(`/admin/notifications/${id}`);
 }

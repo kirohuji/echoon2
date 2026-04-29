@@ -1,11 +1,13 @@
 import {
-  Controller, Post, Get, Body, Query, Req, ForbiddenException,
+  Controller, Post, Get, Patch, Delete,
+  Body, Query, Req, Param, ForbiddenException,
   UploadedFile, UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { Request } from 'express';
 import { NotificationService } from './notification.service';
 import { CreateNotificationDto } from './dto/create-notification.dto';
+import { UpdateNotificationDto } from './dto/update-notification.dto';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import { requireAuthSession } from '../auth/session.util';
 
@@ -50,6 +52,12 @@ export class NotificationAdminController {
     return this.notificationService.uploadNotificationImage(file);
   }
 
+  @Get('stats')
+  async stats(@Req() req: Request) {
+    await this.requireAdmin(req);
+    return this.notificationService.getNotificationStats();
+  }
+
   @Get('images')
   async listImages(
     @Req() req: Request,
@@ -61,5 +69,27 @@ export class NotificationAdminController {
       Number(page) || 1,
       Number(pageSize) || 20,
     );
+  }
+
+  @Get(':id')
+  async detail(@Req() req: Request, @Param('id') id: string) {
+    await this.requireAdmin(req);
+    return this.notificationService.getNotificationById(id);
+  }
+
+  @Patch(':id')
+  async update(
+    @Req() req: Request,
+    @Param('id') id: string,
+    @Body() dto: UpdateNotificationDto,
+  ) {
+    await this.requireAdmin(req);
+    return this.notificationService.updateNotification(id, dto);
+  }
+
+  @Delete(':id')
+  async remove(@Req() req: Request, @Param('id') id: string) {
+    await this.requireAdmin(req);
+    return this.notificationService.deleteNotification(id);
   }
 }

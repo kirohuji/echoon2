@@ -9,7 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Skeleton } from '@/components/ui/skeleton'
+import { Select } from '@/components/ui/select';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@/components/ui/dialog';
@@ -27,9 +28,9 @@ export function AdminUsersPage() {
   const [data, setData] = useState<AdminUsersResult | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [keyword, setKeyword] = useState('');
   const [searchInput, setSearchInput] = useState('');
-  const pageSize = 15;
 
   const fetchUsers = useCallback(async () => {
     setIsLoading(true);
@@ -41,7 +42,7 @@ export function AdminUsersPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [page, keyword]);
+  }, [page, pageSize, keyword]);
 
   useEffect(() => {
     fetchUsers();
@@ -233,8 +234,22 @@ export function AdminUsersPage() {
           )}
 
           {/* 分页 */}
-          {data && data.total > pageSize && (
-            <div className="flex items-center justify-between border-t border-border px-4 py-3">
+          {data && data.total > 0 && (
+            <div className="flex items-center justify-between border-t border-border px-4 py-3 gap-3">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground whitespace-nowrap">每页</span>
+                <Select
+                  value={pageSize}
+                  onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1) }}
+                  className="h-8 w-[72px] text-xs"
+                >
+                  <option value={10}>10</option>
+                  <option value={15}>15</option>
+                  <option value={20}>20</option>
+                  <option value={50}>50</option>
+                </Select>
+                <span className="text-xs text-muted-foreground whitespace-nowrap">条</span>
+              </div>
               <p className="text-xs text-muted-foreground">
                 共 {data.total} 条，第 {page}/{totalPages} 页
               </p>
@@ -246,7 +261,6 @@ export function AdminUsersPage() {
                   onClick={() => setPage((p) => p - 1)}
                 >
                   <ChevronLeft className="h-4 w-4" />
-                  上一页
                 </Button>
                 <Button
                   variant="outline"
@@ -254,7 +268,6 @@ export function AdminUsersPage() {
                   disabled={page >= totalPages}
                   onClick={() => setPage((p) => p + 1)}
                 >
-                  下一页
                   <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>

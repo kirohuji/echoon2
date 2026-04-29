@@ -200,6 +200,16 @@ export class FileAssetsService {
     return { ...asset, url, expiresInSeconds: this.privateUrlExpiresSeconds };
   }
 
+  /** 获取资产的长效签名 URL（用于嵌入内容，7 天有效） */
+  async getAssetLongLivedUrl(assetId: string) {
+    const asset = await this.prisma.fileAsset.findUnique({ where: { id: assetId } });
+    if (!asset || asset.status !== FileAssetStatus.active) {
+      throw new NotFoundException('文件不存在');
+    }
+    const url = await this.getSignedDownloadUrl(asset.cosKey, 604800); // 7 天
+    return { url, assetId: asset.id };
+  }
+
   async listReferences(assetId: string) {
     await this.ensureAssetExists(assetId);
     return this.prisma.fileReference.findMany({
@@ -208,7 +218,7 @@ export class FileAssetsService {
     });
   }
 
-  /** 按分组列出文件资产（带分页），返回公开可访问 URL */
+  /** 按分组列出文件资产（带分页），返回带签名的可访问 URL（24h 有效） */
   async listByGroup(
     group: FileAssetGroup,
     pagination: { page?: number; pageSize?: number },
@@ -229,15 +239,24 @@ export class FileAssetsService {
       }),
     ]);
 
+    // 为每个文件生成签名 URL（24h）
+    const urlExpires = 86400; // 24 小时
+    const signedList = await Promise.all(
+      list.map(async (a) => {
+        const url = await this.getSignedDownloadUrl(a.cosKey, urlExpires);
+        return {
+          id: a.id,
+          url,
+          filename: a.filename,
+          mimeType: a.mimeType,
+          size: a.size,
+          createdAt: a.createdAt,
+        };
+      }),
+    );
+
     return {
-      list: list.map((a) => ({
-        id: a.id,
-        url: `https://${a.bucket}.cos.${a.region}.myqcloud.com/${a.cosKey}`,
-        filename: a.filename,
-        mimeType: a.mimeType,
-        size: a.size,
-        createdAt: a.createdAt,
-      })),
+      list: signedList,
       total,
       page,
       pageSize,
@@ -450,7 +469,7 @@ export class FileAssetsService {
     });
   }
 
-  private async getSignedDownloadUrl(key: string) {
+  private async getSignedDownloadUrl(key: string, expires?: number) {
     return new Promise<string>((resolve, reject) => {
       this.cosClient.getObjectUrl(
         {
@@ -458,7 +477,7 @@ export class FileAssetsService {
           Region: this.region,
           Key: key,
           Sign: true,
-          Expires: this.privateUrlExpiresSeconds,
+          Expires: expires ?? this.privateUrlExpiresSeconds,
         },
         (err, data) => {
           if (err) return reject(err);

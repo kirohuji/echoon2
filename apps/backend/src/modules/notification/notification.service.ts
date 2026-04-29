@@ -1,7 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { PaginationDto, toPageResult } from '../../common/dto/pagination.dto';
 import { CreateNotificationDto } from './dto/create-notification.dto';
+import { UpdateNotificationDto } from './dto/update-notification.dto';
 import { QueryNotificationDto } from './dto/query-notification.dto';
 import { NotificationGateway } from './notification.gateway';
 import { FileAssetsService } from '../file-assets/file-assets.service';
@@ -192,7 +193,7 @@ export class NotificationService {
     });
   }
 
-  /** 管理员：上传通知内嵌图片 */
+  /** 管理员：上传通知内嵌图片（返回 7 天有效签名 URL） */
   async uploadNotificationImage(file: Express.Multer.File) {
     const asset = await this.fileAssets.createAssetFromBuffer({
       buffer: file.buffer,
@@ -200,14 +201,58 @@ export class NotificationService {
       mimeType: file.mimetype,
       group: FileAssetGroup.notification,
     });
-    return {
-      url: `https://${asset.bucket}.cos.${asset.region}.myqcloud.com/${asset.cosKey}`,
-      assetId: asset.id,
-    };
+    const { url } = await this.fileAssets.getAssetLongLivedUrl(asset.id);
+    return { url, assetId: asset.id };
   }
 
   /** 管理员：列出通知图片库 */
   async listNotificationImages(page = 1, pageSize = 20) {
     return this.fileAssets.listByGroup(FileAssetGroup.notification, { page, pageSize });
+  }
+
+  /** 管理员：获取通知详情 */
+  async getNotificationById(id: string) {
+    const n = await this.prisma.notification.findUnique({
+      where: { id },
+      include: {
+        sentBy: { select: { id: true, name: true, email: true } },
+        _count: { select: { reads: true, targets: true } },
+      },
+    });
+    if (!n) throw new NotFoundException('通知不存在');
+    return n;
+  }
+
+  /** 管理员：更新通知 */
+  async updateNotification(id: string, dto: UpdateNotificationDto) {
+    const existing = await this.prisma.notification.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundException('通知不存在');
+    return this.prisma.notification.update({
+      where: { id },
+      data: {
+        ...(dto.title !== undefined ? { title: dto.title } : {}),
+        ...(dto.content !== undefined ? { content: dto.content } : {}),
+        ...(dto.type !== undefined ? { type: dto.type } : {}),
+      },
+    });
+  }
+
+  /** 管理员：删除通知 */
+  async deleteNotification(id: string) {
+    const existing = await this.prisma.notification.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundException('通知不存在');
+    await this.prisma.notification.delete({ where: { id } });
+    return { success: true };
+  }
+
+  /** 管理员：获取通知统计 */
+  async getNotificationStats() {
+    const [total, broadcast, targeted, totalReads] = await this.prisma.$transaction([
+      this.prisma.notification.count(),
+      this.prisma.notification.count({ where: { type: 'broadcast' } }),
+      this.prisma.notification.count({ where: { type: 'targeted' } }),
+      this.prisma.notificationRead.count(),
+    ]);
+    return { total, broadcast, targeted, totalReads };
   }
 }
