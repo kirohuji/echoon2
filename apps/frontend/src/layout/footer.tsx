@@ -19,9 +19,9 @@ export function Footer() {
           </nav>
 
           <div className="flex items-center gap-4 text-xs text-muted-foreground">
-            <a href="#" className="hover:text-foreground transition-colors">隐私政策</a>
-            <a href="#" className="hover:text-foreground transition-colors">用户协议</a>
-            <a href="#" className="hover:text-foreground transition-colors">联系我们</a>
+            <Link to="/system/privacy" className="hover:text-foreground transition-colors">隐私政策</Link>
+            <Link to="/system/terms" className="hover:text-foreground transition-colors">用户协议</Link>
+            <Link to="/system/contact" className="hover:text-foreground transition-colors">联系我们</Link>
           </div>
         </div>
         <div className="mt-6 text-center text-xs text-muted-foreground">

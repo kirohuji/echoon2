@@ -564,18 +564,40 @@ function MobileSettingsView() {
           label="个性化推荐"
           right={<Switch checked={personalizedRecommendation} onCheckedChange={setPersonalizedRecommendation} />}
         />
-        <IosRow
-          label="违法不良信息举报"
-          last
-          onTap={() => {}}
-        />
       </IosSection>
 
-      {/* <IosSection header="账号中心">
-        <div className="px-4 py-3">
-          <AuthSettingsPanel compact />
-        </div>
-      </IosSection> */}
+      {/* 法律与隐私 */}
+      <IosSection header="法律与隐私">
+        <IosRow
+          label="服务条款"
+          onTap={() => navigate('/system/terms')}
+        />
+        <IosRow
+          label="隐私政策"
+          onTap={() => navigate('/system/privacy')}
+        />
+        <IosRow
+          label="儿童信息保护"
+          onTap={() => navigate('/system/privacy-children')}
+        />
+        <IosRow
+          label="个人信息收集清单"
+          onTap={() => navigate('/system/collect-info')}
+        />
+        <IosRow
+          label="权限申请说明"
+          onTap={() => navigate('/system/permissions')}
+        />
+        <IosRow
+          label="第三方SDK目录"
+          onTap={() => navigate('/system/sdk-list')}
+        />
+        <IosRow
+          label="联系我们"
+          last
+          onTap={() => navigate('/system/contact')}
+        />
+      </IosSection>
 
       <IosSection>
         <IosRow
@@ -584,10 +606,6 @@ function MobileSettingsView() {
         />
         <IosRow
           label="应用权限管理"
-          onTap={() => {}}
-        />
-        <IosRow
-          label="内容诉讼"
           onTap={() => {}}
         />
         <IosRow
@@ -2288,6 +2306,35 @@ function SettingsTab() {
               {t('common.confirm')}
             </Button>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* 法律与隐私 */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">法律与隐私</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {[
+            { label: '服务条款', to: '/system/terms' },
+            { label: '隐私政策', to: '/system/privacy' },
+            { label: '儿童信息保护', to: '/system/privacy-children' },
+            { label: '个人信息收集清单', to: '/system/collect-info' },
+            { label: '权限申请说明', to: '/system/permissions' },
+            { label: '第三方SDK目录', to: '/system/sdk-list' },
+            { label: '联系我们', to: '/system/contact' },
+          ].map((item, idx, arr) => (
+            <div key={item.to}>
+              <Link
+                to={item.to}
+                className="flex items-center justify-between rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              >
+                {item.label}
+                <ChevronRight className="h-4 w-4" />
+              </Link>
+              {idx < arr.length - 1 && <Separator className="my-1" />}
+            </div>
+          ))}
         </CardContent>
       </Card>
     </div>

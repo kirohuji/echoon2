@@ -20,6 +20,13 @@ import { NotificationDetailPage } from '@/features/notification/pages/notificati
 import { PortalPage } from '@/features/portal/pages/portal-page'
 import { LoginPage } from '@/features/auth/pages/login-page'
 import { RegisterPage } from '@/features/auth/pages/register-page'
+import { SystemTermsPage } from '@/features/system/pages/system-terms-page'
+import { SystemPrivacyPage } from '@/features/system/pages/system-privacy-page'
+import { SystemChildrenPrivacyPage } from '@/features/system/pages/system-children-page'
+import { SystemPermissionsPage } from '@/features/system/pages/system-permissions-page'
+import { SystemSdkListPage } from '@/features/system/pages/system-sdk-list-page'
+import { SystemCollectInfoPage } from '@/features/system/pages/system-collect-info-page'
+import { SystemContactPage } from '@/features/system/pages/system-contact-page'
 
 export default function App() {
   return (
@@ -48,6 +55,15 @@ export default function App() {
                 <Route path="/member" element={<MemberPage />} />
                 <Route path="/notifications" element={<NotificationListPage />} />
                 <Route path="/notifications/:id" element={<NotificationDetailPage />} />
+
+                {/* 系统文档 — 法律与隐私相关 */}
+                <Route path="/system/terms" element={<SystemTermsPage />} />
+                <Route path="/system/privacy" element={<SystemPrivacyPage />} />
+                <Route path="/system/privacy-children" element={<SystemChildrenPrivacyPage />} />
+                <Route path="/system/permissions" element={<SystemPermissionsPage />} />
+                <Route path="/system/sdk-list" element={<SystemSdkListPage />} />
+                <Route path="/system/collect-info" element={<SystemCollectInfoPage />} />
+                <Route path="/system/contact" element={<SystemContactPage />} />
               </Route>
 
               {/* 认证页 — 无外层布局 */}
