@@ -629,21 +629,24 @@ async function main() {
       }
     }
 
-    // 最近 30 天随机天数的打卡
-    const streakDays = Math.floor(Math.random() * 20) + 1;
-    const uniqueDays = new Set<string>();
-    for (let d = 0; d < streakDays; d++) {
-      const day = new Date();
-      day.setDate(day.getDate() - Math.floor(Math.random() * 30));
-      const dayKey = day.toISOString().split('T')[0];
+    // 全年随机天数的打卡（约 1/3 的天有记录）
+    const uniqueDays = new Set<string>()
+    const now = new Date()
+    const yearStart = new Date(now.getFullYear(), 0, 1)
+    const daysInYear = Math.floor((now.getTime() - yearStart.getTime()) / 86400000)
+    const activeDayCount = Math.floor(Math.random() * daysInYear * 0.35) + 10 // ~35% active days
+    for (let d = 0; d < activeDayCount; d++) {
+      const day = new Date(yearStart)
+      day.setDate(day.getDate() + Math.floor(Math.random() * daysInYear))
+      const dayKey = day.toISOString().split('T')[0]
       if (!uniqueDays.has(dayKey)) {
-        uniqueDays.add(dayKey);
+        uniqueDays.add(dayKey)
         try {
           await prisma.dailyActivity.upsert({
             where: { userId_date: { userId: user.id, date: day } },
             create: { userId: user.id, date: day, count: Math.floor(Math.random() * 10) + 1 },
             update: {},
-          });
+          })
         } catch { /* ignore */ }
       }
     }

@@ -1,4 +1,6 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react'
+import { ActivityCalendar } from 'react-activity-calendar'
+import 'react-activity-calendar/tooltips.css'
 import { Link, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useTheme } from 'next-themes'
@@ -739,14 +741,26 @@ function OverviewTab() {
   const [overview, setOverview] = useState<ProfileOverview | null>(null)
   const [heatmap, setHeatmap] = useState<ActivityDay[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [hmLoading, setHmLoading] = useState(true)
+  const [year, setYear] = useState(new Date().getFullYear())
+  const maxYear = new Date().getFullYear()
 
+  // Load overview stats once on mount
   useEffect(() => {
-    Promise.allSettled([getProfileOverview(), getActivityHeatmap()]).then(([ovRes, hmRes]) => {
-      if (ovRes.status === 'fulfilled') setOverview(ovRes.value)
-      if (hmRes.status === 'fulfilled') setHeatmap(hmRes.value)
-      setIsLoading(false)
-    })
+    getProfileOverview()
+      .then(setOverview)
+      .catch(() => {})
+      .finally(() => setIsLoading(false))
   }, [])
+
+  // Load activity heatmap; reload when year changes
+  useEffect(() => {
+    setHmLoading(true)
+    getActivityHeatmap(year)
+      .then(setHeatmap)
+      .catch(() => {})
+      .finally(() => setHmLoading(false))
+  }, [year])
 
   const stats = [
     { label: '练习天数', value: overview?.totalPracticeDays ?? 0, icon: Calendar, color: 'text-blue-500', bg: 'bg-blue-500/10' },
@@ -810,111 +824,143 @@ function OverviewTab() {
         </Card>
       )}
 
-      <Card>
+      {/* <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base">{t('profile.activityHeatmap')}</CardTitle>
         </CardHeader>
         <CardContent>
-          <ActivityHeatmap days={heatmap} />
+          {hmLoading ? (
+            <div className="space-y-3 py-4">
+              <Skeleton className="h-[120px] w-full rounded-lg" />
+              <div className="flex justify-center gap-3">
+                <Skeleton className="h-7 w-7 rounded-full" />
+                <Skeleton className="h-5 w-16" />
+                <Skeleton className="h-7 w-7 rounded-full" />
+              </div>
+            </div>
+          ) : (
+            <ActivityCalendarSection
+              days={heatmap}
+              year={year}
+              onPrevYear={() => setYear((y) => y - 1)}
+              onNextYear={() => setYear((y) => y + 1)}
+              maxYear={maxYear}
+            />
+          )}
         </CardContent>
-      </Card>
+      </Card> */}
     </div>
   )
 }
 
-function ActivityHeatmap({ days }: { days: ActivityDay[] }) {
-  if (days.length === 0) {
-    return (
-      <div className="flex flex-col items-center py-8 text-center">
-        <BarChart2 className="mb-2 h-10 w-10 text-muted-foreground/30" />
-        <p className="text-sm text-muted-foreground">暂无活跃记录</p>
-        <p className="text-xs text-muted-foreground/60">开始练习后这里会显示你的活跃度</p>
-      </div>
-    )
-  }
+function ActivityCalendarSection({
+  days,
+  year,
+  onPrevYear,
+  onNextYear,
+  maxYear,
+}: {
+  days: ActivityDay[]
+  year: number
+  onPrevYear: () => void
+  onNextYear: () => void
+  maxYear: number
+}) {
+  const { resolvedTheme } = useTheme()
+  const isDark = resolvedTheme === 'dark'
 
-  const levelColors = [
-    'bg-muted/50',
-    'bg-primary/25',
-    'bg-primary/50',
-    'bg-primary/75',
-    'bg-primary',
-  ]
+  // Ensure data always spans the full calendar year (Jan 1 – Dec 31).
+  // The library's fillHoles only pads between the first and last activity dates,
+  // so we insert boundary entries to force a full-year view like GitHub.
+  const yearData = useMemo<ActivityDay[]>(() => {
+    const yearStart = `${year}-01-01`
+    const yearEnd = `${year}-12-31`
 
-  // Build a map of date -> day for quick lookup
-  const dayMap = new Map(days.map((d) => [d.date, d]))
-
-  // Get date range: last ~35 weeks (roughly 8 months back)
-  const endDate = new Date()
-  const startDate = new Date(endDate)
-  startDate.setDate(startDate.getDate() - 245) // 35 weeks
-
-  // Build aligned week grid: each column is a week (Sun-Sat)
-  const weeks: (ActivityDay | null)[][] = []
-  const monthSpans: { label: string; col: number }[] = []
-  const cursor = new Date(startDate)
-  // Move cursor to Sunday
-  cursor.setDate(cursor.getDate() - cursor.getDay())
-
-  while (cursor <= endDate) {
-    const week: (ActivityDay | null)[] = []
-    for (let d = 0; d < 7; d++) {
-      const dateStr = cursor.toISOString().slice(0, 10)
-      week.push(dayMap.get(dateStr) || null)
-      cursor.setDate(cursor.getDate() + 1)
+    if (days.length === 0) {
+      // Generate a full year of empty data so the calendar still renders
+      const result: ActivityDay[] = []
+      const date = new Date(year, 0, 1)
+      while (date.getFullYear() === year) {
+        const d = date.toISOString().slice(0, 10)
+        result.push({ date: d, count: 0, level: 0 })
+        date.setDate(date.getDate() + 1)
+      }
+      return result
     }
-    weeks.push(week)
 
-    // Check if this week started a new month
-    const weekStart = new Date(cursor)
-    weekStart.setDate(weekStart.getDate() - 7)
-    const prevCol = weeks.length - 1
-    if (prevCol === 0 || weekStart.getDate() <= 7) {
-      monthSpans.push({ label: `${weekStart.getMonth() + 1}月`, col: prevCol })
+    const dateSet = new Set(days.map((d) => d.date))
+    const result = [...days]
+
+    if (!dateSet.has(yearStart)) {
+      result.unshift({ date: yearStart, count: 0, level: 0 })
     }
-  }
+    if (!dateSet.has(yearEnd)) {
+      result.push({ date: yearEnd, count: 0, level: 0 })
+    }
+
+    // Sort to keep dates in ascending order
+    return result.sort((a, b) => a.date.localeCompare(b.date))
+  }, [days, year])
 
   return (
     <div>
-      <div className="overflow-x-auto pb-1">
-        {/* Month labels row */}
-        <div className="mb-1 flex text-[10px] text-muted-foreground/70 h-4">
-          {weeks.map((_, wi) => {
-            const span = monthSpans.find((m) => m.col === wi)
-            return (
-              <div key={wi} className="w-3.5 flex-shrink-0 mr-[3px]">
-                {span && <span>{span.label}</span>}
-              </div>
-            )
-          })}
-        </div>
-
-        {/* Grid: 7 rows (days of week) x N columns (weeks) */}
-        <div className="inline-flex" style={{ gap: '3px' }}>
-          {weeks.map((week, wi) => (
-            <div key={wi} className="flex flex-col" style={{ gap: '3px' }}>
-              {week.map((day, di) => (
-                <div
-                  key={di}
-                  title={day ? `${day.date}: ${day.count} 次练习` : '无记录'}
-                  className={cn(
-                    'h-3.5 w-3.5 flex-shrink-0 rounded-sm transition-colors',
-                    day ? levelColors[day.level] || levelColors[0] : 'bg-muted/20'
-                  )}
-                />
-              ))}
-            </div>
-          ))}
-        </div>
+      <div className="flex justify-end overflow-x-auto">
+        <ActivityCalendar
+          data={yearData}
+          blockSize={13}
+          blockMargin={4}
+          blockRadius={2}
+          fontSize={14}
+          colorScheme={isDark ? 'dark' : 'light'}
+          theme={{
+            light: ['#ebedf0', '#9be9a8', '#40c463', '#30a14e', '#216e39'],
+            dark: ['#161b22', '#0e4429', '#006d32', '#26a641', '#39d353'],
+          }}
+          labels={{
+            totalCount: '{{year}} 年共 {{count}} 次练习',
+            legend: { less: '少', more: '多' },
+          }}
+          weekStart={0}
+        />
       </div>
+      <YearNavigator year={year} onPrevYear={onPrevYear} onNextYear={onNextYear} maxYear={maxYear} />
+    </div>
+  )
+}
 
-      <div className="mt-3 flex items-center justify-end gap-1.5 text-xs text-muted-foreground">
-        <span className="text-[10px]">少</span>
-        {levelColors.map((c, i) => (
-          <div key={i} className={cn('h-3.5 w-3.5 rounded-sm', c)} />
-        ))}
-        <span className="text-[10px]">多</span>
-      </div>
+function YearNavigator({
+  year,
+  onPrevYear,
+  onNextYear,
+  maxYear,
+}: {
+  year: number
+  onPrevYear: () => void
+  onNextYear: () => void
+  maxYear: number
+}) {
+  return (
+    <div className="mt-3 flex items-center justify-center gap-3">
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        onClick={onPrevYear}
+        className="h-7 w-7 rounded-full text-muted-foreground hover:text-foreground"
+      >
+        <ChevronLeft className="h-4 w-4" />
+      </Button>
+      <span className="min-w-[4rem] text-center text-sm font-medium tabular-nums">
+        {year}
+      </span>
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        onClick={onNextYear}
+        disabled={year >= maxYear}
+        className="h-7 w-7 rounded-full text-muted-foreground hover:text-foreground"
+      >
+        <ChevronRight className="h-4 w-4" />
+      </Button>
     </div>
   )
 }
