@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   FolderOpen, Folder, File, FileVideo, FileAudio, FileImage, FileText, FileArchive,
   Plus, Trash2, Edit3, Save, ChevronRight, ChevronDown, ArrowLeft,
-  ShieldAlert, Loader2, ExternalLink, Filter, Upload,
+  ShieldAlert, Loader2, ExternalLink, Upload,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -24,7 +24,7 @@ import {
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/cn';
 import {
-  getResourceTree, getResourceRegions,
+  getResourceTree,
   createResourceNode, updateResourceNode, deleteResourceNode,
   type ResourceTreeNode, type CreateResourceNodePayload,
 } from '@/features/admin/api-resources';
@@ -109,17 +109,14 @@ export function AdminResourcesPage() {
   const { session } = useAuth();
 
   const [tree, setTree] = useState<ResourceTreeNode[]>([]);
-  const [regions, setRegions] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedNode, setSelectedNode] = useState<ResourceTreeNode | null>(null);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
-  const [regionFilter, setRegionFilter] = useState('');
 
   // Edit state
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState('');
   const [editType, setEditType] = useState('');
-  const [editRegion, setEditRegion] = useState('');
   const [editUrl, setEditUrl] = useState('');
   const [editDescription, setEditDescription] = useState('');
 
@@ -129,7 +126,6 @@ export function AdminResourcesPage() {
   const [createParentId, setCreateParentId] = useState<string | null>(null);
   const [createName, setCreateName] = useState('');
   const [createType, setCreateType] = useState('pdf');
-  const [createRegion, setCreateRegion] = useState('');
   const [createUrl, setCreateUrl] = useState('');
   const [createFile, setCreateFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -147,7 +143,6 @@ export function AdminResourcesPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogMode, setDialogMode] = useState<'view' | 'edit' | 'delete-confirm'>('view');
   const [dialogEditName, setDialogEditName] = useState('');
-  const [dialogEditRegion, setDialogEditRegion] = useState('');
   const [dialogEditUrl, setDialogEditUrl] = useState('');
   const [dialogEditDescription, setDialogEditDescription] = useState('');
   const [dialogSaving, setDialogSaving] = useState(false);
@@ -156,20 +151,16 @@ export function AdminResourcesPage() {
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [treeData, regionsData] = await Promise.all([
-        getResourceTree(regionFilter || undefined),
-        getResourceRegions(),
-      ]);
+      const treeData = await getResourceTree();
       setTree(treeData);
-      setRegions(regionsData);
-      return { tree: treeData, regions: regionsData };
+      return { tree: treeData };
     } catch {
       setTree([]);
-      return { tree: [] as ResourceTreeNode[], regions: [] as string[] };
+      return { tree: [] as ResourceTreeNode[] };
     } finally {
       setIsLoading(false);
     }
-  }, [regionFilter]);
+  }, []);
 
   useEffect(() => {
     fetchData();
@@ -199,7 +190,6 @@ export function AdminResourcesPage() {
     setIsEditing(false);
     setEditName(fullNode.name);
     setEditType(fullNode.type);
-    setEditRegion(fullNode.region ?? '');
     setEditUrl(fullNode.url ?? '');
     setEditDescription(fullNode.description ?? '');
   };
@@ -210,7 +200,6 @@ export function AdminResourcesPage() {
     try {
       await updateResourceNode(selectedNode.id, {
         name: editName,
-        region: editRegion || null,
         url: editUrl || null,
         description: editDescription || null,
       });
@@ -218,10 +207,10 @@ export function AdminResourcesPage() {
       if (result) {
         const updatedNode = findNodeById(result.tree, selectedNode.id);
         if (updatedNode) {
-          selectNode(updatedNode);
+          setSelectedNode(updatedNode);
         } else {
           setSelectedNode((prev) =>
-            prev ? { ...prev, name: editName, region: editRegion || null, url: editUrl || null, description: editDescription || null } : null
+            prev ? { ...prev, name: editName, url: editUrl || null, description: editDescription || null } : null
           );
         }
       }
@@ -255,10 +244,10 @@ export function AdminResourcesPage() {
     try {
       await deleteResourceNode(childId);
       const result = await fetchData();
-      // 刷新 selectedNode 中的 children
+      // 刷新 selectedNode
       if (selectedNode && result) {
         const updatedNode = findNodeById(result.tree, selectedNode.id);
-        if (updatedNode) selectNode(updatedNode);
+        if (updatedNode) setSelectedNode(updatedNode);
       }
     } catch {
       // handle error
@@ -273,7 +262,7 @@ export function AdminResourcesPage() {
       const result = await fetchData();
       if (selectedNode && result) {
         const updatedNode = findNodeById(result.tree, selectedNode.id);
-        if (updatedNode) selectNode(updatedNode);
+        if (updatedNode) setSelectedNode(updatedNode);
       }
       setRenamingId(null);
     } catch {
@@ -312,7 +301,6 @@ export function AdminResourcesPage() {
         name: createName.trim(),
         type: createMode === 'folder' ? 'folder' : createType,
       };
-      if (createRegion) payload.region = createRegion;
       if (assetId) payload.assetId = assetId;
       if (fileMimeType) payload.mimeType = fileMimeType;
       if (fileSize !== undefined) payload.fileSize = fileSize;
@@ -332,7 +320,7 @@ export function AdminResourcesPage() {
       // 如果是在当前选中文件夹下创建的，刷新该文件夹数据
       if (selectedNode && selectedNode.id === createParentId && result) {
         const updatedNode = findNodeById(result.tree, selectedNode.id);
-        if (updatedNode) selectNode(updatedNode);
+        if (updatedNode) setSelectedNode(updatedNode);
       }
     } catch {
       // handle error
@@ -360,7 +348,7 @@ export function AdminResourcesPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">资料库管理</h1>
-          <p className="text-sm text-muted-foreground">管理各地区的学习资料，支持视频、音频、PDF 等多种格式</p>
+          <p className="text-sm text-muted-foreground">通过文件夹管理学习资料，支持视频、音频、PDF 等多种格式</p>
         </div>
         <div className="flex items-center gap-2">
           <Button
@@ -370,7 +358,6 @@ export function AdminResourcesPage() {
               setCreateMode('folder');
               setCreateParentId(null);
               setCreateName('');
-              setCreateRegion('');
               setCreateFile(null);
               setIsCreating(true);
               setSelectedNode(null);
@@ -382,38 +369,6 @@ export function AdminResourcesPage() {
           </Button>
         </div>
       </div>
-
-      {/* Region Filter */}
-      {regions.length > 0 && (
-        <div className="flex items-center gap-2">
-          <Filter className="h-4 w-4 text-muted-foreground" />
-          <div className="flex gap-1 rounded-lg bg-muted p-1">
-            <button
-              type="button"
-              onClick={() => setRegionFilter('')}
-              className={cn(
-                'rounded-md px-3 py-1 text-xs font-medium transition-all',
-                !regionFilter ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground',
-              )}
-            >
-              全部地区
-            </button>
-            {regions.map((r) => (
-              <button
-                key={r}
-                type="button"
-                onClick={() => setRegionFilter(r)}
-                className={cn(
-                  'rounded-md px-3 py-1 text-xs font-medium transition-all',
-                  regionFilter === r ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground',
-                )}
-              >
-                {r}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Main Content */}
       <div className="flex gap-4">
@@ -449,7 +404,6 @@ export function AdminResourcesPage() {
                     setCreateMode('folder');
                     setCreateParentId(parentId);
                     setCreateName('');
-                    setCreateRegion('');
                     setCreateFile(null);
                     setIsCreating(true);
                     setSelectedNode(null);
@@ -606,15 +560,6 @@ export function AdminResourcesPage() {
                     <Input value={editName} onChange={(e) => setEditName(e.target.value)} />
                   </div>
 
-                  <div>
-                    <Label>地区</Label>
-                    <Input
-                      value={editRegion}
-                      onChange={(e) => setEditRegion(e.target.value)}
-                      placeholder="留空表示通用资料"
-                    />
-                  </div>
-
                   {selectedNode.type === 'video_url' && (
                     <div>
                       <Label>视频地址</Label>
@@ -641,7 +586,6 @@ export function AdminResourcesPage() {
                   <Button variant="ghost" size="sm" onClick={() => {
                     setIsEditing(false);
                     setEditName(selectedNode.name);
-                    setEditRegion(selectedNode.region ?? '');
                     setEditUrl(selectedNode.url ?? '');
                     setEditDescription(selectedNode.description ?? '');
                   }}>
@@ -662,12 +606,6 @@ export function AdminResourcesPage() {
                       <div className="flex items-center gap-2">
                         <h3 className="text-lg font-semibold">{selectedNode.name}</h3>
                         <Badge variant="secondary" className="text-xs">文件夹</Badge>
-                        {selectedNode.region && (
-                          <Badge variant="outline" className="text-xs">{selectedNode.region}</Badge>
-                        )}
-                        {!selectedNode.region && (
-                          <Badge variant="outline" className="text-xs text-emerald-600 border-emerald-200 bg-emerald-50">通用</Badge>
-                        )}
                       </div>
                       <p className="text-xs text-muted-foreground mt-0.5">
                         {selectedNode.children?.length || 0} 项
@@ -683,7 +621,6 @@ export function AdminResourcesPage() {
                         setCreateMode('folder');
                         setCreateParentId(selectedNode.id);
                         setCreateName('');
-                        setCreateRegion('');
                         setCreateFile(null);
                         setIsCreating(true);
                       }}
@@ -698,7 +635,6 @@ export function AdminResourcesPage() {
                         setCreateParentId(selectedNode.id);
                         setCreateName('');
                         setCreateType('pdf');
-                        setCreateRegion('');
                         setCreateUrl('');
                         setCreateFile(null);
                         setIsCreating(true);
@@ -934,14 +870,10 @@ export function AdminResourcesPage() {
                           await deleteResourceNode(viewingResource.id);
                           setDialogOpen(false);
                           setDialogMode('view');
-                          await fetchData();
-                          // 如果是在当前选中文件夹内删除的，刷新文件夹
-                          if (selectedNode && selectedNode.type === 'folder') {
-                            const result = await fetchData();
-                            if (result) {
-                              const updatedNode = findNodeById(result.tree, selectedNode.id);
-                              if (updatedNode) selectNode(updatedNode);
-                            }
+                          const result = await fetchData();
+                          if (selectedNode && selectedNode.type === 'folder' && result) {
+                            const updatedNode = findNodeById(result.tree, selectedNode.id);
+                            if (updatedNode) setSelectedNode(updatedNode);
                           }
                         } catch {
                           // handle error
@@ -964,14 +896,6 @@ export function AdminResourcesPage() {
                       <Input
                         value={dialogEditName}
                         onChange={(e) => setDialogEditName(e.target.value)}
-                      />
-                    </div>
-                    <div>
-                      <Label>地区</Label>
-                      <Input
-                        value={dialogEditRegion}
-                        onChange={(e) => setDialogEditRegion(e.target.value)}
-                        placeholder="留空表示通用资料"
                       />
                     </div>
                     {viewingResource.type === 'video_url' && (
@@ -1001,7 +925,6 @@ export function AdminResourcesPage() {
                       onClick={() => {
                         setDialogMode('view');
                         setDialogEditName(viewingResource.name);
-                        setDialogEditRegion(viewingResource.region ?? '');
                         setDialogEditUrl(viewingResource.url ?? '');
                         setDialogEditDescription(viewingResource.description ?? '');
                       }}
@@ -1017,7 +940,6 @@ export function AdminResourcesPage() {
                         try {
                           await updateResourceNode(viewingResource.id, {
                             name: dialogEditName.trim(),
-                            region: dialogEditRegion || null,
                             url: dialogEditUrl || null,
                             description: dialogEditDescription || null,
                           });
@@ -1029,7 +951,7 @@ export function AdminResourcesPage() {
                               // 同时刷新当前选中的文件夹
                               if (selectedNode && selectedNode.type === 'folder') {
                                 const updatedFolder = findNodeById(result.tree, selectedNode.id);
-                                if (updatedFolder) selectNode(updatedFolder);
+                                if (updatedFolder) setSelectedNode(updatedFolder);
                               }
                             }
                           }
@@ -1049,17 +971,11 @@ export function AdminResourcesPage() {
               ) : (
                 // ─── 查看模式 ───
                 <div className="space-y-4">
-                  {/* 文件类型 & 地区 */}
+                  {/* 文件类型 */}
                   <div className="flex items-center gap-2">
                     <Badge variant="secondary" className="text-xs">
                       {typeLabels[viewingResource.type] || viewingResource.type}
                     </Badge>
-                    {viewingResource.region && (
-                      <Badge variant="outline" className="text-xs">{viewingResource.region}</Badge>
-                    )}
-                    {!viewingResource.region && (
-                      <Badge variant="outline" className="text-xs text-emerald-600 border-emerald-200 bg-emerald-50">通用</Badge>
-                    )}
                   </div>
 
                   {/* 图片预览 */}
@@ -1172,7 +1088,6 @@ export function AdminResourcesPage() {
                       size="sm"
                       onClick={() => {
                         setDialogEditName(viewingResource.name);
-                        setDialogEditRegion(viewingResource.region ?? '');
                         setDialogEditUrl(viewingResource.url ?? '');
                         setDialogEditDescription(viewingResource.description ?? '');
                         setDialogMode('edit');
@@ -1275,12 +1190,6 @@ function TreeNodeItem({
         />
 
         <span className="text-sm truncate flex-1 min-w-0">{node.name}</span>
-
-        {!node.region && (
-          <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 flex-shrink-0 opacity-50">
-            通用
-          </Badge>
-        )}
 
         {/* Quick add folder button on hover */}
         {isFolder && (
