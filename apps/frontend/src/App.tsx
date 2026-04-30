@@ -20,6 +20,7 @@ import { NotificationDetailPage } from '@/features/notification/pages/notificati
 import { PortalPage } from '@/features/portal/pages/portal-page'
 import { LoginPage } from '@/features/auth/pages/login-page'
 import { RegisterPage } from '@/features/auth/pages/register-page'
+import { ForgotPasswordPage } from '@/features/auth/pages/forgot-password-page'
 import { SystemTermsPage } from '@/features/system/pages/system-terms-page'
 import { SystemPrivacyPage } from '@/features/system/pages/system-privacy-page'
 import { SystemChildrenPrivacyPage } from '@/features/system/pages/system-children-page'
@@ -73,6 +74,7 @@ export default function App() {
               {/* 认证页 — 无外层布局 */}
               <Route path="/auth/login" element={<LoginPage />} />
               <Route path="/auth/register" element={<RegisterPage />} />
+              <Route path="/auth/forgot-password" element={<ForgotPasswordPage />} />
             </Routes>
           </AuthRouteGate>
         </HashRouter>

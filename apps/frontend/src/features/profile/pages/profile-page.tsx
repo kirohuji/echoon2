@@ -495,6 +495,33 @@ function MobileSettingsView() {
   const [learningPreference, setLearningPreference] = useState('balanced')
   const [personalizedRecommendation, setPersonalizedRecommendation] = useState(true)
 
+  // 删除账户状态
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [deletePassword, setDeletePassword] = useState('')
+  const [deleteLoading, setDeleteLoading] = useState(false)
+  const [deleteError, setDeleteError] = useState('')
+
+  // 处理账户删除
+  const handleDeleteAccount = async () => {
+    if (!deletePassword) {
+      setDeleteError('请输入密码以确认删除')
+      return
+    }
+    setDeleteLoading(true)
+    setDeleteError('')
+    try {
+      const { deleteAccount } = await import('@/features/auth/api')
+      await deleteAccount(deletePassword)
+      localStorage.clear()
+      window.location.hash = '#/portal'
+      window.location.reload()
+    } catch (error: any) {
+      setDeleteError(error?.response?.data?.message || error?.message || '删除失败，请稍后重试')
+    } finally {
+      setDeleteLoading(false)
+    }
+  }
+
   // 法律文档 Drawer 状态
   const [legalDrawer, setLegalDrawer] = useState<{ title: string; content: string } | null>(null)
 
@@ -638,7 +665,7 @@ function MobileSettingsView() {
         <IosRow
           label="注销账户"
           last
-          onTap={() => {}}
+          onTap={() => setShowDeleteDialog(true)}
         />
       </IosSection>
 
@@ -663,6 +690,43 @@ function MobileSettingsView() {
           content={legalDrawer.content}
         />
       )}
+
+      {/* 删除账户确认弹窗 */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-destructive">注销账户</DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground">
+              此操作不可撤销。所有学习记录、收藏、生词本、模考成绩等数据将被永久删除。请输入密码以确认。
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Input
+              value={deletePassword}
+              onChange={(e) => { setDeletePassword(e.target.value); setDeleteError('') }}
+              type="password"
+              placeholder="输入当前密码"
+              autoComplete="current-password"
+            />
+            {deleteError && (
+              <p className="text-sm text-red-500">{deleteError}</p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDeleteDialog(false)} disabled={deleteLoading}>
+              取消
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteAccount}
+              disabled={deleteLoading}
+            >
+              {deleteLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              确认删除
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
@@ -2385,6 +2449,32 @@ function AuthSettingsPanel({ compact }: { compact: boolean }) {
   const [message, setMessage] = useState('')
   const sessionUser = session?.user ?? null
 
+  // 删除账户状态
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [deletePassword, setDeletePassword] = useState('')
+  const [deleteLoading, setDeleteLoading] = useState(false)
+  const [deleteError, setDeleteError] = useState('')
+
+  const handleDeleteAccount = async () => {
+    if (!deletePassword) {
+      setDeleteError('请输入密码以确认删除')
+      return
+    }
+    setDeleteLoading(true)
+    setDeleteError('')
+    try {
+      const { deleteAccount } = await import('@/features/auth/api')
+      await deleteAccount(deletePassword)
+      localStorage.clear()
+      window.location.hash = '#/portal'
+      window.location.reload()
+    } catch (error: any) {
+      setDeleteError(error?.response?.data?.message || error?.message || '删除失败')
+    } finally {
+      setDeleteLoading(false)
+    }
+  }
+
   useEffect(() => {
     const fetchProfile = async () => {
       try {
@@ -2445,8 +2535,20 @@ function AuthSettingsPanel({ compact }: { compact: boolean }) {
           >
             保存个人信息
           </Button>
+          <Button variant="outline" disabled={loading} onClick={() => navigate('/account')}>
+            修改密码 / 账号管理
+          </Button>
           <Button variant="outline" disabled={loading} onClick={() => runAction(() => signOut(), '已退出登录')}>
             退出登录
+          </Button>
+          <Button
+            variant="destructive"
+            size="sm"
+            disabled={loading}
+            onClick={() => setShowDeleteDialog(true)}
+            className="sm:col-span-2"
+          >
+            注销账户
           </Button>
           {profile && (
             <p className="col-span-full text-xs text-muted-foreground">
@@ -2457,6 +2559,39 @@ function AuthSettingsPanel({ compact }: { compact: boolean }) {
       )}
 
       {message && <p className={cn('text-xs', compact ? 'text-muted-foreground' : 'text-primary')}>{message}</p>}
+
+      {/* 删除账户确认弹窗 */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-destructive">注销账户</DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground">
+              此操作不可撤销。所有学习记录、收藏、生词本、模考成绩等数据将被永久删除。请输入密码以确认。
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Input
+              value={deletePassword}
+              onChange={(e) => { setDeletePassword(e.target.value); setDeleteError('') }}
+              type="password"
+              placeholder="输入当前密码"
+              autoComplete="current-password"
+            />
+            {deleteError && (
+              <p className="text-sm text-red-500">{deleteError}</p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDeleteDialog(false)} disabled={deleteLoading}>
+              取消
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteAccount} disabled={deleteLoading}>
+              {deleteLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              确认删除
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

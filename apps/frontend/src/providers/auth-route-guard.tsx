@@ -30,7 +30,7 @@ export function GuestOnly({ children }: { children: ReactElement }) {
 export function AuthRouteGate({ children }: { children: ReactElement }) {
   const location = useLocation()
   const { isAuthenticated, isLoading } = useAuth()
-  const isAuthPage = location.pathname === '/auth/login' || location.pathname === '/auth/register'
+  const isAuthPage = location.pathname === '/auth/login' || location.pathname === '/auth/register' || location.pathname === '/auth/forgot-password'
   const isPublicPage = location.pathname === '/portal' || location.pathname.startsWith('/system/') || isAuthPage
 
   // Keep auth pages stable while auth state refreshes (e.g. during sign-in attempt).

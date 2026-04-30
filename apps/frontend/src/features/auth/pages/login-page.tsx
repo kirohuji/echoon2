@@ -175,7 +175,7 @@ export function LoginPage() {
                 </Button>
 
                 <div className="flex items-center justify-between text-sm">
-                  <Link to="/auth/register" className="text-muted-foreground hover:text-primary transition-colors">
+                  <Link to="/auth/forgot-password" className="text-muted-foreground hover:text-primary transition-colors">
                     忘记密码？
                   </Link>
                   <Link to="/auth/register" className="text-muted-foreground hover:text-primary transition-colors">

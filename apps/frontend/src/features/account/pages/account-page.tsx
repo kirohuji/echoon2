@@ -2,11 +2,12 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   ChevronLeft, ChevronRight, Camera, User, Loader2,
-  Phone, ExternalLink,
+  Phone, ExternalLink, KeyRound, CheckCircle2, Mail,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter,
@@ -21,6 +22,7 @@ import {
   listLinkedAccounts, linkSocialAccount, unlinkAccount,
   type LinkedAccount,
 } from '@/features/account/api'
+import { changePassword, sendEmailOtp } from '@/features/auth/api'
 
 // ─── iOS 风格组件（与 profile-page 一致）──────────────────────────────────
 
@@ -158,6 +160,131 @@ function NicknameEditDrawer({
   )
 }
 
+// ─── 修改密码 Drawer ──────────────────────────────────────────────────────
+
+function ChangePasswordDrawer({
+  open,
+  onOpenChange,
+  onDone,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onDone?: () => void
+}) {
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [message, setMessage] = useState('')
+  const [success, setSuccess] = useState(false)
+
+  useEffect(() => {
+    if (open) {
+      setCurrentPassword('')
+      setNewPassword('')
+      setConfirmPassword('')
+      setMessage('')
+      setSuccess(false)
+    }
+  }, [open])
+
+  const handleChange = async () => {
+    if (!currentPassword) { setMessage('请输入当前密码'); return }
+    if (newPassword.length < 8) { setMessage('新密码至少需要8位字符'); return }
+    if (newPassword !== confirmPassword) { setMessage('两次密码不一致'); return }
+    if (currentPassword === newPassword) { setMessage('新密码不能与旧密码相同'); return }
+
+    setLoading(true)
+    setMessage('')
+    try {
+      await changePassword(currentPassword, newPassword)
+      setSuccess(true)
+      setMessage('密码修改成功')
+      setTimeout(() => {
+        onOpenChange(false)
+        onDone?.()
+      }, 1500)
+    } catch (error: any) {
+      setMessage(error?.response?.data?.message || error?.message || '修改失败')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (success) {
+    return (
+      <Drawer open={open} onOpenChange={onOpenChange}>
+        <DrawerContent className="rounded-t-3xl">
+          <div className="flex flex-col items-center px-4 py-10">
+            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
+              <CheckCircle2 className="h-7 w-7 text-green-600 dark:text-green-400" />
+            </div>
+            <p className="text-lg font-semibold">密码修改成功</p>
+            <p className="mt-1 text-sm text-muted-foreground">下次登录请使用新密码</p>
+          </div>
+        </DrawerContent>
+      </Drawer>
+    )
+  }
+
+  return (
+    <Drawer open={open} onOpenChange={onOpenChange}>
+      <DrawerContent className="rounded-t-3xl">
+        <DrawerHeader>
+          <DrawerTitle className="text-base">修改密码</DrawerTitle>
+        </DrawerHeader>
+        <div className="px-4 space-y-3 pb-4">
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">当前密码</Label>
+            <Input
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+              type="password"
+              placeholder="输入当前密码"
+              autoComplete="current-password"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">新密码</Label>
+            <Input
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              type="password"
+              placeholder="至少8位字符"
+              autoComplete="new-password"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">确认新密码</Label>
+            <Input
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              type="password"
+              placeholder="再次输入新密码"
+              autoComplete="new-password"
+            />
+          </div>
+          {message && (
+            <p className={cn(
+              'text-sm text-center rounded-lg px-3 py-2',
+              message.includes('成功') ? 'bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-400' : 'bg-red-50 text-red-600 dark:bg-red-950/30 dark:text-red-400',
+            )}>
+              {message}
+            </p>
+          )}
+        </div>
+        <DrawerFooter>
+          <Button onClick={handleChange} disabled={loading}>
+            {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+            确认修改
+          </Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>取消</Button>
+        </DrawerFooter>
+      </DrawerContent>
+    </Drawer>
+  )
+}
+
 // ─── 主页面 ────────────────────────────────────────────────────────────────
 
 export function AccountPage() {
@@ -173,6 +300,22 @@ export function AccountPage() {
   const [linkingProvider, setLinkingProvider] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [unlinkingId, setUnlinkingId] = useState<string | null>(null)
+  const [passwordDrawerOpen, setPasswordDrawerOpen] = useState(false)
+  const [sendingVerification, setSendingVerification] = useState(false)
+  const [verificationSent, setVerificationSent] = useState(false)
+
+  const handleSendVerification = async () => {
+    if (!sessionUser?.email) return
+    setSendingVerification(true)
+    try {
+      await sendEmailOtp(sessionUser.email)
+      setVerificationSent(true)
+    } catch {
+      // ignore
+    } finally {
+      setSendingVerification(false)
+    }
+  }
 
   const avatarInputRef = useRef<HTMLInputElement | null>(null)
 
@@ -343,11 +486,32 @@ export function AccountPage() {
             </div>
             <div className="border-t border-border/50 px-4 py-4">
               <Skeleton className="h-4 w-16" />
+              <Skeleton className="mt-1 h-3 w-24" />
+            </div>
+            <div className="border-t border-border/50 px-4 py-4">
+              <Skeleton className="h-4 w-16" />
               <Skeleton className="mt-1 h-3 w-32" />
             </div>
           </>
         ) : (
           <>
+            <IosRow
+              label="邮箱"
+              value={sessionUser?.email || '未设置'}
+              subtitle={sessionUser?.emailVerified ? '已验证' : '未验证'}
+              iconBg="bg-blue-500"
+              icon={Mail}
+              right={!sessionUser?.emailVerified && sessionUser?.email ? (
+                <button
+                  type="button"
+                  disabled={sendingVerification || verificationSent}
+                  onClick={handleSendVerification}
+                  className="text-xs font-medium text-primary"
+                >
+                  {verificationSent ? '已发送' : sendingVerification ? '发送中...' : '验证'}
+                </button>
+              ) : undefined}
+            />
             <IosRow
               label="昵称"
               value={nickname}
@@ -470,12 +634,30 @@ export function AccountPage() {
         )}
       </IosSection>
 
+      {/* 区域四：安全设置 */}
+      <IosSection header="安全设置">
+        <IosRow
+          icon={KeyRound}
+          iconBg="bg-amber-500"
+          label="修改密码"
+          subtitle="定期更换密码保障账户安全"
+          onTap={() => setPasswordDrawerOpen(true)}
+          last
+        />
+      </IosSection>
+
       {/* 昵称编辑抽屉 */}
       <NicknameEditDrawer
         open={nicknameDrawerOpen}
         onOpenChange={setNicknameDrawerOpen}
         currentName={nickname}
         onSaved={handleNicknameSaved}
+      />
+
+      {/* 修改密码抽屉 */}
+      <ChangePasswordDrawer
+        open={passwordDrawerOpen}
+        onOpenChange={setPasswordDrawerOpen}
       />
     </div>
   )
