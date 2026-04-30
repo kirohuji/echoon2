@@ -593,6 +593,14 @@ function MobileSettingsView() {
           onTap={() => navigate('/system/sdk-list')}
         />
         <IosRow
+          label="隐私政策简明版"
+          onTap={() => navigate('/system/privacy-concise')}
+        />
+        <IosRow
+          label="ICP备案信息"
+          onTap={() => navigate('/system/icp')}
+        />
+        <IosRow
           label="联系我们"
           last
           onTap={() => navigate('/system/contact')}
@@ -2322,6 +2330,8 @@ function SettingsTab() {
             { label: '个人信息收集清单', to: '/system/collect-info' },
             { label: '权限申请说明', to: '/system/permissions' },
             { label: '第三方SDK目录', to: '/system/sdk-list' },
+            { label: '隐私政策简明版', to: '/system/privacy-concise' },
+            { label: 'ICP备案信息', to: '/system/icp' },
             { label: '联系我们', to: '/system/contact' },
           ].map((item, idx, arr) => (
             <div key={item.to}>

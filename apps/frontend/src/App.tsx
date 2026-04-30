@@ -27,6 +27,8 @@ import { SystemPermissionsPage } from '@/features/system/pages/system-permission
 import { SystemSdkListPage } from '@/features/system/pages/system-sdk-list-page'
 import { SystemCollectInfoPage } from '@/features/system/pages/system-collect-info-page'
 import { SystemContactPage } from '@/features/system/pages/system-contact-page'
+import { SystemPrivacyConcisePage } from '@/features/system/pages/system-privacy-concise-page'
+import { SystemIcpPage } from '@/features/system/pages/system-icp-page'
 
 export default function App() {
   return (
@@ -63,6 +65,8 @@ export default function App() {
                 <Route path="/system/permissions" element={<SystemPermissionsPage />} />
                 <Route path="/system/sdk-list" element={<SystemSdkListPage />} />
                 <Route path="/system/collect-info" element={<SystemCollectInfoPage />} />
+                <Route path="/system/privacy-concise" element={<SystemPrivacyConcisePage />} />
+                <Route path="/system/icp" element={<SystemIcpPage />} />
                 <Route path="/system/contact" element={<SystemContactPage />} />
               </Route>
 
