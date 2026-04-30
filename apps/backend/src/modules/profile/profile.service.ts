@@ -178,33 +178,48 @@ export class ProfileService {
     const { page = 1, pageSize = 20 } = pagination;
     const skip = (page - 1) * pageSize;
 
-    const where: Record<string, unknown> = { userId };
-    if (pagination.keyword) {
-      where.actionType = { contains: pagination.keyword, mode: 'insensitive' };
-    }
+    // Aggregate by question: count practices + last practice date per question
+    const records = await this.prisma.practiceRecord.groupBy({
+      by: ['questionId'],
+      where: { userId },
+      _count: { id: true },
+      _max: { createdAt: true },
+      orderBy: { _max: { createdAt: 'desc' } },
+      skip,
+      take: pageSize,
+    });
 
-    const [list, total] = await this.prisma.$transaction([
-      this.prisma.practiceRecord.findMany({
-        where,
-        orderBy: { createdAt: 'desc' },
-        skip,
-        take: pageSize,
-        include: {
-          question: {
-            select: {
-              id: true,
-              title: true,
-              difficulty: true,
-              topic: {
-                select: { name: true },
-              },
-            },
-          },
-        },
-      }),
-      this.prisma.practiceRecord.count({ where }),
-    ]);
+    const totalResult = await this.prisma.practiceRecord.groupBy({
+      by: ['questionId'],
+      where: { userId },
+    });
+    const total = totalResult.length;
 
-    return toPageResult(list, total, pagination);
+    // Fetch question details
+    const questionIds = records.map((r) => r.questionId);
+    const questions = await this.prisma.questionItem.findMany({
+      where: { id: { in: questionIds } },
+      select: {
+        id: true,
+        title: true,
+        topic: { select: { id: true, name: true } },
+      },
+    });
+    const questionMap = new Map(questions.map((q) => [q.id, q]));
+
+    const list = records.map((r) => {
+      const q = questionMap.get(r.questionId);
+      return {
+        recordId: r.questionId,
+        topicId: q?.topic?.id || '',
+        topicName: q?.topic?.name || '未知专题',
+        questionId: r.questionId,
+        questionText: q?.title || '未知题目',
+        practiceCount: r._count.id,
+        lastPracticeAt: r._max.createdAt?.toISOString() || '',
+      };
+    });
+
+    return { list, total, page, pageSize };
   }
 }

@@ -47,7 +47,17 @@ export interface UserProfile {
   emailVerified: boolean
 }
 
-export const getProfileOverview = (): Promise<ProfileOverview> => get('/profile/overview')
+export const getProfileOverview = (): Promise<ProfileOverview> =>
+  get<any>('/profile/overview').then((res) => ({
+    userId: res.userId,
+    currentBank: res.bank ? { bankId: res.bank.id, bankName: res.bank.name } : undefined,
+    totalPracticeDays: res.stats?.totalPracticed ?? 0,
+    totalQuestionsAnswered: res.stats?.totalPracticed ?? 0,
+    totalFavorites: res.stats?.favoritesCount ?? 0,
+    totalWords: res.stats?.wordsCount ?? 0,
+    streakDays: res.stats?.streakDays ?? 0,
+    avgDailyQuestions: res.stats?.totalPracticed ? Math.round(res.stats.totalPracticed / Math.max(1, res.stats.streakDays || 7)) : 0,
+  }))
 
 export const getActivityHeatmap = async (year?: number): Promise<ActivityDay[]> => {
   try {

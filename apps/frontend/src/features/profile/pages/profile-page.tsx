@@ -834,73 +834,75 @@ function ActivityHeatmap({ days }: { days: ActivityDay[] }) {
   }
 
   const levelColors = [
-    'bg-muted',
-    'bg-primary/20',
-    'bg-primary/45',
-    'bg-primary/70',
+    'bg-muted/50',
+    'bg-primary/25',
+    'bg-primary/50',
+    'bg-primary/75',
     'bg-primary',
   ]
 
-  // Group days into weeks (columns of 7, starting from Monday)
-  const weeks: ActivityDay[][] = []
-  let currentWeek: ActivityDay[] = []
+  // Build a map of date -> day for quick lookup
+  const dayMap = new Map(days.map((d) => [d.date, d]))
 
-  days.forEach((day, i) => {
-    currentWeek.push(day)
-    if (currentWeek.length === 7 || i === days.length - 1) {
-      weeks.push(currentWeek)
-      currentWeek = []
-    }
-  })
+  // Get date range: last ~35 weeks (roughly 8 months back)
+  const endDate = new Date()
+  const startDate = new Date(endDate)
+  startDate.setDate(startDate.getDate() - 245) // 35 weeks
 
-  const monthLabels: { label: string; col: number }[] = []
-  weeks.forEach((week, wi) => {
-    const firstDay = week[0]
-    if (firstDay) {
-      const d = new Date(firstDay.date)
-      const monthKey = `${d.getFullYear()}-${d.getMonth()}`
-      const prev = monthLabels[monthLabels.length - 1]
-      const prevMonth = prev ? prev.label.split('-')[1] : ''
-      if (monthLabels.length === 0 || `${d.getMonth() + 1}月` !== prevMonth) {
-        monthLabels.push({ label: `${d.getMonth() + 1}月`, col: wi })
-      }
+  // Build aligned week grid: each column is a week (Sun-Sat)
+  const weeks: (ActivityDay | null)[][] = []
+  const monthSpans: { label: string; col: number }[] = []
+  const cursor = new Date(startDate)
+  // Move cursor to Sunday
+  cursor.setDate(cursor.getDate() - cursor.getDay())
+
+  while (cursor <= endDate) {
+    const week: (ActivityDay | null)[] = []
+    for (let d = 0; d < 7; d++) {
+      const dateStr = cursor.toISOString().slice(0, 10)
+      week.push(dayMap.get(dateStr) || null)
+      cursor.setDate(cursor.getDate() + 1)
     }
-  })
+    weeks.push(week)
+
+    // Check if this week started a new month
+    const weekStart = new Date(cursor)
+    weekStart.setDate(weekStart.getDate() - 7)
+    const prevCol = weeks.length - 1
+    if (prevCol === 0 || weekStart.getDate() <= 7) {
+      monthSpans.push({ label: `${weekStart.getMonth() + 1}月`, col: prevCol })
+    }
+  }
 
   return (
     <div>
       <div className="overflow-x-auto pb-1">
-        {/* Month labels */}
-        <div className="mb-1 flex text-[10px] text-muted-foreground" style={{ gap: '3px' }}>
+        {/* Month labels row */}
+        <div className="mb-1 flex text-[10px] text-muted-foreground/70 h-4">
           {weeks.map((_, wi) => {
-            const ml = monthLabels.find((m) => m.col === wi)
+            const span = monthSpans.find((m) => m.col === wi)
             return (
-              <div key={wi} className="h-3 w-3 flex-shrink-0">
-                {ml && (
-                  <span className="absolute text-[10px] leading-none">{ml.label}</span>
-                )}
+              <div key={wi} className="w-3.5 flex-shrink-0 mr-[3px]">
+                {span && <span>{span.label}</span>}
               </div>
             )
           })}
         </div>
 
-        {/* Grid */}
-        <div className="flex" style={{ gap: '3px' }}>
+        {/* Grid: 7 rows (days of week) x N columns (weeks) */}
+        <div className="inline-flex" style={{ gap: '3px' }}>
           {weeks.map((week, wi) => (
             <div key={wi} className="flex flex-col" style={{ gap: '3px' }}>
-              {Array.from({ length: 7 }).map((_, di) => {
-                const day = week[di]
-                return (
-                  <div
-                    key={di}
-                    title={day ? `${day.date}: ${day.count} 次练习` : ''}
-                    className={cn(
-                      'h-3 w-3 flex-shrink-0 rounded-sm transition-colors',
-                      day ? levelColors[day.level] || levelColors[0] : 'bg-transparent'
-                    )}
-                  />
-                )
-              })}
+              {week.map((day, di) => (
+                <div
+                  key={di}
+                  title={day ? `${day.date}: ${day.count} 次练习` : '无记录'}
+                  className={cn(
+                    'h-3.5 w-3.5 flex-shrink-0 rounded-sm transition-colors',
+                    day ? levelColors[day.level] || levelColors[0] : 'bg-muted/20'
+                  )}
+                />
+              ))}
             </div>
           ))}
         </div>
@@ -909,7 +911,7 @@ function ActivityHeatmap({ days }: { days: ActivityDay[] }) {
       <div className="mt-3 flex items-center justify-end gap-1.5 text-xs text-muted-foreground">
         <span className="text-[10px]">少</span>
         {levelColors.map((c, i) => (
-          <div key={i} className={cn('h-3 w-3 rounded-sm', c)} />
+          <div key={i} className={cn('h-3.5 w-3.5 rounded-sm', c)} />
         ))}
         <span className="text-[10px]">多</span>
       </div>

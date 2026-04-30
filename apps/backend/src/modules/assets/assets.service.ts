@@ -19,7 +19,10 @@ export class AssetsService {
         take: pageSize,
         include: {
           question: {
-            include: { content: true },
+            include: {
+              content: true,
+              topic: { select: { id: true, name: true } },
+            },
           },
         },
       }),

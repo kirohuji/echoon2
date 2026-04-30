@@ -29,7 +29,16 @@ export interface WordsResult {
 }
 
 export const getFavorites = (params?: { page?: number; pageSize?: number }): Promise<FavoritesResult> =>
-  get('/assets/favorites', params)
+  get<any>('/assets/favorites', params).then((res) => ({
+    ...res,
+    list: (res.list || []).map((item: any) => ({
+      questionId: item.questionId,
+      topicId: item.question?.topic?.id || '',
+      topicName: item.question?.topic?.name || '未知专题',
+      questionText: item.question?.title || '未知题目',
+      createdAt: item.createdAt,
+    })),
+  }))
 
 export const addFavorite = (questionId: string): Promise<void> =>
   post(`/assets/favorites/${questionId}`)
