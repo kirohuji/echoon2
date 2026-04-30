@@ -18,7 +18,7 @@ export function RootLayout() {
       <main className={`flex-1 pt-0 ${
         isAuthPage ? 'pb-0 lg:pt-0 lg:pb-0' : 'pb-[calc(4rem+env(safe-area-inset-bottom,0px))] lg:pt-14 lg:pb-0'
       }`}>
-        <div className={isAuthPage ? 'h-full max-w-none px-0 py-0' : 'mx-auto max-w-[1480px] px-3 py-4 lg:px-4 lg:py-6'}>
+        <div className={isAuthPage ? 'h-full max-w-none px-0 py-0' : 'mx-auto max-w-[1480px]  lg:px-4 lg:py-6'}>
           <Outlet />
         </div>
       </main>

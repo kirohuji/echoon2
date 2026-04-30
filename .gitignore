@@ -10,3 +10,4 @@ prisma/dev.db
 *.tsbuildinfo
 uploads/
 ssl/
+hope-front-main

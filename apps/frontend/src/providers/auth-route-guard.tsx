@@ -31,6 +31,7 @@ export function AuthRouteGate({ children }: { children: ReactElement }) {
   const location = useLocation()
   const { isAuthenticated, isLoading } = useAuth()
   const isAuthPage = location.pathname === '/auth/login' || location.pathname === '/auth/register'
+  const isPublicPage = location.pathname === '/portal' || isAuthPage
 
   // Keep auth pages stable while auth state refreshes (e.g. during sign-in attempt).
   // This avoids full-page flicker on login failures.
@@ -43,7 +44,7 @@ export function AuthRouteGate({ children }: { children: ReactElement }) {
 
   if (isLoading) return <GuardLoading />
 
-  if (!isAuthenticated && !isAuthPage) {
+  if (!isAuthenticated && !isPublicPage) {
     return <Navigate to="/auth/login" replace state={{ from: location.pathname }} />
   }
 

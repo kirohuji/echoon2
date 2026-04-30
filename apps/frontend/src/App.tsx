@@ -17,6 +17,7 @@ import { AdminNotificationsPage } from '@/features/admin/pages/admin-notificatio
 import { AdminResourcesPage } from '@/features/admin/pages/admin-resources-page'
 import { NotificationListPage } from '@/features/notification/pages/notification-list-page'
 import { NotificationDetailPage } from '@/features/notification/pages/notification-detail-page'
+import { PortalPage } from '@/features/portal/pages/portal-page'
 import { LoginPage } from '@/features/auth/pages/login-page'
 import { RegisterPage } from '@/features/auth/pages/register-page'
 
@@ -39,6 +40,7 @@ export default function App() {
               {/* 用户端 — RootLayout */}
               <Route element={<RootLayout />}>
                 <Route path="/" element={<HomePage />} />
+                <Route path="/portal" element={<PortalPage />} />
                 <Route path="/practice/:topicId" element={<PracticePage />} />
                 <Route path="/mock" element={<MockPage />} />
                 <Route path="/profile" element={<ProfilePage />} />
