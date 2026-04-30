@@ -23,19 +23,31 @@ export function MarkdownContent({ content }: { content: string }) {
 
       [&_img]:rounded-xl [&_img]:max-w-full
 
-      /* 表格：全宽 + 溢出滚动 + 边框 */
-      [&_table]:w-full [&_table]:border-collapse [&_table]:my-4 [&_table]:text-sm
+      /* 表格容器：溢出横向滚动 + 圆角边框 */
+      [&_.table-wrapper]:overflow-x-auto [&_.table-wrapper]:my-4 [&_.table-wrapper]:rounded-lg [&_.table-wrapper]:border [&_.table-wrapper]:border-border
 
-      [&_th]:border [&_th]:border-solid [&_th]:border-border [&_th]:bg-muted/50 [&_th]:px-3 [&_th]:py-2.5 [&_th]:text-left [&_th]:text-xs [&_th]:font-semibold [&_th]:text-foreground
+      /* 表格：最小宽度撑满，内容过多则自然撑开触发横向滚动 */
+      [&_table]:min-w-full [&_table]:border-collapse [&_table]:text-sm
 
-      [&_td]:border [&_td]:border-solid [&_td]:border-border [&_td]:px-3 [&_td]:py-2 [&_td]:text-sm [&_td]:text-foreground/85 [&_td]:break-words
+      [&_th]:border [&_th]:border-solid [&_th]:border-border [&_th]:bg-muted/50 [&_th]:px-3 [&_th]:py-2.5 [&_th]:text-left [&_th]:text-xs [&_th]:font-semibold [&_th]:text-foreground [&_th]:whitespace-nowrap
+
+      [&_td]:border [&_td]:border-solid [&_td]:border-border [&_td]:px-3 [&_td]:py-2 [&_td]:text-sm [&_td]:text-foreground/85
 
       [&_tr:hover]:bg-muted/30
       [&_tr]:transition-colors
 
       [&_small]:text-xs [&_small]:text-muted-foreground [&_small]:leading-relaxed
     ">
-      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        components={{
+          table: ({ children }) => (
+            <div className="table-wrapper">
+              <table>{children}</table>
+            </div>
+          ),
+        }}
+      >
         {content}
       </ReactMarkdown>
     </article>
