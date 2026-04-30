@@ -40,6 +40,10 @@ model User {
   sentNotifications   Notification[]
   orders              Order[]
   membership          UserMembership?
+  referralCode        ReferralCode?
+  referredBy          Referral?
+  achievements        UserAchievement[]
+  feedbacks           Feedback[]
 
   @@unique([email])
   @@map("user")
@@ -341,6 +345,8 @@ model Order {
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
   membership    UserMembership?
+  coupon        Coupon?         @relation(fields: [couponId], references: [id])
+  couponId      String?
 
   @@index([userId, createdAt(sort: Desc)])
   @@index([status])
@@ -534,4 +540,112 @@ model NotificationTarget {
   @@unique([notificationId, userId])
   @@index([userId])
   @@map("notification_target")
+}
+
+// ──── 优惠券/促销域 ────
+
+enum CouponType {
+  percentage
+  fixed
+  free_trial
+}
+
+model Coupon {
+  id          String      @id @default(cuid())
+  code        String      @unique
+  type        CouponType
+  value       Float       /// 折扣值（百分比如20=20%，固定金额单位分，试用天数）
+  minAmount   Float?      /// 最低消费金额（分）
+  maxUses     Int?
+  usedCount   Int         @default(0)
+  validFrom   DateTime    @default(now())
+  validUntil  DateTime?
+  isActive    Boolean     @default(true)
+  orders      Order[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@map("coupon")
+}
+
+// ──── 邀请域 ────
+
+model ReferralCode {
+  id           String     @id @default(cuid())
+  userId       String     @unique
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  code         String     @unique
+  totalInvited Int        @default(0)
+  totalReward  Int        @default(0)
+  createdAt    DateTime   @default(now())
+  referrals    Referral[]
+
+  @@map("referral_code")
+}
+
+model Referral {
+  id             String       @id @default(cuid())
+  referrerId     String
+  referrer       ReferralCode @relation(fields: [referrerId], references: [id], onDelete: Cascade)
+  referredUserId String       @unique
+  referredUser   User         @relation(fields: [referredUserId], references: [id], onDelete: Cascade)
+  rewardedAt     DateTime?
+  createdAt      DateTime     @default(now())
+
+  @@index([referrerId])
+  @@map("referral")
+}
+
+// ──── 成就域 ────
+
+model Achievement {
+  id          String             @id @default(cuid())
+  key         String             @unique
+  name        String
+  description String
+  icon        String
+  category    String
+  condition   Json
+  sortOrder   Int                @default(0)
+  users       UserAchievement[]
+  createdAt   DateTime           @default(now())
+
+  @@map("achievement")
+}
+
+model UserAchievement {
+  userId        String
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievementId String
+  achievement   Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+  unlockedAt    DateTime    @default(now())
+
+  @@id([userId, achievementId])
+  @@index([userId])
+  @@map("user_achievement")
+}
+
+// ──── 反馈域 ────
+
+enum FeedbackStatus {
+  pending
+  resolved
+  closed
+}
+
+model Feedback {
+  id        String         @id @default(cuid())
+  userId    String
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  content   String         @db.Text
+  contact   String?
+  status    FeedbackStatus @default(pending)
+  adminNote String?        @db.Text
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([status])
+  @@map("feedback")
 }

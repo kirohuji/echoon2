@@ -5,6 +5,7 @@ import {
   Search, Star, BookOpen, TrendingUp, Calendar, Target,
   ChevronRight, MapPin, FileText, ScrollText, Mic, BookMarked,
   Heart, History, Crown, CircleUser, LayoutGrid,
+  Trophy, Users, MessageSquare,
 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -14,6 +15,7 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ConfigDataTable, type ColumnConfig } from '@/components/common/config-datatable'
 import { BindingDialog } from '@/features/question-bank/components/binding-dialog'
+import { OnboardingGuide, useOnboarding } from '@/components/common/onboarding-guide'
 import { SearchOverlay } from '@/features/question-bank/components/search-overlay'
 import { getQuestionBankHome, type QuestionBankHome, type ScenicCard, type OtherTopic } from '@/features/question-bank/api'
 import { useConfigStore } from '@/stores/config.store'
@@ -35,11 +37,11 @@ const categoryItems = [
   { label: '模拟考试', icon: FileText, path: '/mock' },
   { label: '真题练习', icon: ScrollText, path: '/' },
   { label: '发音训练', icon: Mic, path: '/' },
-  { label: '单词学习', icon: BookMarked, path: '/profile' },
-  { label: '收藏题目', icon: Heart, path: '/profile' },
-  { label: '练习记录', icon: History, path: '/profile' },
-  { label: '会员权益', icon: Crown, path: '/member' },
+  { label: '排行榜', icon: Trophy, path: '/leaderboard' },
+  { label: '成就', icon: Crown, path: '/achievements' },
+  { label: '邀请好友', icon: Users, path: '/invite' },
   { label: '个人中心', icon: CircleUser, path: '/profile' },
+  { label: '反馈', icon: MessageSquare, path: '/feedback' },
   { label: '全部分类', icon: LayoutGrid, path: '/' },
 ]
 
@@ -58,6 +60,14 @@ export function HomePage() {
 
   const [showBinding, setShowBinding] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
+  const { hasSeen, markSeen } = useOnboarding()
+  const [showOnboarding, setShowOnboarding] = useState(false)
+
+  useEffect(() => {
+    if (!hasSeen && isConfigured) {
+      setShowOnboarding(true)
+    }
+  }, [hasSeen, isConfigured])
   const [homeData, setHomeData] = useState<QuestionBankHome | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
@@ -178,6 +188,12 @@ export function HomePage() {
         open={showBinding}
         onClose={() => setShowBinding(false)}
         forceOpen={!isConfigured}
+      />
+
+      <OnboardingGuide
+        open={showOnboarding && isConfigured}
+        onClose={() => { setShowOnboarding(false); markSeen() }}
+        onFinish={markSeen}
       />
 
       <SearchOverlay

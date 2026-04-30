@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom'
 import {
   Users, Database, FileText, Settings, BarChart3, Bell,
   ChevronRight, ArrowLeft, CreditCard, Receipt, FolderOpen,
+  Tag, MessageSquare,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
@@ -44,6 +45,18 @@ const menuItems: MenuItem[] = [
     label: '资料库管理',
     icon: FolderOpen,
     path: '/admin/resources',
+  },
+  {
+    key: 'coupons',
+    label: '优惠券管理',
+    icon: Tag,
+    path: '/admin/coupons',
+  },
+  {
+    key: 'feedbacks',
+    label: '反馈管理',
+    icon: MessageSquare,
+    path: '/admin/feedbacks',
   },
   {
     key: 'question-bank',

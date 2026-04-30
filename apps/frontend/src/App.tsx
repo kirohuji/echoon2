@@ -30,6 +30,12 @@ import { SystemCollectInfoPage } from '@/features/system/pages/system-collect-in
 import { SystemContactPage } from '@/features/system/pages/system-contact-page'
 import { SystemPrivacyConcisePage } from '@/features/system/pages/system-privacy-concise-page'
 import { SystemIcpPage } from '@/features/system/pages/system-icp-page'
+import { FeedbackPage } from '@/features/feedback/pages/feedback-page'
+import { AchievementPage } from '@/features/achievement/pages/achievement-page'
+import { LeaderboardPage } from '@/features/leaderboard/pages/leaderboard-page'
+import { InvitePage } from '@/features/referral/pages/invite-page'
+import { AdminCouponsPage } from '@/features/admin/pages/admin-coupons-page'
+import { AdminFeedbacksPage } from '@/features/admin/pages/admin-feedbacks-page'
 
 export default function App() {
   return (
@@ -45,6 +51,8 @@ export default function App() {
                 <Route path="billing" element={<AdminBillingPage />} />
                 <Route path="notifications" element={<AdminNotificationsPage />} />
                 <Route path="resources" element={<AdminResourcesPage />} />
+                <Route path="coupons" element={<AdminCouponsPage />} />
+                <Route path="feedbacks" element={<AdminFeedbacksPage />} />
               </Route>
 
               {/* 用户端 — RootLayout */}
@@ -58,6 +66,10 @@ export default function App() {
                 <Route path="/member" element={<MemberPage />} />
                 <Route path="/notifications" element={<NotificationListPage />} />
                 <Route path="/notifications/:id" element={<NotificationDetailPage />} />
+                <Route path="/feedback" element={<FeedbackPage />} />
+                <Route path="/achievements" element={<AchievementPage />} />
+                <Route path="/leaderboard" element={<LeaderboardPage />} />
+                <Route path="/invite" element={<InvitePage />} />
 
                 {/* 系统文档 — 法律与隐私相关 */}
                 <Route path="/system/terms" element={<SystemTermsPage />} />

@@ -17,6 +17,11 @@ import { AdminModule } from './modules/admin/admin.module';
 import { PayModule } from './modules/pay/pay.module';
 import { NotificationModule } from './modules/notification/notification.module';
 import { ResourceLibraryModule } from './modules/resource-library/resource-library.module';
+import { FeedbackModule } from './modules/feedback/feedback.module';
+import { LeaderboardModule } from './modules/leaderboard/leaderboard.module';
+import { CouponModule } from './modules/coupon/coupon.module';
+import { ReferralModule } from './modules/referral/referral.module';
+import { AchievementModule } from './modules/achievement/achievement.module';
 
 @Module({
   imports: [
@@ -38,6 +43,11 @@ import { ResourceLibraryModule } from './modules/resource-library/resource-libra
     ResourceLibraryModule,
     PayModule,
     NotificationModule,
+    FeedbackModule,
+    LeaderboardModule,
+    CouponModule,
+    ReferralModule,
+    AchievementModule,
   ],
 })
 export class AppModule {}

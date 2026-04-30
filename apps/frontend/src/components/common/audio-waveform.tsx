@@ -53,9 +53,10 @@ export const AudioWaveform = forwardRef<AudioWaveformHandle, AudioWaveformProps>
       <div className={shellCn}>
         <WavesurferPlayer
           url={audioUrl}
-          waveColor="hsl(var(--muted-foreground) / 0.3)"
+          waveColor="hsl(var(--muted-foreground) / 0.25)"
           progressColor="hsl(var(--primary))"
           cursorColor="hsl(var(--primary))"
+          cursorWidth={2}
           height={52}
           barWidth={2}
           barGap={2}

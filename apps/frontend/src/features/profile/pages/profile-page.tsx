@@ -9,6 +9,7 @@ import {
   GraduationCap, CheckCircle2, Lightbulb, Crown, Sun, Moon, Monitor,
   Globe, Database, Zap, TrendingUp, Target, Flame, Camera,
   IdCard, PencilLine, LogOut, ShieldAlert, Phone, Mail,
+  MessageSquare,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -2607,6 +2608,11 @@ function AuthSettingsPanel({ compact: _compact }: { compact: boolean }) {
           label="退出登录"
           subtitle="清除本地登录状态，返回登录页"
           onClick={() => signOut().then(() => navigate('/auth/login'))}
+        />
+        <Row
+          label="帮助与反馈"
+          subtitle="提交问题或建议，帮助我们做得更好"
+          onClick={() => navigate('/feedback')}
         />
         <Row
           label="注销账户"
