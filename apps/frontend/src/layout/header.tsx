@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useTheme } from 'next-themes'
@@ -19,6 +19,7 @@ export function Header() {
   const location = useLocation()
   const { theme, setTheme } = useTheme()
   const [themeMenuOpen, setThemeMenuOpen] = useState(false)
+  const themeMenuRef = useRef<HTMLDivElement>(null)
   const { session } = useAuth()
   const isAdmin = session?.user?.role === 'admin'
   const isLoggedIn = !!session
@@ -37,6 +38,18 @@ export function Header() {
   ]
 
   const ThemeIcon = theme === 'dark' ? Moon : theme === 'light' ? Sun : Monitor
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (themeMenuRef.current && !themeMenuRef.current.contains(e.target as Node)) {
+        setThemeMenuOpen(false)
+      }
+    }
+    if (themeMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+      return () => document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [themeMenuOpen])
 
   return (
     <header className="fixed top-0 left-0 right-0 z-40 border-b border-border/50 bg-background/60 backdrop-blur-xl supports-[backdrop-filter]:bg-background/50">
@@ -84,7 +97,7 @@ export function Header() {
               </Link>
             )}
 
-            <div className="relative">
+            <div className="relative" ref={themeMenuRef}>
               <Button
                 variant="ghost"
                 size="icon"
@@ -93,7 +106,28 @@ export function Header() {
               >
                 <ThemeIcon className="h-4 w-4" />
               </Button>
-              {/* ... theme menu ... */}
+              {themeMenuOpen && (
+                <div className="absolute right-0 top-full mt-1 w-32 rounded-lg border border-border bg-popover p-1 shadow-md z-50">
+                  {themeOptions.map(({ value, label, icon: Icon }) => (
+                    <button
+                      key={value}
+                      onClick={() => {
+                        setTheme(value)
+                        setThemeMenuOpen(false)
+                      }}
+                      className={cn(
+                        'flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-sm transition-colors',
+                        theme === value
+                          ? 'bg-accent text-accent-foreground'
+                          : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                      )}
+                    >
+                      <Icon className="h-3.5 w-3.5" />
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             {isLoggedIn && (

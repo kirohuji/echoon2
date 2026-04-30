@@ -56,6 +56,7 @@ import { synthesizeText } from '@/lib/tts-api'
 import { cn } from '@/lib/cn'
 import i18n from '@/lib/i18n'
 import { getCurrentAvatar, uploadFileToCosAndComplete, setCurrentAvatar } from '@/features/file-assets/api'
+import { SystemDocumentDrawer } from '@/features/system/components/system-document-drawer'
 import {
   listLinkedAccounts, linkSocialAccount, unlinkAccount,
   type LinkedAccount,
@@ -494,6 +495,48 @@ function MobileSettingsView() {
   const [learningPreference, setLearningPreference] = useState('balanced')
   const [personalizedRecommendation, setPersonalizedRecommendation] = useState(true)
 
+  // 法律文档 Drawer 状态
+  const [legalDrawer, setLegalDrawer] = useState<{ title: string; content: string } | null>(null)
+
+  // 延迟导入 MD 内容（避免重复加载）
+  const [mdContents, setMdContents] = useState<Record<string, string>>({})
+
+  const openLegalDoc = async (key: string, title: string) => {
+    if (mdContents[key]) {
+      setLegalDrawer({ title, content: mdContents[key] })
+      return
+    }
+    // 动态加载 MD 文件
+    try {
+      let mod: { default: string }
+      switch (key) {
+        case 'terms': mod = await import('@/features/system/content/terms-of-service.md?raw'); break
+        case 'privacy': mod = await import('@/features/system/content/privacy-policy.md?raw'); break
+        case 'privacy-children': mod = await import('@/features/system/content/privacy-children.md?raw'); break
+        case 'collect-info': mod = await import('@/features/system/content/collect-info-list.md?raw'); break
+        case 'permissions': mod = await import('@/features/system/content/permissions.md?raw'); break
+        case 'sdk-list': mod = await import('@/features/system/content/sdk-list.md?raw'); break
+        case 'contact': mod = await import('@/features/system/content/contact-us.md?raw'); break
+        default: mod = { default: '# 暂无内容' }
+      }
+      const content = mod.default
+      setMdContents((prev) => ({ ...prev, [key]: content }))
+      setLegalDrawer({ title, content })
+    } catch {
+      setLegalDrawer({ title, content: '# 加载失败，请稍后重试' })
+    }
+  }
+
+  const legalDocList = [
+    { key: 'terms', label: '服务条款' },
+    { key: 'privacy', label: '隐私政策' },
+    { key: 'privacy-children', label: '儿童信息保护' },
+    { key: 'collect-info', label: '个人信息收集清单' },
+    { key: 'permissions', label: '权限申请说明' },
+    { key: 'sdk-list', label: '第三方SDK目录' },
+    { key: 'contact', label: '联系我们' },
+  ]
+
   return (
     <div className="space-y-5">
       <BindingDialog open={showBinding} onClose={() => setShowBinding(false)} />
@@ -566,45 +609,16 @@ function MobileSettingsView() {
         />
       </IosSection>
 
-      {/* 法律与隐私 */}
+      {/* 法律与隐私 — 移动端使用 Drawer 全屏查看 */}
       <IosSection header="法律与隐私">
-        <IosRow
-          label="服务条款"
-          onTap={() => navigate('/system/terms')}
-        />
-        <IosRow
-          label="隐私政策"
-          onTap={() => navigate('/system/privacy')}
-        />
-        <IosRow
-          label="儿童信息保护"
-          onTap={() => navigate('/system/privacy-children')}
-        />
-        <IosRow
-          label="个人信息收集清单"
-          onTap={() => navigate('/system/collect-info')}
-        />
-        <IosRow
-          label="权限申请说明"
-          onTap={() => navigate('/system/permissions')}
-        />
-        <IosRow
-          label="第三方SDK目录"
-          onTap={() => navigate('/system/sdk-list')}
-        />
-        <IosRow
-          label="隐私政策简明版"
-          onTap={() => navigate('/system/privacy-concise')}
-        />
-        <IosRow
-          label="ICP备案信息"
-          onTap={() => navigate('/system/icp')}
-        />
-        <IosRow
-          label="联系我们"
-          last
-          onTap={() => navigate('/system/contact')}
-        />
+        {legalDocList.map((doc, idx) => (
+          <IosRow
+            key={doc.key}
+            label={doc.label}
+            last={idx === legalDocList.length - 1}
+            onTap={() => openLegalDoc(doc.key, doc.label)}
+          />
+        ))}
       </IosSection>
 
       <IosSection>
@@ -639,6 +653,16 @@ function MobileSettingsView() {
           </button>
         </div>
       </IosSection>
+
+      {/* 法律文档全屏 Drawer */}
+      {legalDrawer && (
+        <SystemDocumentDrawer
+          open={legalDrawer !== null}
+          onClose={() => setLegalDrawer(null)}
+          title={legalDrawer.title}
+          content={legalDrawer.content}
+        />
+      )}
     </div>
   )
 }
