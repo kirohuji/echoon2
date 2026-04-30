@@ -484,6 +484,7 @@ function MobileProfileHome({ onNavigate }: { onNavigate: (view: MobileView) => v
 // ─── 手机端：设置页 ────────────────────────────────────────────────────────
 function MobileSettingsView() {
   const navigate = useNavigate()
+  const { signOut } = useAuth()
   const { autoPlay, setAutoPlay } = usePreferencesStore()
   const { config } = useConfigStore()
   const [showBinding, setShowBinding] = useState(false)
@@ -673,7 +674,7 @@ function MobileSettingsView() {
         <div className="px-4 py-3">
           <button
             type="button"
-            onClick={() => navigate('/')}
+            onClick={async () => { await signOut(); navigate('/auth/login'); }}
             className="w-full text-center text-sm font-medium text-red-500"
           >
             退出登录
@@ -2435,31 +2436,102 @@ function SettingsTab() {
           ))}
         </CardContent>
       </Card>
+
+      {/* 账户安全 — 修改密码 / 退出 / 注销 */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">账户安全</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <AuthSettingsPanel compact={false} />
+        </CardContent>
+      </Card>
     </div>
   )
 }
 
-function AuthSettingsPanel({ compact }: { compact: boolean }) {
+function AuthSettingsPanel({ compact: _compact }: { compact: boolean }) {
   const navigate = useNavigate()
   const { session, refreshSession, signOut } = useAuth()
-  const [profile, setProfile] = useState<UserProfile | null>(null)
-  const [name, setName] = useState('')
-  const [username, setUsername] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [message, setMessage] = useState('')
   const sessionUser = session?.user ?? null
 
-  // 删除账户状态
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  // ── 个人信息 Dialog ──
+  const [profileDialogOpen, setProfileDialogOpen] = useState(false)
+  const [name, setName] = useState('')
+  const [username, setUsername] = useState('')
+  const [profileLoading, setProfileLoading] = useState(false)
+
+  useEffect(() => {
+    if (!profileDialogOpen || !sessionUser) return
+    getUserProfile().then((p) => {
+      setName(p.name || '')
+      setUsername(p.username || '')
+    }).catch(() => {})
+  }, [profileDialogOpen, sessionUser])
+
+  const handleSaveProfile = async () => {
+    setProfileLoading(true)
+    try {
+      await updateUserProfile({ name, username })
+      await refreshSession()
+      setProfileDialogOpen(false)
+    } catch {
+      // ignore
+    } finally {
+      setProfileLoading(false)
+    }
+  }
+
+  // ── 修改密码 Dialog ──
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false)
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [passwordLoading, setPasswordLoading] = useState(false)
+  const [passwordError, setPasswordError] = useState('')
+
+  useEffect(() => {
+    if (passwordDialogOpen) {
+      setCurrentPassword('')
+      setNewPassword('')
+      setConfirmPassword('')
+      setPasswordError('')
+    }
+  }, [passwordDialogOpen])
+
+  const handleChangePassword = async () => {
+    if (!currentPassword) { setPasswordError('请输入当前密码'); return }
+    if (newPassword.length < 8) { setPasswordError('新密码至少需要8位字符'); return }
+    if (newPassword !== confirmPassword) { setPasswordError('两次密码不一致'); return }
+
+    setPasswordLoading(true)
+    setPasswordError('')
+    try {
+      const { changePassword } = await import('@/features/auth/api')
+      await changePassword(currentPassword, newPassword)
+      setPasswordDialogOpen(false)
+    } catch (error: any) {
+      setPasswordError(error?.response?.data?.message || error?.message || '修改失败')
+    } finally {
+      setPasswordLoading(false)
+    }
+  }
+
+  // ── 删除账户 Dialog ──
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [deletePassword, setDeletePassword] = useState('')
   const [deleteLoading, setDeleteLoading] = useState(false)
   const [deleteError, setDeleteError] = useState('')
 
-  const handleDeleteAccount = async () => {
-    if (!deletePassword) {
-      setDeleteError('请输入密码以确认删除')
-      return
+  useEffect(() => {
+    if (deleteDialogOpen) {
+      setDeletePassword('')
+      setDeleteError('')
     }
+  }, [deleteDialogOpen])
+
+  const handleDeleteAccount = async () => {
+    if (!deletePassword) { setDeleteError('请输入密码以确认删除'); return }
     setDeleteLoading(true)
     setDeleteError('')
     try {
@@ -2475,97 +2547,161 @@ function AuthSettingsPanel({ compact }: { compact: boolean }) {
     }
   }
 
-  useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        if (!sessionUser) {
-          setProfile(null)
-          setName('')
-          setUsername('')
-          return
-        }
-        const userProfile = await getUserProfile()
-        setProfile(userProfile)
-        setName(userProfile.name || '')
-        setUsername(userProfile.username || '')
-      } catch {
-        setProfile(null)
-      }
-    }
-    fetchProfile()
-  }, [sessionUser])
+  const currentName = name || sessionUser?.name || '未设置'
 
-  const runAction = async (task: () => Promise<any>, successText: string) => {
-    try {
-      setLoading(true)
-      setMessage('')
-      await task()
-      await refreshSession()
-      setMessage(successText)
-    } catch (error: any) {
-      setMessage(error?.response?.data?.message || error?.message || '操作失败')
-    } finally {
-      setLoading(false)
-    }
+  // ── 列表行组件 ──
+  const Row = ({ label, value, subtitle, danger, onClick, last }: {
+    label: string
+    value?: string
+    subtitle?: string
+    danger?: boolean
+    onClick?: () => void
+    last?: boolean
+  }) => (
+    <div
+      className={cn(
+        'flex items-center justify-between px-4 py-3 transition-colors',
+        onClick && 'cursor-pointer hover:bg-muted/50',
+        !last && 'border-b border-border/40',
+      )}
+      onClick={onClick}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={onClick ? (e) => { if (e.key === 'Enter') onClick() } : undefined}
+    >
+      <div className="flex-1 min-w-0">
+        <p className={cn('text-sm', danger ? 'font-medium text-destructive' : 'font-medium')}>{label}</p>
+        {subtitle && <p className="mt-0.5 text-xs text-muted-foreground">{subtitle}</p>}
+      </div>
+      <div className="flex items-center gap-2 ml-3">
+        {value && <span className="text-sm text-muted-foreground truncate max-w-[160px]">{value}</span>}
+        {onClick && <ChevronRight className="h-4 w-4 flex-shrink-0 text-muted-foreground/50" />}
+      </div>
+    </div>
+  )
+
+  if (!sessionUser) {
+    return (
+      <div className="space-y-3 px-4 py-3">
+        <p className="text-xs text-muted-foreground">请前往登录或注册。</p>
+        <Button size="sm" onClick={() => navigate('/auth/login')}>去登录</Button>
+      </div>
+    )
   }
 
   return (
-    <div className="space-y-3">
-      {!sessionUser && (
-        <div className="space-y-2">
-          <p className="text-xs text-muted-foreground">请前往独立认证页面进行登录或注册。</p>
-          <div className="flex gap-2">
-            <Button size={compact ? 'sm' : 'default'} onClick={() => navigate('/auth/login')}>
-              去登录
-            </Button>
-            <Button variant="outline" size={compact ? 'sm' : 'default'} onClick={() => navigate('/auth/register')}>
-              去注册
-            </Button>
+    <div>
+      <div className="-mx-4 -my-4 divide-y-0">
+        <Row
+          label="个人信息"
+          value={currentName}
+          subtitle={`${sessionUser.email}${sessionUser.emailVerified ? ' · 已验证' : ''}`}
+          onClick={() => setProfileDialogOpen(true)}
+        />
+        <Row
+          label="修改密码"
+          subtitle="定期更换密码保障账户安全"
+          onClick={() => setPasswordDialogOpen(true)}
+        />
+        <Row
+          label="退出登录"
+          subtitle="清除本地登录状态，返回登录页"
+          onClick={() => signOut().then(() => navigate('/auth/login'))}
+        />
+        <Row
+          label="注销账户"
+          subtitle="永久删除账户及所有学习数据，不可恢复"
+          danger
+          onClick={() => setDeleteDialogOpen(true)}
+          last
+        />
+      </div>
+
+      {/* ── 个人信息 Dialog ── */}
+      <Dialog open={profileDialogOpen} onOpenChange={setProfileDialogOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>编辑个人信息</DialogTitle>
+            <DialogDescription>修改后点击保存即可生效</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label className="text-xs text-muted-foreground">名称 (name)</Label>
+              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="显示名称" />
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground">昵称 (username)</Label>
+              <Input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="昵称" />
+            </div>
           </div>
-        </div>
-      )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setProfileDialogOpen(false)}>取消</Button>
+            <Button onClick={handleSaveProfile} disabled={profileLoading}>
+              {profileLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              保存
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-      {sessionUser && (
-        <div className="grid gap-2 sm:grid-cols-2">
-          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="用户名（name）" />
-          <Input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="昵称（username）" />
-          <Button
-            disabled={loading}
-            onClick={() => runAction(() => updateUserProfile({ name, username }), '个人信息保存成功')}
-          >
-            保存个人信息
-          </Button>
-          <Button variant="outline" disabled={loading} onClick={() => navigate('/account')}>
-            修改密码 / 账号管理
-          </Button>
-          <Button variant="outline" disabled={loading} onClick={() => runAction(() => signOut(), '已退出登录')}>
-            退出登录
-          </Button>
-          <Button
-            variant="destructive"
-            size="sm"
-            disabled={loading}
-            onClick={() => setShowDeleteDialog(true)}
-            className="sm:col-span-2"
-          >
-            注销账户
-          </Button>
-          {profile && (
-            <p className="col-span-full text-xs text-muted-foreground">
-              当前资料：name={profile.name || '-'}，username={profile.username || '-'}，email={profile.email}
-            </p>
-          )}
-        </div>
-      )}
+      {/* ── 修改密码 Dialog ── */}
+      <Dialog open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>修改密码</DialogTitle>
+            <DialogDescription>输入当前密码和新密码</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label className="text-xs text-muted-foreground">当前密码</Label>
+              <Input
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                type="password"
+                placeholder="输入当前密码"
+                autoComplete="current-password"
+              />
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground">新密码</Label>
+              <Input
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                type="password"
+                placeholder="至少 8 位字符"
+                autoComplete="new-password"
+              />
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground">确认新密码</Label>
+              <Input
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                type="password"
+                placeholder="再次输入新密码"
+                autoComplete="new-password"
+              />
+            </div>
+            {passwordError && (
+              <p className="text-sm text-red-500">{passwordError}</p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPasswordDialogOpen(false)}>取消</Button>
+            <Button onClick={handleChangePassword} disabled={passwordLoading}>
+              {passwordLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              确认修改
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-      {message && <p className={cn('text-xs', compact ? 'text-muted-foreground' : 'text-primary')}>{message}</p>}
-
-      {/* 删除账户确认弹窗 */}
-      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+      {/* ── 注销账户 Dialog ── */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle className="text-destructive">注销账户</DialogTitle>
-            <DialogDescription className="text-sm text-muted-foreground">
+            <DialogDescription>
               此操作不可撤销。所有学习记录、收藏、生词本、模考成绩等数据将被永久删除。请输入密码以确认。
             </DialogDescription>
           </DialogHeader>
@@ -2577,14 +2713,10 @@ function AuthSettingsPanel({ compact }: { compact: boolean }) {
               placeholder="输入当前密码"
               autoComplete="current-password"
             />
-            {deleteError && (
-              <p className="text-sm text-red-500">{deleteError}</p>
-            )}
+            {deleteError && <p className="text-sm text-red-500">{deleteError}</p>}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDeleteDialog(false)} disabled={deleteLoading}>
-              取消
-            </Button>
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)} disabled={deleteLoading}>取消</Button>
             <Button variant="destructive" onClick={handleDeleteAccount} disabled={deleteLoading}>
               {deleteLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               确认删除
