@@ -53,13 +53,45 @@ echoon2/
 
 ## 前端路由
 
+### 用户端
+
 | 路由 | 页面 |
 |---|---|
 | `#/` | 题库首页 |
+| `#/portal` | 产品门户页 |
 | `#/practice/:topicId` | 题目练习页 |
 | `#/mock` | 模考页 |
 | `#/profile` | 个人中心 |
+| `#/account` | 账户管理 |
 | `#/member` | 会员权益页 |
+| `#/notifications` | 通知列表 |
+| `#/notifications/:id` | 通知详情 |
+| `#/auth/login` | 登录页 |
+| `#/auth/register` | 注册页 |
+
+### 系统文档（法律与隐私）
+
+| 路由 | 说明 |
+|---|---|
+| `#/system/terms` | 服务条款 |
+| `#/system/privacy` | 隐私政策 |
+| `#/system/privacy-children` | 儿童信息保护 |
+| `#/system/privacy-concise` | 隐私政策简明版 |
+| `#/system/icp` | ICP 备案信息 |
+| `#/system/permissions` | 权限申请说明 |
+| `#/system/sdk-list` | 第三方 SDK 目录 |
+| `#/system/collect-info` | 个人信息收集清单 |
+| `#/system/contact` | 联系我们 |
+
+### 管理后台（独立布局，需 Admin 角色）
+
+| 路由 | 页面 |
+|---|---|
+| `#/admin/users` | 用户管理 |
+| `#/admin/members` | 会员管理 |
+| `#/admin/billing` | 订单/账单管理 |
+| `#/admin/notifications` | 通知管理 |
+| `#/admin/resources` | 资源管理 |
 
 ## Docker + SSH 自动部署
 
@@ -94,3 +126,13 @@ echoon2/
 ### 4) 本地参考环境变量
 
 可参考 `.env.production.example`，按实际值填写后用于手动部署或排障。
+
+## 项目文档
+
+详见 `docs/` 目录：
+
+| 文档 | 说明 |
+|---|---|
+| [echoon2-技术文档.md](docs/echoon2-技术文档.md) | 系统架构与实现文档 |
+| [导游口试训练-需求文档.md](docs/导游口试训练-需求文档.md) | 产品需求说明 |
+| [待办需求.md](docs/待办需求.md) | 待开发功能清单 |
