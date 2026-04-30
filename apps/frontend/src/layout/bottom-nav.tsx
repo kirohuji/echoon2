@@ -20,6 +20,7 @@ export function BottomNav() {
   const fetchUnreadCount = useNotificationStore((s) => s.fetchUnreadCount)
   const initSocket = useNotificationStore((s) => s.initSocket)
   const { session } = useAuth()
+  const isLoggedIn = !!session
 
   useEffect(() => {
     if (session?.user?.id) {
@@ -33,7 +34,7 @@ export function BottomNav() {
     return location.pathname.startsWith(path)
   }
 
-  if (!visible) return null
+  if (!visible || !isLoggedIn) return null
 
   return (
     <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-border/60 bg-background/95 backdrop-blur-xl pb-[env(safe-area-inset-bottom)]">

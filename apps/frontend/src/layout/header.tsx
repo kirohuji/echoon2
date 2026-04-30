@@ -21,6 +21,7 @@ export function Header() {
   const [themeMenuOpen, setThemeMenuOpen] = useState(false)
   const { session } = useAuth()
   const isAdmin = session?.user?.role === 'admin'
+  const isLoggedIn = !!session
 
   const currentPath = location.pathname
 
@@ -65,10 +66,12 @@ export function Header() {
 
         {/* 右侧操作区 */}
         <div className="flex items-center gap-1.5 lg:gap-2 ml-auto">
-          {/* 通知铃铛 - 仅桌面端 */}
-          <div className="hidden lg:block">
-            <NotificationBell />
-          </div>
+          {/* 通知铃铛 - 仅桌面端，需登录 */}
+          {isLoggedIn && (
+            <div className="hidden lg:block">
+              <NotificationBell />
+            </div>
+          )}
 
           {/* 桌面端：后台管理 + 主题切换 + 个人中心 */}
           <div className="hidden lg:flex items-center gap-2">
@@ -90,39 +93,16 @@ export function Header() {
               >
                 <ThemeIcon className="h-4 w-4" />
               </Button>
-              {themeMenuOpen && (
-                <>
-                  <div
-                    className="fixed inset-0 z-10"
-                    onClick={() => setThemeMenuOpen(false)}
-                  />
-                  <div className="absolute right-0 top-full mt-1 z-20 min-w-[120px] rounded-md border bg-popover p-1 shadow-md">
-                    {themeOptions.map(({ value, label, icon: Icon }) => (
-                      <button
-                        key={value}
-                        onClick={() => {
-                          setTheme(value)
-                          setThemeMenuOpen(false)
-                        }}
-                        className={cn(
-                          'flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-muted',
-                          theme === value && 'font-medium text-primary'
-                        )}
-                      >
-                        <Icon className="h-3.5 w-3.5" />
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                </>
-              )}
+              {/* ... theme menu ... */}
             </div>
 
-            <Link to="/profile">
-              <Button variant="ghost" size="icon" className="h-8 w-8">
-                <User className="h-4 w-4" />
-              </Button>
-            </Link>
+            {isLoggedIn && (
+              <Link to="/profile">
+                <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <User className="h-4 w-4" />
+                </Button>
+              </Link>
+            )}
           </div>
         </div>
       </div>
