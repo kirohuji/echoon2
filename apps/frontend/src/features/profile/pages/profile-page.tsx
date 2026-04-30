@@ -58,6 +58,7 @@ import { cn } from '@/lib/cn'
 import i18n from '@/lib/i18n'
 import { getCurrentAvatar, uploadFileToCosAndComplete, setCurrentAvatar } from '@/features/file-assets/api'
 import { SystemDocumentDrawer } from '@/features/system/components/system-document-drawer'
+import { FeedbackDialog } from '@/features/feedback/components/feedback-dialog'
 import {
   listLinkedAccounts, linkSocialAccount, unlinkAccount,
   type LinkedAccount,
@@ -2524,6 +2525,9 @@ function AuthSettingsPanel({ compact: _compact }: { compact: boolean }) {
   const [deleteLoading, setDeleteLoading] = useState(false)
   const [deleteError, setDeleteError] = useState('')
 
+  // ── 反馈 Dialog ──
+  const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false)
+
   useEffect(() => {
     if (deleteDialogOpen) {
       setDeletePassword('')
@@ -2612,7 +2616,7 @@ function AuthSettingsPanel({ compact: _compact }: { compact: boolean }) {
         <Row
           label="帮助与反馈"
           subtitle="提交问题或建议，帮助我们做得更好"
-          onClick={() => navigate('/feedback')}
+          onClick={() => setFeedbackDialogOpen(true)}
         />
         <Row
           label="注销账户"
@@ -2730,6 +2734,9 @@ function AuthSettingsPanel({ compact: _compact }: { compact: boolean }) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* ── 反馈 Dialog (PC) / Drawer (移动端) ── */}
+      <FeedbackDialog open={feedbackDialogOpen} onOpenChange={setFeedbackDialogOpen} />
     </div>
   )
 }

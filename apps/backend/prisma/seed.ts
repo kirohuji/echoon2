@@ -7,6 +7,13 @@ async function main() {
   await prisma.notificationRead.deleteMany();
   await prisma.notificationTarget.deleteMany();
   await prisma.notification.deleteMany();
+  await prisma.feedback.deleteMany();
+  await prisma.referral.deleteMany();
+  await prisma.referralCode.deleteMany();
+  await prisma.userAchievement.deleteMany();
+  await prisma.order.updateMany({ data: { couponId: null } });
+  await prisma.coupon.deleteMany();
+  await prisma.dailyActivity.deleteMany();
   await prisma.session.deleteMany();
   await prisma.account.deleteMany();
   await prisma.verification.deleteMany();
@@ -396,10 +403,316 @@ async function main() {
   });
 
   // 将管理员账号的 role 设为 admin
-  await prisma.user.update({
+  const adminUser = await prisma.user.update({
     where: { email: 'z1309014381@gmail.com' },
     data: { role: 'admin' },
   });
+
+  const normalUser = await prisma.user.findUnique({
+    where: { email: 'user@echoon2.local' },
+  });
+
+  // ──── 优惠券 Seed ────
+  const couponNewUser = await prisma.coupon.create({
+    data: {
+      code: 'NEWUSER20',
+      type: 'percentage',
+      value: 20,
+      minAmount: 9800,
+      maxUses: 100,
+      usedCount: 12,
+      validFrom: new Date('2026-01-01'),
+      validUntil: new Date('2027-12-31'),
+      isActive: true,
+    },
+  });
+
+  await prisma.coupon.create({
+    data: {
+      code: 'WELCOME10',
+      type: 'fixed',
+      value: 1000,
+      maxUses: 50,
+      usedCount: 8,
+      validFrom: new Date(),
+      isActive: true,
+    },
+  });
+
+  await prisma.coupon.create({
+    data: {
+      code: 'FREETRIAL7',
+      type: 'free_trial',
+      value: 7,
+      maxUses: 200,
+      usedCount: 45,
+      validUntil: new Date('2027-06-30'),
+      isActive: true,
+    },
+  });
+
+  await prisma.coupon.create({
+    data: {
+      code: 'VIP50',
+      type: 'percentage',
+      value: 50,
+      minAmount: 19800,
+      maxUses: 10,
+      usedCount: 0,
+      validFrom: new Date(),
+      validUntil: new Date('2026-12-31'),
+      isActive: true,
+    },
+  });
+
+  await prisma.coupon.create({
+    data: {
+      code: 'EXPIRED99',
+      type: 'percentage',
+      value: 99,
+      validFrom: new Date('2025-01-01'),
+      validUntil: new Date('2025-12-31'),
+      isActive: false,
+    },
+  });
+
+  // ──── 邀请码 Seed ────
+  if (adminUser && normalUser) {
+    const adminReferral = await prisma.referralCode.create({
+      data: {
+        userId: adminUser.id,
+        code: 'ADMIN001',
+        totalInvited: 3,
+        totalReward: 9,
+      },
+    });
+
+    const userReferral = await prisma.referralCode.create({
+      data: {
+        userId: normalUser.id,
+        code: 'USER001',
+        totalInvited: 1,
+        totalReward: 3,
+      },
+    });
+
+    // 模拟几个被邀请用户
+    for (let i = 0; i < 3; i++) {
+      const fakeEmail = `invited${i}@echoon2.local`;
+      const result = await auth.api.signUpEmail({
+        body: {
+          name: `被邀请用户${i + 1}`,
+          email: fakeEmail,
+          password: 'test123456',
+        },
+      });
+      const invitedUserId = (result as any)?.user?.id;
+      if (invitedUserId && adminReferral) {
+        await prisma.referral.create({
+          data: {
+            referrerId: adminReferral.id,
+            referredUserId: invitedUserId,
+            rewardedAt: i < 2 ? new Date() : null,
+          },
+        });
+      }
+    }
+  }
+
+  // ──── 成就解锁 Seed ────
+  if (adminUser && normalUser) {
+    // 给管理员解锁大多数成就
+    const allAchievements = [
+      { key: 'first_practice', name: '初次练习', description: '完成第一次练习', icon: 'Play', category: 'practice', condition: { type: 'practice_count', threshold: 1 }, sortOrder: 1 },
+      { key: 'practice_10', name: '学有所成', description: '累计完成 10 次练习', icon: 'BookOpen', category: 'practice', condition: { type: 'practice_count', threshold: 10 }, sortOrder: 2 },
+      { key: 'practice_50', name: '勤奋刻苦', description: '累计完成 50 次练习', icon: 'PenLine', category: 'practice', condition: { type: 'practice_count', threshold: 50 }, sortOrder: 3 },
+      { key: 'practice_100', name: '百题斩', description: '累计完成 100 次练习', icon: 'Zap', category: 'practice', condition: { type: 'practice_count', threshold: 100 }, sortOrder: 4 },
+      { key: 'practice_500', name: '学神降临', description: '累计完成 500 次练习', icon: 'Crown', category: 'practice', condition: { type: 'practice_count', threshold: 500 }, sortOrder: 5 },
+      { key: 'streak_3', name: '三日之约', description: '连续 3 天打卡学习', icon: 'Flame', category: 'streak', condition: { type: 'streak_days', threshold: 3 }, sortOrder: 6 },
+      { key: 'streak_7', name: '周而复始', description: '连续 7 天打卡学习', icon: 'Flame', category: 'streak', condition: { type: 'streak_days', threshold: 7 }, sortOrder: 7 },
+      { key: 'streak_30', name: '月度达人', description: '连续 30 天打卡学习', icon: 'Flame', category: 'streak', condition: { type: 'streak_days', threshold: 30 }, sortOrder: 8 },
+      { key: 'first_mock', name: '初试锋芒', description: '完成第一次模拟考试', icon: 'GraduationCap', category: 'mock', condition: { type: 'mock_count', threshold: 1 }, sortOrder: 9 },
+      { key: 'mock_5', name: '身经百战', description: '完成 5 次模拟考试', icon: 'Trophy', category: 'mock', condition: { type: 'mock_count', threshold: 5 }, sortOrder: 10 },
+      { key: 'mock_90', name: '九十分先生', description: '模拟考试得分 90 分以上', icon: 'Star', category: 'mock', condition: { type: 'mock_score', threshold: 90 }, sortOrder: 11 },
+      { key: 'mock_100', name: '满分达人', description: '模拟考试满分 100 分', icon: 'Sparkles', category: 'mock', condition: { type: 'mock_score', threshold: 100 }, sortOrder: 12 },
+      { key: 'favorite_10', name: '收藏达人', description: '收藏 10 道题目', icon: 'Heart', category: 'collection', condition: { type: 'favorite_count', threshold: 10 }, sortOrder: 13 },
+      { key: 'word_20', name: '词汇大师', description: '生词本收集 20 个单词', icon: 'BookMarked', category: 'collection', condition: { type: 'word_count', threshold: 20 }, sortOrder: 14 },
+    ];
+
+    for (const a of allAchievements) {
+      await prisma.achievement.upsert({
+        where: { key: a.key },
+        create: a,
+        update: {},
+      });
+    }
+
+    // 管理员解锁前 8 个成就
+    const adminAchievements = await prisma.achievement.findMany({
+      where: { sortOrder: { lte: 8 } },
+    });
+    for (const a of adminAchievements) {
+      await prisma.userAchievement.create({
+        data: {
+          userId: adminUser.id,
+          achievementId: a.id,
+          unlockedAt: new Date(Date.now() - Math.random() * 30 * 86400000),
+        },
+      });
+    }
+
+    // 普通用户解锁前 3 个成就
+    const userAchievements = await prisma.achievement.findMany({
+      where: { sortOrder: { lte: 3 } },
+    });
+    for (const a of userAchievements) {
+      await prisma.userAchievement.create({
+        data: {
+          userId: normalUser.id,
+          achievementId: a.id,
+          unlockedAt: new Date(),
+        },
+      });
+    }
+  }
+
+  // ──── 反馈 Seed ────
+  if (normalUser) {
+    await prisma.feedback.create({
+      data: {
+        userId: normalUser.id,
+        type: 'bug',
+        content: '在练习页面中，TTS 自动播放有时会失效，需要手动点击播放按钮。希望修复这个问题。',
+        contact: 'user@echoon2.local',
+        status: 'pending',
+      },
+    });
+
+    await prisma.feedback.create({
+      data: {
+        userId: normalUser.id,
+        type: 'suggestion',
+        content: '建议增加夜间模式的自动切换功能，根据系统时间自动切换主题。',
+        status: 'resolved',
+        adminNote: '感谢建议！目前已经支持跟随系统主题（设置 → 外观 → 跟随系统）。',
+      },
+    });
+
+    await prisma.feedback.create({
+      data: {
+        userId: normalUser.id,
+        type: 'suggestion',
+        content: '希望可以增加学习数据导出功能，方便打印和分享。',
+        status: 'pending',
+      },
+    });
+  }
+
+  // ──── 排行榜 Seed：为所有用户生成练习记录和打卡数据 ────
+  const allUsers = await prisma.user.findMany();
+  for (const user of allUsers) {
+    // 随机 0-30 条练习记录
+    const practiceCount = Math.floor(Math.random() * 30) + 1;
+    for (let i = 0; i < practiceCount; i++) {
+      const randomQuestion = questionItems[Math.floor(Math.random() * questionItems.length)];
+      if (randomQuestion) {
+        try {
+          await prisma.practiceRecord.create({
+            data: {
+              userId: user.id,
+              questionId: randomQuestion.id,
+              actionType: i % 3 === 0 ? 'listen' : i % 3 === 1 ? 'speak' : 'answer',
+              createdAt: new Date(Date.now() - Math.random() * 30 * 86400000),
+            },
+          });
+        } catch { /* ignore */ }
+      }
+    }
+
+    // 最近 30 天随机天数的打卡
+    const streakDays = Math.floor(Math.random() * 20) + 1;
+    const uniqueDays = new Set<string>();
+    for (let d = 0; d < streakDays; d++) {
+      const day = new Date();
+      day.setDate(day.getDate() - Math.floor(Math.random() * 30));
+      const dayKey = day.toISOString().split('T')[0];
+      if (!uniqueDays.has(dayKey)) {
+        uniqueDays.add(dayKey);
+        try {
+          await prisma.dailyActivity.upsert({
+            where: { userId_date: { userId: user.id, date: day } },
+            create: { userId: user.id, date: day, count: Math.floor(Math.random() * 10) + 1 },
+            update: {},
+          });
+        } catch { /* ignore */ }
+      }
+    }
+  }
+
+  // ──── 模拟考试记录 Seed ────
+  for (const user of allUsers) {
+    const examCount = Math.floor(Math.random() * 5);
+    for (let i = 0; i < examCount; i++) {
+      const paper = i % 2 === 0 ? standardPaper : intensePaper;
+      try {
+        await prisma.mockExamRecord.create({
+          data: {
+            userId: user.id,
+            paperId: paper.id,
+            score: Math.floor(Math.random() * 40) + 60,
+            weakness: ['景点介绍', '应变能力'].slice(0, Math.random() > 0.5 ? 2 : 1),
+            takenAt: new Date(Date.now() - Math.random() * 30 * 86400000),
+          },
+        });
+      } catch { /* ignore */ }
+    }
+  }
+
+  // ──── 收藏/生词 Seed ────
+  for (const user of allUsers) {
+    // 随机收藏题目
+    const favCount = Math.floor(Math.random() * 8) + 1;
+    const addedIds = new Set<string>();
+    for (let i = 0; i < favCount; i++) {
+      const q = questionItems[Math.floor(Math.random() * questionItems.length)];
+      if (q && !addedIds.has(q.id)) {
+        addedIds.add(q.id);
+        try {
+          await prisma.favoriteQuestion.create({
+            data: { userId: user.id, questionId: q.id },
+          });
+        } catch { /* ignore */ }
+      }
+    }
+
+    // 随机生词
+    const wordCount = Math.floor(Math.random() * 10) + 1;
+    const sampleWords = [
+      { term: 'skyscraper', definition: '摩天大楼' },
+      { term: 'heritage', definition: '遗产' },
+      { term: 'concession', definition: '租界' },
+      { term: 'artifacts', definition: '文物' },
+      { term: 'itinerary', definition: '行程' },
+      { term: 'hospitality', definition: '款待' },
+      { term: 'dynasty', definition: '朝代' },
+      { term: 'architecture', definition: '建筑' },
+      { term: 'octagonal', definition: '八角形的' },
+      { term: 'pavilion', definition: '亭子' },
+      { term: 'memorial', definition: '纪念堂' },
+      { term: 'observation deck', definition: '观景台' },
+      { term: 'botanical garden', definition: '植物园' },
+      { term: 'ancestral hall', definition: '宗祠' },
+      { term: 'maritime trade', definition: '海上贸易' },
+    ];
+    const shuffled = [...sampleWords].sort(() => Math.random() - 0.5).slice(0, wordCount);
+    for (const w of shuffled) {
+      try {
+        await prisma.vocabularyWord.create({
+          data: { userId: user.id, term: w.term, definition: w.definition },
+        });
+      } catch { /* ignore */ }
+    }
+  }
 
   console.log('Seed complete!');
 }
