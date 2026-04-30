@@ -2,7 +2,7 @@ import React from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import {
   Users, Database, FileText, Settings, BarChart3, Bell,
-  ChevronRight, ArrowLeft, CreditCard, Receipt,
+  ChevronRight, ArrowLeft, CreditCard, Receipt, FolderOpen,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
@@ -38,6 +38,12 @@ const menuItems: MenuItem[] = [
     label: '消息通知',
     icon: Bell,
     path: '/admin/notifications',
+  },
+  {
+    key: 'resources',
+    label: '资料库管理',
+    icon: FolderOpen,
+    path: '/admin/resources',
   },
   {
     key: 'question-bank',

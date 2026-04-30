@@ -14,6 +14,7 @@ import { AdminUsersPage } from '@/features/admin/pages/admin-users-page'
 import { AdminMembersPage } from '@/features/admin/pages/admin-members-page'
 import { AdminBillingPage } from '@/features/admin/pages/admin-billing-page'
 import { AdminNotificationsPage } from '@/features/admin/pages/admin-notifications-page'
+import { AdminResourcesPage } from '@/features/admin/pages/admin-resources-page'
 import { NotificationListPage } from '@/features/notification/pages/notification-list-page'
 import { NotificationDetailPage } from '@/features/notification/pages/notification-detail-page'
 import { LoginPage } from '@/features/auth/pages/login-page'
@@ -32,6 +33,7 @@ export default function App() {
                 <Route path="members" element={<AdminMembersPage />} />
                 <Route path="billing" element={<AdminBillingPage />} />
                 <Route path="notifications" element={<AdminNotificationsPage />} />
+                <Route path="resources" element={<AdminResourcesPage />} />
               </Route>
 
               {/* 用户端 — RootLayout */}

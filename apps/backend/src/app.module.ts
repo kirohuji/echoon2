@@ -16,6 +16,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { PayModule } from './modules/pay/pay.module';
 import { NotificationModule } from './modules/notification/notification.module';
+import { ResourceLibraryModule } from './modules/resource-library/resource-library.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { NotificationModule } from './modules/notification/notification.module';
     FileAssetsModule,
     AuthModule,
     AdminModule,
+    ResourceLibraryModule,
     PayModule,
     NotificationModule,
   ],
