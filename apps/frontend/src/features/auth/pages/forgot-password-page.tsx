@@ -48,8 +48,8 @@ export function ForgotPasswordPage() {
     try {
       setLoading(true)
       setMessage('')
-      const { default: resetApi } = await import('@/features/auth/api')
-      await resetApi.resetPasswordByOtp(email, otp, newPassword)
+      const { resetPasswordByOtp: resetApi } = await import('@/features/auth/api')
+      await resetApi(email, otp, newPassword)
       setMessage('密码重置成功，即将跳转到登录页')
       setTimeout(() => navigate('/auth/login'), 1500)
     } catch (error: any) {

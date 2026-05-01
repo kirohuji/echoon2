@@ -28,7 +28,7 @@ export interface FieldConfig {
 
 export interface ConfigFormProps {
   fields: FieldConfig[]
-  schema: z.ZodObject<any>
+  schema: z.ZodSchema<any>
   defaultValues?: Record<string, any>
   onSubmit: (values: any) => void | Promise<void>
   submitLabel?: string
@@ -55,7 +55,7 @@ export function ConfigForm({
     control,
     formState: { errors },
   } = useForm({
-    resolver: zodResolver(schema),
+    resolver: zodResolver(schema as any),
     defaultValues,
   })
 
