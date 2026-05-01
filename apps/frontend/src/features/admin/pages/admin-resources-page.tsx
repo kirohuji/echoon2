@@ -171,7 +171,7 @@ function StatsOverview({ tree }: { tree: ResourceTreeNode[] }) {
           </div>
           <div>
             <p className="text-xs text-muted-foreground">总大小</p>
-            <p className="text-lg font-bold">{formatFileSize(totalSize)}</p>
+            <p className="text-lg font-bold">{formatSize(totalSize)}</p>
           </div>
         </CardContent>
       </Card>

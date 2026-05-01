@@ -180,7 +180,7 @@ function EditNotificationDialog({
   if (!item) return null
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col p-0">
+      <DialogContent className="sm:max-w-5xl max-h-[90vh] flex flex-col p-0">
         <DialogHeader className="flex-shrink-0 px-6 pt-5 pb-0">
           <DialogTitle>编辑通知</DialogTitle>
           <DialogDescription>修改通知的标题、内容和发送范围</DialogDescription>

@@ -46,12 +46,12 @@ const menuItems: MenuItem[] = [
     icon: FolderOpen,
     path: '/admin/resources',
   },
-  {
-    key: 'coupons',
-    label: '优惠券管理',
-    icon: Tag,
-    path: '/admin/coupons',
-  },
+  // {
+  //   key: 'coupons',
+  //   label: '优惠券管理',
+  //   icon: Tag,
+  //   path: '/admin/coupons',
+  // },
   {
     key: 'feedbacks',
     label: '反馈管理',
