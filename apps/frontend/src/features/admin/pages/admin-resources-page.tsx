@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   FolderOpen, Folder, File, FileVideo, FileAudio, FileImage, FileText, FileArchive,
   Plus, Trash2, Edit3, Save, ChevronRight, ChevronDown, ArrowLeft,
-  ShieldAlert, Loader2, ExternalLink, Upload,
+  ShieldAlert, Loader2, ExternalLink, Upload, Package, HardDrive,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -102,6 +102,81 @@ function formatSize(bytes: number) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function countResources(nodes: ResourceTreeNode[]): { folders: number; files: number; totalSize: number } {
+  let folders = 0
+  let files = 0
+  let totalSize = 0
+  for (const node of nodes) {
+    if (node.type === 'folder') {
+      folders++
+      if (node.children?.length) {
+        const sub = countResources(node.children)
+        folders += sub.folders
+        files += sub.files
+        totalSize += sub.totalSize
+      }
+    } else {
+      files++
+      if (node.fileSize) totalSize += node.fileSize
+    }
+  }
+  return { folders, files, totalSize }
+}
+
+function StatsOverview({ tree }: { tree: ResourceTreeNode[] }) {
+  if (tree.length === 0) return null
+  const { folders, files, totalSize } = countResources(tree)
+
+  return (
+    <div className="grid grid-cols-4 gap-3">
+      <Card>
+        <CardContent className="p-4 flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
+            <Package className="h-4 w-4 text-primary" />
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">资料总数</p>
+            <p className="text-lg font-bold">{folders + files}</p>
+          </div>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardContent className="p-4 flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-500/10">
+            <Folder className="h-4 w-4 text-amber-500" />
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">文件夹</p>
+            <p className="text-lg font-bold">{folders}</p>
+          </div>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardContent className="p-4 flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-500/10">
+            <File className="h-4 w-4 text-blue-500" />
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">文件</p>
+            <p className="text-lg font-bold">{files}</p>
+          </div>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardContent className="p-4 flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-green-500/10">
+            <HardDrive className="h-4 w-4 text-green-500" />
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">总大小</p>
+            <p className="text-lg font-bold">{formatFileSize(totalSize)}</p>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
 }
 
 export function AdminResourcesPage() {
@@ -369,6 +444,9 @@ export function AdminResourcesPage() {
           </Button>
         </div>
       </div>
+
+      {/* 统计概览 */}
+      <StatsOverview tree={tree} />
 
       {/* Main Content */}
       <div className="flex gap-4">

@@ -1,12 +1,22 @@
 import { Injectable, BadRequestException } from '@nestjs/common'
 import { PrismaService } from '../../common/prisma/prisma.service'
+import type { Prisma } from '@prisma/client'
 
 @Injectable()
 export class CouponService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll() {
-    return this.prisma.coupon.findMany({ orderBy: { createdAt: 'desc' } })
+  async findAll(page = 1, pageSize = 20, keyword?: string) {
+    const where: Prisma.CouponWhereInput = {}
+    if (keyword) {
+      where.code = { contains: keyword.toUpperCase(), mode: 'insensitive' }
+    }
+    const skip = (page - 1) * pageSize
+    const [items, total] = await Promise.all([
+      this.prisma.coupon.findMany({ where, orderBy: { createdAt: 'desc' }, skip, take: pageSize }),
+      this.prisma.coupon.count({ where }),
+    ])
+    return { items, total, page, pageSize }
   }
 
   async create(data: {

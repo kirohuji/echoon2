@@ -1,4 +1,4 @@
-import { get, post } from '@/lib/request'
+import { get, post, patch } from '@/lib/request'
 
 export interface FeedbackResult {
   id: string
@@ -25,5 +25,10 @@ export function getAllFeedbacks(params?: { status?: string; page?: number; pageS
 }
 
 export function updateFeedback(id: string, data: { status: string; adminNote?: string }) {
-  return post<FeedbackResult>(`/feedbacks/${id}`, data)
+  return patch<FeedbackResult>(`/feedbacks/${id}`, data)
+}
+
+/** 管理员回复反馈，后端会自动发送通知给用户 */
+export function replyFeedback(id: string, adminNote: string) {
+  return post<{ success: boolean; notificationId: string }>(`/feedbacks/${id}/reply`, { adminNote })
 }

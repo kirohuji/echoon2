@@ -9,5 +9,6 @@ import { FileAssetsModule } from '../file-assets/file-assets.module';
   imports: [FileAssetsModule],
   controllers: [NotificationController, NotificationAdminController],
   providers: [NotificationService, NotificationGateway],
+  exports: [NotificationService, NotificationGateway],
 })
 export class NotificationModule {}

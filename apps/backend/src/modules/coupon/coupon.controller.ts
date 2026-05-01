@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Body, Param, Req, ForbiddenException } from '@nestjs/common'
+import { Controller, Get, Post, Patch, Body, Param, Query, Req, ForbiddenException } from '@nestjs/common'
 import type { Request } from 'express'
 import { CouponService } from './coupon.service'
 import { requireAuthSession } from '../auth/session.util'
@@ -8,8 +8,12 @@ export class CouponController {
   constructor(private readonly couponService: CouponService) {}
 
   @Get()
-  async list() {
-    return this.couponService.findAll()
+  async list(
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+    @Query('keyword') keyword?: string,
+  ) {
+    return this.couponService.findAll(Number(page) || 1, Number(pageSize) || 20, keyword)
   }
 
   @Post()

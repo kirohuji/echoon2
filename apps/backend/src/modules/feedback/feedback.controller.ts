@@ -37,4 +37,12 @@ export class FeedbackController {
     if ((session.user as any)?.role !== 'admin') throw new ForbiddenException('仅管理员可处理反馈')
     return this.feedbackService.updateStatus(id, body.status, body.adminNote)
   }
+
+  /** 管理员回复反馈，自动发送通知给用户 */
+  @Post(':id/reply')
+  async reply(@Req() req: Request, @Param('id') id: string, @Body() body: { adminNote: string }) {
+    const session = await requireAuthSession(req)
+    if ((session.user as any)?.role !== 'admin') throw new ForbiddenException('仅管理员可回复反馈')
+    return this.feedbackService.reply(session.user.id, id, body.adminNote)
+  }
 }

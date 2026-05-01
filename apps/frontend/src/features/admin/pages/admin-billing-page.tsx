@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Select, SelectItem } from '@/components/ui/select'
 import { cn } from '@/lib/cn'
 import {
   listOrders, getOrderStats, testPayment,
@@ -37,7 +38,7 @@ export function AdminBillingPage() {
   const [stats, setStats] = useState<AdminOrderStats | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [page, setPage] = useState(1)
-  const [pageSize] = useState(20)
+  const [pageSize, setPageSize] = useState(20)
   const [keyword, setKeyword] = useState('')
   const [searchInput, setSearchInput] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
@@ -366,10 +367,19 @@ export function AdminBillingPage() {
 
           {data && data.total > 0 && (
             <div className="flex items-center justify-between border-t border-border px-4 py-3 gap-3">
-              <p className="text-xs text-muted-foreground">
-                共 {data.total} 条，第 {page}/{totalPages} 页
-              </p>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">每页</span>
+                <Select value={String(pageSize)} onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1) }} className="w-16">
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="20">20</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                </Select>
+                <span className="text-xs text-muted-foreground">条</span>
+              </div>
               <div className="flex items-center gap-1">
+                <span className="text-xs text-muted-foreground mr-2">
+                  共 {data.total} 条，第 {page}/{totalPages} 页
+                </span>
                 <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
                   <ChevronLeft className="h-4 w-4" />
                 </Button>

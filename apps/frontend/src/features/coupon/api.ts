@@ -20,8 +20,15 @@ export interface CouponValidateResult {
   finalAmount: number
 }
 
-export function getAllCoupons() {
-  return get<CouponData[]>('/coupons')
+export interface CouponListResult {
+  items: CouponData[]
+  total: number
+  page: number
+  pageSize: number
+}
+
+export function getAllCoupons(params?: { page?: number; pageSize?: number; keyword?: string }) {
+  return get<CouponListResult>('/coupons', params)
 }
 
 export function createCoupon(data: {
