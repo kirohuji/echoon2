@@ -214,10 +214,10 @@ export function OnboardingGuide({ open, onClose, onFinish }: OnboardingGuideProp
 
 /**
  * 检查是否是首次访问，返回是否需要显示引导
- * 存储 key: echoon2-onboarding-seen
+ * 存储 key: guideready-onboarding-seen
  */
 export function useOnboarding() {
-  const KEY = 'echoon2-onboarding-seen'
+  const KEY = 'guideready-onboarding-seen'
 
   const hasSeen = localStorage.getItem(KEY) === '1'
 

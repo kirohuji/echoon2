@@ -7,7 +7,7 @@ export function Footer() {
       <div className="mx-auto max-w-[1480px] px-4 py-8">
         <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-between">
           <div className="flex items-center gap-2">
-            <span className="font-semibold">导游口试训练</span>
+            <span className="font-semibold">导游说</span>
             <span className="text-muted-foreground text-sm">专业导游外语口试备考平台</span>
           </div>
 
@@ -30,7 +30,7 @@ export function Footer() {
           </div>
         </div>
         <div className="mt-6 text-center text-xs text-muted-foreground">
-          © {new Date().getFullYear()} 导游口试训练. All rights reserved.
+          © {new Date().getFullYear()} 导游说. All rights reserved.
         </div>
       </div>
     </footer>

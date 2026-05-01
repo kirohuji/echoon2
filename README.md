@@ -1,4 +1,6 @@
-# Echoon2 — 导游口试训练系统
+# GuideReady — 导游说
+
+多语种全国导游资格面试练习平台 · 上场前，先说好。
 
 基于 pnpm monorepo 的全栈学习应用。
 
@@ -39,7 +41,7 @@ pnpm dev
 ## 目录结构
 
 ```
-echoon2/
+guideready/
 ├── apps/
 │   ├── backend/      # NestJS 后端
 │   └── frontend/     # React 前端
@@ -105,7 +107,7 @@ echoon2/
 ### 1) GitHub Variables（仓库变量）
 
 - `DEPLOY_HOST`：部署地址（域名或服务器 IP）
-- `DEPLOY_PATH`：服务器部署目录（可选，默认 `/opt/echoon2`）
+- `DEPLOY_PATH`：服务器部署目录（可选，默认 `/opt/guideready`）
 - `FRONTEND_URL`：前端公网地址（可选，默认 `https://DEPLOY_HOST`）
 
 ### 2) GitHub Secrets（仓库密钥）
@@ -113,9 +115,9 @@ echoon2/
 - `SSH_USER`
 - `SSH_PRIVATE_KEY`
 - `SSH_PORT`（可选，默认 `22`）
-- `POSTGRES_USER`（可选，默认 `echoon2`）
+- `POSTGRES_USER`（可选，默认 `guideready`）
 - `POSTGRES_PASSWORD`（必填）
-- `POSTGRES_DB`（可选，默认 `echoon2`）
+- `POSTGRES_DB`（可选，默认 `guideready`）
 
 ### 3) 服务器准备
 
@@ -133,6 +135,6 @@ echoon2/
 
 | 文档 | 说明 |
 |---|---|
-| [echoon2-技术文档.md](docs/echoon2-技术文档.md) | 系统架构与实现文档 |
-| [导游口试训练-需求文档.md](docs/导游口试训练-需求文档.md) | 产品需求说明 |
-| [待办需求.md](docs/待办需求.md) | 待开发功能清单 |
+| [技术文档](docs/导游说-技术文档.md) | 系统架构与实现文档 |
+| [需求文档](docs/导游说-需求文档.md) | 产品需求说明 |
+| [待办需求](docs/待办需求.md) | 待开发功能清单 |

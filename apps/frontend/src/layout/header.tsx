@@ -56,7 +56,7 @@ export function Header() {
       <div className="mx-auto flex h-14 max-w-[1480px] items-center px-3 lg:px-4">
         {/* Logo - 桌面端显示 */}
         <Link to="/" className="mr-8 hidden lg:flex items-center gap-2">
-          <span className="font-display text-lg font-bold tracking-tight text-foreground">导游口试</span>
+          <span className="font-display text-lg font-bold tracking-tight text-foreground">导游说</span>
         </Link>
 
         {/* 桌面端导航 */}

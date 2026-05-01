@@ -17,7 +17,7 @@ function getTrustedOrigins() {
 }
 
 export const auth: any = betterAuth({
-  appName: 'echoon2',
+  appName: 'guideready',
   baseURL: process.env.BETTER_AUTH_URL || `http://localhost:${process.env.PORT || 3001}`,
   basePath: '/api/auth',
   secret: process.env.BETTER_AUTH_SECRET,

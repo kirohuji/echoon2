@@ -5,7 +5,7 @@ import {
   Mic, BookOpen, Brain, Sparkles, TrendingUp,
   Trophy, Users, FileText, Headphones, ArrowRight,
   MapPin, CheckCircle, Star, Zap, Globe, GraduationCap,
-  ChevronRight,
+  ChevronRight, Languages, MessageSquare,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { Button } from '@/components/ui/button'
@@ -45,52 +45,52 @@ function FadeInSection({
 // ─── 数据 ────────────────────────────────────────────────────────────────────
 
 const stats = [
-  { value: 12, suffix: '+', label: '热门景点', icon: MapPin },
-  { value: 500, suffix: '+', label: '练习题目', icon: FileText },
+  { value: 31, suffix: '+', label: '覆盖省份', icon: MapPin },
+  { value: 8, suffix: '', label: '支持语种', icon: Languages },
   { value: 98, suffix: '%', label: '用户好评', icon: Star },
-  { value: 10000, suffix: '+', label: '活跃用户', icon: Users },
+  { value: 10000, suffix: '+', label: '活跃考生', icon: Users },
 ]
 
 const features = [
   {
-    icon: Mic,
-    title: 'AI 智能评分',
-    description: '基于 DeepSeek 大模型的实时口语评估，从发音、语法、流利度多维度精准打分',
+    icon: MessageSquare,
+    title: '多语种面试练习',
+    description: '支持中、英、日、韩、法、德、西、俄 8 种语言的导游资格面试模拟，覆盖全国 31 个省份考点',
     gradient: 'from-blue-500 to-cyan-400',
     bgGradient: 'from-blue-500/10 to-cyan-500/10',
   },
   {
-    icon: Headphones,
-    title: 'TTS 语音合成',
-    description: 'MiniMax 顶尖语音合成技术，支持多角色、多音色，让你听到最地道的示范朗读',
+    icon: Mic,
+    title: 'AI 智能评分',
+    description: '基于 DeepSeek 大模型的实时口语评估，从发音、语法、流利度多维度精准打分，还原真实考官标准',
     gradient: 'from-violet-500 to-purple-400',
     bgGradient: 'from-violet-500/10 to-purple-500/10',
   },
   {
-    icon: BookOpen,
-    title: '景点知识库',
-    description: '覆盖全国 10 大热门景点，结构化知识卡片，图文并茂轻松记忆',
+    icon: Headphones,
+    title: 'TTS 语音合成',
+    description: 'MiniMax 顶尖语音合成技术，支持多语种、多音色，让你听到最地道的示范朗读',
     gradient: 'from-emerald-500 to-teal-400',
     bgGradient: 'from-emerald-500/10 to-teal-500/10',
   },
   {
     icon: Brain,
-    title: '模拟考试',
-    description: '1:1 还原真实考场环境，限时答题 + 智能评分报告，提前适应考试节奏',
+    title: '全真模拟面试',
+    description: '1:1 还原真实面试场景，限时答题 + 智能评分报告，提前适应面试节奏与压力',
     gradient: 'from-amber-500 to-orange-400',
     bgGradient: 'from-amber-500/10 to-orange-500/10',
   },
   {
     icon: TrendingUp,
     title: '学习数据追踪',
-    description: '可视化学习曲线，记录每一次进步。薄弱项诊断 + 个性化推荐，精准提升',
+    description: '可视化学习曲线，记录每一次进步。薄弱项诊断 + 个性化推荐，精准提升面试表现',
     gradient: 'from-rose-500 to-pink-400',
     bgGradient: 'from-rose-500/10 to-pink-500/10',
   },
   {
     icon: Globe,
     title: '全平台支持',
-    description: 'Web / iOS 双端适配，随时随地练习。支持离线缓存，无网也能学',
+    description: 'Web / iOS 双端适配，随时随地练习。支持离线缓存，无网也能练口语',
     gradient: 'from-sky-500 to-blue-400',
     bgGradient: 'from-sky-500/10 to-blue-500/10',
   },
@@ -99,15 +99,15 @@ const features = [
 const steps = [
   {
     number: '01',
-    icon: GraduationCap,
-    title: '选择学习景点',
-    description: '从 10+ 热门景点中选择目标，获取专属知识卡片',
+    icon: BookOpen,
+    title: '选择考点与语种',
+    description: '匹配报考省份和语种，获取专属面试题库与知识卡片',
   },
   {
     number: '02',
     icon: Mic,
     title: '跟读模仿练习',
-    description: '聆听标准发音后跟读，AI 实时分析发音准确度',
+    description: '聆听标准发音后开口跟读，AI 实时分析发音准确度与流利度',
   },
   {
     number: '03',
@@ -118,26 +118,26 @@ const steps = [
   {
     number: '04',
     icon: Trophy,
-    title: '模拟考试检验',
-    description: '全真模拟考试环境，检验学习成果，轻松应对考试',
+    title: '模拟面试检验',
+    description: '全真模拟面试环境，检验学习成果，轻松应对正式面试',
   },
 ]
 
 const testimonials = [
   {
-    text: '用了这个 App 练习了两个月，导游口试一次就过了！AI 评分特别准，能清楚知道哪里发音不对。',
+    text: '用了导游说练习了两个月，英语导游面试一次通过！AI 评分特别准，能清楚知道哪里发音不对，哪里表达不地道。',
     name: '张同学',
-    role: '2025 届考生',
+    role: '2025 届英语导游考生',
   },
   {
-    text: '景点知识卡片做得太好了，图文并茂记起来特别快。TTS 发音比我自己念的标准太多了。',
+    text: '多语种支持太赞了！我考的是日语导游，用导游说练口语效率特别高，TTS 发音比我自己念的标准太多了。',
     name: '李导',
-    role: '持证导游',
+    role: '持证日语导游',
   },
   {
-    text: '模拟考试功能太实用了，考前练了 5 次，真正上考场一点都不紧张。强烈推荐！',
+    text: '模拟面试功能太实用了，考前练了 5 次，真正上场一点都不紧张。面试官问的问题跟练习的差不多，简直是开挂！',
     name: '王考生',
-    role: '2025 届考生',
+    role: '2025 届中文导游考生',
   },
 ]
 
@@ -197,8 +197,8 @@ export function PortalPage() {
               variant="outline"
               className="px-4 py-1.5 text-sm border-primary/30 bg-primary/5 text-primary gap-2"
             >
-              <Sparkles className="h-3.5 w-3.5" />
-              导游资格证口试备考 · AI 智能训练平台
+              <Languages className="h-3.5 w-3.5" />
+              多语种全国导游资格面试练习平台
             </Badge>
           </motion.div>
 
@@ -210,18 +210,17 @@ export function PortalPage() {
             className="space-y-4"
           >
             <h1 className="font-display text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold leading-tight tracking-tight text-foreground">
-              让每一次
+              上场前，
               <br className="sm:hidden" />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-primary to-accent">
-                开口练习
+                先说好
               </span>
-              {' '}都算数
             </h1>
 
             <div className="flex items-center justify-center gap-2 text-2xl sm:text-3xl md:text-4xl font-display font-bold text-muted-foreground">
               <span>AI 驱动的</span>
               <WordRotate
-                words={['口语训练', '发音评估', '智能纠错', '场景模拟']}
+                words={['英语面试', '日语面试', '韩语面试', '法语面试', '多语种面试']}
                 duration={2500}
                 className="text-transparent bg-clip-text bg-gradient-to-r from-accent to-orange-400"
               />
@@ -235,8 +234,19 @@ export function PortalPage() {
             transition={{ delay: 0.4, duration: 0.6 }}
             className="max-w-2xl mx-auto text-base sm:text-lg text-muted-foreground leading-relaxed"
           >
-            Echoon2 专为导游资格考试口语环节设计。结合 AI 大模型评分、TTS 语音合成，
-            为你打造沉浸式口语练习体验，高效备考，自信开口。
+            导游说（GuideReady）专为全国导游资格面试设计。
+            覆盖中、英、日、韩、法、德、西、俄 8 种语言，
+            结合 AI 大模型评分 + TTS 语音合成，打造沉浸式多语种面试练习体验。
+          </motion.p>
+
+          {/* 品牌口号 */}
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5, duration: 0.6 }}
+            className="text-sm text-muted-foreground/60 italic"
+          >
+            "上场前，先说好。"
           </motion.p>
 
           {/* CTA 按钮 */}
@@ -263,7 +273,7 @@ export function PortalPage() {
               onClick={() => navigate(isLoggedIn ? '/mock' : '/auth/register')}
             >
               <Trophy className="mr-2 h-5 w-5" />
-              模拟考试
+              模拟面试
             </Button>
           </motion.div>
 
@@ -275,9 +285,10 @@ export function PortalPage() {
             className="flex flex-wrap items-center justify-center gap-3 pt-8"
           >
             {[
+              { icon: Languages, text: '8 种语言' },
               { icon: CheckCircle, text: 'AI 精准评分' },
               { icon: Zap, text: '实时反馈' },
-              { icon: Trophy, text: '模拟考试' },
+              { icon: Trophy, text: '全真模拟' },
             ].map(({ icon: Icon, text }) => (
               <div
                 key={text}
@@ -331,10 +342,10 @@ export function PortalPage() {
         <FadeInSection className="max-w-5xl mx-auto text-center mb-12 lg:mb-16">
           <SectionLabel>核心功能</SectionLabel>
           <h2 className="font-display text-3xl sm:text-4xl lg:text-5xl font-extrabold text-foreground tracking-tight">
-            全方位提升口语能力
+            多语种面试，一站搞定
           </h2>
           <p className="mt-4 text-muted-foreground text-base sm:text-lg max-w-2xl mx-auto">
-            从知识学习到模拟考试，Echoon2 覆盖导游口试备考全流程
+            导游说（GuideReady）覆盖导游资格面试备考全流程，从知识学习到面试模拟，助你轻松通关
           </p>
         </FadeInSection>
 
@@ -402,12 +413,12 @@ export function PortalPage() {
         <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-background to-transparent" />
 
         <FadeInSection className="relative max-w-5xl mx-auto text-center mb-12 lg:mb-16">
-          <SectionLabel>三步上手</SectionLabel>
+          <SectionLabel>四步上手</SectionLabel>
           <h2 className="font-display text-3xl sm:text-4xl lg:text-5xl font-extrabold text-foreground tracking-tight">
-            高效备考，轻松通关
+            从开口到通关
           </h2>
           <p className="mt-4 text-muted-foreground text-base sm:text-lg max-w-2xl mx-auto">
-            四步完成从入门到精通，让考试变得简单
+            四步完成从入门到精通，让面试变得简单
           </p>
         </FadeInSection>
 
@@ -495,10 +506,10 @@ export function PortalPage() {
 
         <FadeInSection className="relative z-10 max-w-2xl mx-auto text-center space-y-6">
           <h2 className="font-display text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white tracking-tight">
-            准备好开始你的备考之旅了吗？
+            上场前，先说好。
           </h2>
           <p className="text-white/80 text-base sm:text-lg leading-relaxed max-w-lg mx-auto">
-            免费注册即可开始练习。AI 教练 24 小时在线，随时随地提升口语能力。
+            免费注册即可开始练习。AI 教练 24 小时在线，随时随地提升面试口语能力。
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">

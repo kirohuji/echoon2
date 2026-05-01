@@ -74,7 +74,7 @@ export function SharePoster({ data }: SharePosterProps) {
           )}
           {data.subtitle && <p className="text-xs opacity-80">{data.subtitle}</p>}
           <div className="pt-2">
-            <p className="text-[10px] opacity-60">导游口试训练 · Echoon</p>
+            <p className="text-[10px] opacity-60">导游说 · GuideReady</p>
           </div>
         </div>
       </div>

@@ -15,7 +15,7 @@ COPY apps/frontend apps/frontend
 ARG VITE_API_BASE_URL=/api/v1/guide-exam
 ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
 
-RUN pnpm --filter @echoon2/frontend build
+RUN pnpm --filter @guideready/frontend build
 
 FROM nginx:1.27-alpine AS runner
 

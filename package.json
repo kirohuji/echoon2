@@ -1,5 +1,5 @@
 {
-  "name": "echoon2",
+  "name": "guideready",
   "private": true,
   "engines": {
     "node": ">=22.0.0",
@@ -7,8 +7,8 @@
   },
   "scripts": {
     "dev": "pnpm --parallel -r dev",
-    "dev:backend": "pnpm --filter @echoon2/backend dev",
-    "dev:frontend": "pnpm --filter @echoon2/frontend dev",
+    "dev:backend": "pnpm --filter @guideready/backend dev",
+    "dev:frontend": "pnpm --filter @guideready/frontend dev",
     "build": "pnpm -r build",
     "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck"

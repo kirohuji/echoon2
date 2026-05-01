@@ -389,7 +389,7 @@ async function main() {
   await auth.api.signUpEmail({
     body: {
       name: '普通用户',
-      email: 'user@echoon2.local',
+      email: 'user@guideready.local',
       password: 'user123456',
     },
   });
@@ -409,7 +409,7 @@ async function main() {
   });
 
   const normalUser = await prisma.user.findUnique({
-    where: { email: 'user@echoon2.local' },
+    where: { email: 'user@guideready.local' },
   });
 
   // ──── 优惠券 Seed ────
@@ -498,7 +498,7 @@ async function main() {
 
     // 模拟几个被邀请用户
     for (let i = 0; i < 3; i++) {
-      const fakeEmail = `invited${i}@echoon2.local`;
+      const fakeEmail = `invited${i}@guideready.local`;
       const result = await auth.api.signUpEmail({
         body: {
           name: `被邀请用户${i + 1}`,
@@ -583,7 +583,7 @@ async function main() {
         userId: normalUser.id,
         type: 'bug',
         content: '在练习页面中，TTS 自动播放有时会失效，需要手动点击播放按钮。希望修复这个问题。',
-        contact: 'user@echoon2.local',
+        contact: 'user@guideready.local',
         status: 'pending',
       },
     });

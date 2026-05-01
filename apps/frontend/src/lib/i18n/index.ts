@@ -11,7 +11,7 @@ const zhCN = {
       profile: '个人中心',
     },
     home: {
-      title: '导游口试训练',
+      title: '导游说',
       hero: {
         mode: '训练模式',
         practice: '练习模式',
@@ -246,7 +246,7 @@ const en = {
       profile: 'Profile',
     },
     home: {
-      title: 'Tour Guide Oral Exam Trainer',
+      title: 'GuideReady',
       hero: {
         mode: 'Training Mode',
         practice: 'Practice Mode',
