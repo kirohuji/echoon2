@@ -107,7 +107,7 @@ export function ProfilePage() {
     setBottomNavVisible(mobileView === 'home')
   }, [mobileView, setBottomNavVisible])
 
-  const nickname = userProfile?.name || userProfile?.username || '导游备考者'
+  const nickname = userProfile?.name || userProfile?.username || '导游说者'
 
   return (
     <div>
@@ -300,7 +300,7 @@ function MobileProfileHome({ onNavigate }: { onNavigate: (view: MobileView) => v
     i18n.changeLanguage(lang)
   }
 
-  const nickname = userProfile?.name || userProfile?.username || '导游备考者'
+  const nickname = userProfile?.name || userProfile?.username || '导游说者'
 
   const onTapAvatar = () => {
     navigate('/account')

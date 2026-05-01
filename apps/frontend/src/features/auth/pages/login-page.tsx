@@ -105,7 +105,7 @@ export function LoginPage() {
     <div className="min-h-[100dvh] flex flex-col items-center justify-center px-4 py-6 md:py-8">
       {/* 品牌标题区 */}
       <div className="mb-8 text-center">
-        <h1 className="text-2xl font-bold tracking-tight">登录导游备考</h1>
+        <h1 className="text-2xl font-bold tracking-tight">登录导游说</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           还没有账号？
           <Link to="/auth/register" className="ml-1 text-primary hover:underline font-medium">
