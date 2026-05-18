@@ -51,6 +51,19 @@ export default {
   				'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
   				border: 'hsl(var(--sidebar-border))',
   				ring: 'hsl(var(--sidebar-ring))'
+  			},
+  			// GuideReady 品牌语义色
+  			brand: {
+  				navy:    'hsl(var(--brand-navy))',
+  				'navy-deep': 'hsl(var(--brand-navy-deep))',
+  				'navy-dark': 'hsl(var(--brand-navy-dark))',
+  				coral:   'hsl(var(--brand-coral))',
+  				'coral-light': 'hsl(var(--brand-coral-light))',
+  				'coral-pressed': 'hsl(var(--brand-coral-pressed))',
+  				link:    'hsl(var(--brand-link))',
+  				text:    'hsl(var(--brand-text))',
+  				'text-secondary': 'hsl(var(--brand-text-secondary))',
+  				divider: 'hsl(var(--brand-divider))',
   			}
   		},
   		borderRadius: {
