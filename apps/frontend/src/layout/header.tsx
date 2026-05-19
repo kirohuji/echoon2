@@ -54,9 +54,13 @@ export function Header() {
   return (
     <header className="fixed top-0 left-0 right-0 z-40 border-b border-border/50 bg-background/60 backdrop-blur-xl supports-[backdrop-filter]:bg-background/50">
       <div className="mx-auto flex h-14 max-w-[1480px] items-center px-3 lg:px-4">
-        {/* Logo - 桌面端显示 */}
-        <Link to="/" className="mr-8 hidden lg:flex items-center gap-2">
-          <span className="font-display text-lg font-bold tracking-tight text-foreground">导游说</span>
+        {/* Logo - 桌面端 */}
+        <Link to="/" className="mr-8 hidden lg:flex items-center gap-2 shrink-0">
+          <img
+            src="/logo.png"
+            alt="GuideReady 导游说"
+            className="h-7 w-auto dark:invert"
+          />
         </Link>
 
         {/* 桌面端导航 */}
