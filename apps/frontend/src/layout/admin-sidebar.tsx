@@ -63,7 +63,6 @@ const menuItems: MenuItem[] = [
     label: '题库管理',
     icon: Database,
     path: '/admin/question-bank',
-    soon: true,
   },
   {
     key: 'content',
