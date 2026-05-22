@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Select, SelectItem } from '@/components/ui/select'
 import { getAllFeedbacks, updateFeedback, replyFeedback } from '@/features/feedback/api'
 import type { FeedbackResult } from '@/features/feedback/api'
+import { MarkdownEditor } from '@/components/common/markdown-editor'
 import { cn } from '@/lib/cn'
 
 const STATUS_MAP: Record<string, { label: string; variant: 'outline' | 'secondary' | 'default' }> = {
@@ -260,12 +261,12 @@ export function AdminFeedbacksPage() {
 
               {/* 回复输入区 */}
               <div className="space-y-2">
-                <p className="text-xs text-muted-foreground">回复用户（将发送通知）</p>
-                <textarea
-                  className="w-full min-h-[80px] rounded-lg border border-border bg-background px-3 py-2 text-sm resize-y focus:outline-none focus:ring-2 focus:ring-ring"
-                  placeholder="输入回复内容，将自动通知用户..."
+                <p className="text-xs text-muted-foreground mb-1.5">回复用户（支持 Markdown，将发送通知）</p>
+                <MarkdownEditor
                   value={replyText}
-                  onChange={(e) => setReplyText(e.target.value)}
+                  onChange={setReplyText}
+                  height={180}
+                  placeholder="输入回复内容，支持 Markdown 格式..."
                   disabled={replying || replySent}
                 />
                 <Button

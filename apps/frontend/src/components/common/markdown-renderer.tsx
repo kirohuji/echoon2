@@ -1,5 +1,6 @@
 import React from 'react'
 import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { cn } from '@/lib/cn'
 
 interface Props {
@@ -11,6 +12,7 @@ export function MarkdownRenderer({ content, className }: Props) {
   return (
     <div className={cn('prose prose-sm dark:prose-invert max-w-none text-sm leading-relaxed text-foreground/85', className)}>
       <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
         components={{
           img: ({ src, alt }) => (
             <img

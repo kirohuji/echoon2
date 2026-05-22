@@ -15,7 +15,8 @@ import {
   Select,
   SelectItem,
 } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
+import { MarkdownEditor } from '@/components/common/markdown-editor';
+import { MarkdownRenderer } from '@/components/common/markdown-renderer';
 import {
   Dialog,
   DialogContent,
@@ -646,11 +647,12 @@ export function AdminResourcesPage() {
                   )}
 
                   <div>
-                    <Label>描述</Label>
-                    <Textarea
+                    <MarkdownEditor
+                      label="描述（支持 Markdown）"
                       value={editDescription}
-                      onChange={(e) => setEditDescription(e.target.value)}
-                      rows={3}
+                      onChange={setEditDescription}
+                      height={180}
+                      placeholder="输入描述内容..."
                     />
                   </div>
                 </div>
@@ -987,11 +989,12 @@ export function AdminResourcesPage() {
                       </div>
                     )}
                     <div>
-                      <Label>描述</Label>
-                      <Textarea
+                      <MarkdownEditor
+                        label="描述（支持 Markdown）"
                         value={dialogEditDescription}
-                        onChange={(e) => setDialogEditDescription(e.target.value)}
-                        rows={3}
+                        onChange={setDialogEditDescription}
+                        height={180}
+                        placeholder="输入描述内容..."
                       />
                     </div>
                   </div>
@@ -1155,7 +1158,9 @@ export function AdminResourcesPage() {
                   {viewingResource.description && (
                     <div>
                       <p className="text-xs font-medium text-muted-foreground mb-1">描述</p>
-                      <p className="text-sm text-foreground/80">{viewingResource.description}</p>
+                      <div className="rounded-lg border border-border bg-muted/20 p-3">
+                        <MarkdownRenderer content={viewingResource.description} />
+                      </div>
                     </div>
                   )}
 
