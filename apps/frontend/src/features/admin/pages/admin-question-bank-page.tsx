@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import { MarkdownEditor } from '@/components/common/markdown-editor';
+import { MarkdownRenderer } from '@/components/common/markdown-renderer';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Select,
@@ -626,7 +627,7 @@ function QuestionDialog({
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
-      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {mode === 'create' ? '新建题目' : mode === 'edit' ? '编辑题目' : '题目详情'}
@@ -706,64 +707,82 @@ function QuestionDialog({
             />
           </div>
 
-          {/* 题目内容 — 双语 */}
+          {/* 题目内容 — 双语（Markdown） */}
           <div className="border-t pt-4">
-            <Label className="text-sm font-semibold mb-2 block">题目内容（双语）</Label>
-            <div className="grid gap-3">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label className="text-xs text-muted-foreground">题目（英文）</Label>
-                  <Textarea
-                    rows={3}
+            <Label className="text-sm font-semibold mb-3 block">题目内容（支持 Markdown 格式）</Label>
+            <div className="grid gap-4">
+              {isView ? (
+                <>
+                  <div>
+                    <Label className="text-xs text-muted-foreground mb-1 block">题目（英文）</Label>
+                    <div className="rounded-lg border border-border bg-muted/20 p-3 min-h-[60px]">
+                      <MarkdownRenderer content={promptEn} />
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground mb-1 block">题目（中文）</Label>
+                    <div className="rounded-lg border border-border bg-muted/20 p-3 min-h-[60px]">
+                      <MarkdownRenderer content={promptZh} />
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground mb-1 block">答案（英文）</Label>
+                    <div className="rounded-lg border border-border bg-muted/20 p-3 min-h-[60px]">
+                      <MarkdownRenderer content={answerEn} />
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground mb-1 block">答案（中文）</Label>
+                    <div className="rounded-lg border border-border bg-muted/20 p-3 min-h-[60px]">
+                      <MarkdownRenderer content={answerZh} />
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground mb-1 block">摘要 / 要点</Label>
+                    <div className="rounded-lg border border-border bg-muted/20 p-3 min-h-[60px]">
+                      <MarkdownRenderer content={summary} />
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <MarkdownEditor
+                    label="题目（英文）"
                     value={promptEn}
-                    onChange={(e) => setPromptEn(e.target.value)}
-                    placeholder="English prompt..."
-                    disabled={isView}
+                    onChange={setPromptEn}
+                    height={200}
+                    placeholder="English prompt (Markdown supported)..."
                   />
-                </div>
-                <div>
-                  <Label className="text-xs text-muted-foreground">题目（中文）</Label>
-                  <Textarea
-                    rows={3}
+                  <MarkdownEditor
+                    label="题目（中文）"
                     value={promptZh}
-                    onChange={(e) => setPromptZh(e.target.value)}
-                    placeholder="中文题目..."
-                    disabled={isView}
+                    onChange={setPromptZh}
+                    height={200}
+                    placeholder="中文题目（支持 Markdown）..."
                   />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label className="text-xs text-muted-foreground">答案（英文）</Label>
-                  <Textarea
-                    rows={3}
+                  <MarkdownEditor
+                    label="答案（英文）"
                     value={answerEn}
-                    onChange={(e) => setAnswerEn(e.target.value)}
-                    placeholder="English answer..."
-                    disabled={isView}
+                    onChange={setAnswerEn}
+                    height={200}
+                    placeholder="English answer (Markdown supported)..."
                   />
-                </div>
-                <div>
-                  <Label className="text-xs text-muted-foreground">答案（中文）</Label>
-                  <Textarea
-                    rows={3}
+                  <MarkdownEditor
+                    label="答案（中文）"
                     value={answerZh}
-                    onChange={(e) => setAnswerZh(e.target.value)}
-                    placeholder="中文答案..."
-                    disabled={isView}
+                    onChange={setAnswerZh}
+                    height={200}
+                    placeholder="中文答案（支持 Markdown）..."
                   />
-                </div>
-              </div>
-              <div>
-                <Label className="text-xs text-muted-foreground">摘要 / 要点</Label>
-                <Textarea
-                  rows={2}
-                  value={summary}
-                  onChange={(e) => setSummary(e.target.value)}
-                  placeholder="题目摘要或答题要点..."
-                  disabled={isView}
-                />
-              </div>
+                  <MarkdownEditor
+                    label="摘要 / 要点"
+                    value={summary}
+                    onChange={setSummary}
+                    height={150}
+                    placeholder="题目摘要或答题要点（支持 Markdown）..."
+                  />
+                </>
+              )}
             </div>
           </div>
         </div>
