@@ -3,6 +3,339 @@ import { auth } from '../src/modules/auth/auth';
 
 const prisma = new PrismaClient();
 
+// ══════════════════════════════════════════════════════════
+// SystemConfig 默认值
+// ══════════════════════════════════════════════════════════
+
+const defaultConfigs = [
+  { key: 'app_name',        value: 'GuideReady',        group: 'basic', label: '应用名称',       type: 'string',   description: 'App 显示名称' },
+  { key: 'app_logo_url',    value: '',                  group: 'basic', label: 'Logo URL',        type: 'string',   description: 'App Logo 图片链接' },
+  { key: 'contact_email',   value: '',                  group: 'basic', label: '联系邮箱',       type: 'string',   description: '客服/联系邮箱地址' },
+  { key: 'icp_number',      value: '',                  group: 'basic', label: 'ICP 备案号',     type: 'string',   description: 'ICP 备案号' },
+  { key: 'registration_open',    value: 'true',  group: 'feature', label: '开放注册',         type: 'boolean',  description: '是否允许新用户注册' },
+  { key: 'maintenance_mode',     value: 'false', group: 'feature', label: '维护模式',         type: 'boolean',  description: '开启后非管理员用户将看到维护提示' },
+  { key: 'maintenance_message',  value: '系统维护中，请稍后再试。', group: 'feature', label: '维护提示文案', type: 'textarea', description: '维护模式下展示的提示信息' },
+  { key: 'feature_ai_practice',  value: 'true',  group: 'feature', label: 'AI 练习',          type: 'boolean',  description: '启用/禁用 AI 练习功能' },
+  { key: 'feature_leaderboard',  value: 'true',  group: 'feature', label: '排行榜',           type: 'boolean',  description: '启用/禁用排行榜功能' },
+  { key: 'feature_mock_exam',    value: 'true',  group: 'feature', label: '模考',             type: 'boolean',  description: '启用/禁用模考功能' },
+  { key: 'api_rate_limit',       value: '60',  group: 'technical', label: 'API 限流（次/分钟）',  type: 'number',  description: '每个 IP 每分钟最大请求数' },
+  { key: 'upload_max_size_mb',   value: '10',  group: 'technical', label: '文件上传限制（MB）',   type: 'number',  description: '单文件上传最大大小（MB）' },
+  { key: 'session_timeout_min',  value: '4320',group: 'technical', label: '会话超时（分钟）',     type: 'number',  description: '用户会话过期时间（默认 3 天）' },
+];
+
+async function seedSystemConfigs() {
+  for (const cfg of defaultConfigs) {
+    await prisma.systemConfig.create({ data: cfg });
+  }
+  console.log(`    ↳ ${defaultConfigs.length} 项系统配置`);
+}
+
+// ══════════════════════════════════════════════════════════
+// ResourceNode 资料库数据
+// ══════════════════════════════════════════════════════════
+
+interface CategoryDetail {
+  region: string; category: string; title: string; content: string; scope: string;
+}
+
+const nationalRequirements = [
+  { name: '考试语种', description: '外语类包括英语、日语、俄语、法语、德语、西班牙语、朝鲜语、泰语等。' },
+  { name: '考试方式', description: '现场考试（面试）以模拟考试方式进行，由省级考试单位根据考试大纲和《全国导游资格考试现场考试工作标准（试行）》组织。' },
+  { name: '考试时长', description: '外语类考生每人不少于25分钟，备考旅游景区不少于5个。' },
+  { name: '分值比例', description: '外语类分值比例为：礼貌礼仪占5%，语言表达占25%，景点讲解占30%，导游服务规范占10%，应变能力占5%，综合知识占5%，口译占20%。' },
+];
+
+// ─── ResourceNode 资料库数据 ────────────────────────────────
+
+interface CategoryDetail {
+  region: string; category: string; title: string; content: string; scope: string;
+}
+
+const regionOverviews = [
+  { region: '北京市', page: '23-24', categories: '语言表达；景点讲解；综合能力；外语口译；知识问答', excerpt: '考查外语类考生在导游服务过程中，进行中文与外语之间口译的基本能力。' },
+  { region: '天津市', page: '25-40', categories: '景点讲解；导游服务规范；文明旅游；应变能力；综合知识；语言表达；仪表礼仪', excerpt: '景点讲解；导游服务规范；文明旅游；应变能力；综合知识；语言表达；仪表礼仪。' },
+  { region: '河北省', page: '41-45', categories: '景点讲解；专题讲解；口译', excerpt: '外语类考生现场考试内容包括：用所考语种进行景点讲解、专题讲解和口译测试。外语类考生考试时间25分钟。', scoreInfo: '外语类现场考试礼貌礼仪占5%，语言表达占25%，景点讲解占30%，导游服务规范占10%，应变能力占5%，综合知识占5%，口译占20%。' },
+  { region: '山西省', page: '46-53', categories: '专题讲解；导游服务能力；应变能力；综合知识；口译', excerpt: '外语考生考试内容考试时长43分钟，其中：讲解环节8分钟，问答环节6分钟，口译环节4分钟，准备和音频回放时长25分钟。' },
+  { region: '内蒙古自治区', page: '54-60', categories: '导游服务规范；应变能力；综合知识', excerpt: '外语类考生现场考试内容包括：用所考语种进行导游讲解、导游服务规范、应变能力、综合知识和口译测试（包括"中译外""外译中"）。' },
+  { region: '辽宁省', page: '61-66', categories: '景点讲解；导游规范；应变能力；综合知识；口译', excerpt: '外语类考生全程使用所报考的外语语种应试和讲解，并具备中外口译能力。', scoreInfo: '外语类分值比例为：礼貌礼仪占5%，语言表达占25%，景点讲解占30%，导游服务规范占10%，应变能力占5%，综合知识占5%，口译占20%。' },
+  { region: '吉林省', page: '67-69', categories: '语言表达；景点讲解；导游服务规范；应变能力；知识问答；口译', excerpt: '外语类考生现场考试内容包括：用报考语种进行景点讲解、导游服务规范问答、应变能力问答、综合知识问答和口译测试。', timeInfo: '外语类考生一般每人不少于25分钟。', scoreInfo: '外语类现场考试礼貌礼仪占5%，语言表达占25%，景点讲解占30%，导游服务规范占10%，应变能力占5%，综合知识占5%，口译占20%。' },
+  { region: '黑龙江省', page: '70-72', categories: '景点讲解；导游规范；应变能力；综合知识；文明旅游；口译', excerpt: '考查外语类考生在中文和外语之间口头互译的能力，充分反映考生的真实外语水平。' },
+  { region: '上海市', page: '73-80', categories: '概况讲解；景点讲解；综合知识问答；导游服务规范；应变能力；礼貌礼仪；口译；语言表达', excerpt: '主要类别：概况讲解；景点讲解；综合知识问答；导游服务规范；应变能力；礼貌礼仪；口译；语言表达。', timeInfo: '外语类考试答题时间不少于25分钟。' },
+  { region: '江苏省', page: '81-83', categories: '', excerpt: '外语类考生现场考试内容包括：用所考语种讲述城市简介、景点讲解和知识问答题。' },
+  { region: '浙江省', page: '84-87', categories: '礼貌礼仪；语言表达；景点讲解；概况讲解；导游服务规范问答；应变能力问答；综合知识问答；口译', excerpt: '考查外语类考生在中文和外语导游词之间口头互译的能力，"中译外""外译中"各1题，分值占比合计为20%。', timeInfo: '外语类考生每人考试时间25分钟，其中城市概况讲解2～3分钟，抽签景点讲解8～9分钟；3道问答题每题限时2分钟；2道口译题每题限时3.5分钟。' },
+  { region: '安徽省', page: '88-92', categories: '景点讲解；语言表达；导游规范；应变能力；综合知识；口译', excerpt: '外语类考生现场考试内容包括用所报考语种的语言进行景点讲解、导游规范问答、应变能力问答、综合知识问答和口译测试。', timeInfo: '外语类考生现场考试时间每人25分钟，全程用所报考语种的语言进行现场考试。' },
+  { region: '福建省', page: '93-97', categories: '景点讲解；导游规范；应变能力；综合知识；外语类口译', excerpt: '考查外语类考生在中文和外语之间口头互译的能力，充分反映考生的真实外语水平。' },
+  { region: '江西省', page: '98-104', categories: '景点讲解；口译；语言表达；导游服务规范；应变能力；综合知识', excerpt: '主要类别：景点讲解；口译；语言表达；导游服务规范；应变能力；综合知识。', timeInfo: '外语类考生每人考试时间不少于25分钟，时间分配大致为：讲解约15分钟（江西文化专题4～5分钟，景区讲解10～11分钟），知识问答约5分钟，口译测试约5分钟。', scoreInfo: '外语类现场考试语言和仪表、礼仪占10%，景点讲解占55%，导游服务规范（含文明旅游）问答占5%，应变能力（含文明旅游）问答占5%，综合知识问答占5%，口译占20%。' },
+  { region: '山东省', page: '105-108', categories: '景点讲解；导游规范；应变能力；综合知识；口译', excerpt: '外语类考生现场考试内容包括：用所考语种进行山东省省情、景点讲解（含景点知识问答）、导游规范、应变能力、"中译外""外译中"口译。' },
+  { region: '河南省', page: '109-112', categories: '礼貌礼仪；语言表达；景点讲解；导游服务规范问答；应变能力问答；综合知识问答；口译', excerpt: '外语类考生景点讲解范围（5个）：河南嵩山少林寺景区等。', timeInfo: '外语类考生考试时长每人不少于25分钟。', scoreInfo: '外语类现场考试礼貌礼仪占5%、语言表达占25%、景点讲解占30%、导游服务规范占10%、应变能力占5%、综合知识占5%、口译占20%。' },
+  { region: '湖北省', page: '113-116', categories: '景点讲解；导游规范；应变能力；综合知识；口译', excerpt: '考查外语类考生在中文和外语之间口头互译的能力。', timeInfo: '外语类考生一般每人不少于25分钟。' },
+  { region: '湖南省', page: '117-122', categories: '讲解能力；导游服务规范；应变能力；综合知识；口译', excerpt: '外语类分值比例：湖南概况5%；景点讲解与景点知识问答占25%；导游服务规范占10%；应变能力占5%；综合知识占5%；口译占20%。', timeInfo: '外语类考生考试时间为25分钟，备考旅游景区5个。', scoreInfo: '外语类分值比例：湖南概况5%；景点讲解与景点知识问答占25%；导游服务规范占10%；应变能力占5%；综合知识占5%；口译占20%（其中，中译外10%，外译中10%）；礼貌礼仪占5%；语言表达占25%。' },
+  { region: '广东省', page: '123-124', categories: '景点讲解；导游规范；应变能力；综合知识；口译', excerpt: '外语类考试景点讲解范围：丹霞山、开平碉楼与村落。口译（外语类考生）考查中译外和外译中能力。' },
+  { region: '广西壮族自治区', page: '125-133', categories: '专题线路讲解；旅游景区讲解；知识问答；口译', excerpt: '外语类考生现场考试内容包括：用所报考的语种进行专题线路和旅游景区讲解、知识问答（包括服务规范问答、应变能力问答、综合知识问答）以及口译测试。' },
+  { region: '海南省', page: '134-140', categories: '语言表达；景点讲解；导游规范知识问答；应变能力；综合知识；口译；概况讲解；导游服务规范', excerpt: '考查外语类考生在中文和外语之间口头互译的能力。' },
+  { region: '重庆市', page: '141-149', categories: '景点讲解；知识问答；口译；语言表达；仪表礼仪', excerpt: '外语类考生景点讲解范围与要求（详见分类考纲）。' },
+  { region: '四川省', page: '150-152', categories: '语言表达；景点讲解；导游规范；应变能力知识；综合知识；口译', excerpt: '考查外语类考生在中文和外语之间的口译能力。' },
+  { region: '贵州省', page: '153-155', categories: '景点讲解；导游规范；应变能力；综合知识；口译', excerpt: '主要类别：景点讲解；导游规范；应变能力；综合知识；口译。' },
+  { region: '云南省', page: '156-160', categories: '礼貌礼仪；景点讲解；导游服务规范；应变能力；综合知识；口译', excerpt: '外语类考生景点讲解范围（模拟团型与讲解顺序参照中文类），口译（外语类考生）考查中译外和外译中。' },
+  { region: '西藏自治区', page: '161-166', categories: '大美西藏文旅推介；景点讲解；导游服务规范问答；应变能力问答；综合知识问答；口译', excerpt: '口译（外语类考生）考查中译外和外译中能力。' },
+  { region: '陕西省', page: '167-169', categories: '景点讲解；综合知识；导游规范；应变能力；口译', excerpt: '外语类考生现场考试内容包括：景点讲解、综合知识问答、导游规范问答、应变能力问答及口译测试。', scoreInfo: '外语类现场考试语言和仪态占30%，景点讲解占30%，导游规范占10%，应变能力占5%，综合知识占5%，口译占20%。' },
+  { region: '甘肃省', page: '170-175', categories: '礼貌礼仪；景点讲解；地方美食推介；导游规范；应变能力；综合知识；口译；甘肃美食推介', excerpt: '考查外语类考生使用中文和外语进行口头互译的基本能力。' },
+  { region: '青海省', page: '176-180', categories: '景点讲解；综合知识；导游规范；应变能力；口译', excerpt: '考查外语类考生在中文和外语之间口头互译的能力。', scoreInfo: '外语类现场考试礼貌礼仪占5%，语言表达占25%，景点讲解占30%，导游服务规范占10%，应变能力占5%，综合知识占5%，口译占20%。' },
+  { region: '宁夏回族自治区', page: '181-194', categories: '语言表达；仪表礼仪；沿途及景点讲解；导游规范；应变能力；综合知识；口译；沿途讲解；景点讲解', excerpt: '考查外语类考生在中文与外语之间口头互译的能力，外语口语的表达能力，语音语调的准确性，口语表达的流畅性。', timeInfo: '外语类考生每人讲解（沿途+景点）不少于25分钟。', scoreInfo: '外语类分值比例为：礼貌礼仪占5%，语言表达占25%，景点讲解占30%（沿途讲解占10%，景点讲解占20%），导游服务规范占10%，应变能力占5%，综合知识占5%，口译占20%。' },
+  { region: '新疆维吾尔自治区', page: '195-201', categories: '语言表达；礼貌礼仪；景点讲解；导游规范；应变能力；综合知识；口译；外语口译', excerpt: '考查外语类考生在导游服务过程中，使用中文和外语之间口头互译的基本能力。' },
+  { region: '新疆生产建设兵团', page: '202-209', categories: '语言表达；景点讲解；导游规范；应变能力；综合知识；口译；文明旅游；外语口译', excerpt: '考查外语类考生在导游服务过程中，使用中文和外语之间口头互译的基本能力。' },
+];
+
+const categoryDefinitions = [
+  { code: '景点讲解', name: '景点讲解', sortOrder: 1 },
+  { code: '语言表达', name: '语言表达', sortOrder: 2 },
+  { code: '导游服务规范', name: '导游服务规范', sortOrder: 3 },
+  { code: '应变能力', name: '应变能力', sortOrder: 4 },
+  { code: '综合知识', name: '综合知识', sortOrder: 5 },
+  { code: '外语口译', name: '外语口译', sortOrder: 6 },
+  { code: '口译', name: '口译', sortOrder: 7 },
+  { code: '仪表礼仪', name: '仪表礼仪', sortOrder: 8 },
+  { code: '文明旅游', name: '文明旅游', sortOrder: 9 },
+  { code: '专题讲解', name: '专题讲解', sortOrder: 10 },
+  { code: '综合能力', name: '综合能力', sortOrder: 11 },
+  { code: '知识问答', name: '知识问答', sortOrder: 12 },
+  { code: '礼貌礼仪', name: '礼貌礼仪', sortOrder: 13 },
+  { code: '概况讲解', name: '概况讲解', sortOrder: 14 },
+  { code: '导游服务能力', name: '导游服务能力', sortOrder: 15 },
+  { code: '导游规范', name: '导游规范', sortOrder: 16 },
+  { code: '讲解能力', name: '讲解能力', sortOrder: 17 },
+];
+
+const categoryDetails: CategoryDetail[] = [
+  { region: '北京市', category: '语言表达', title: '语言表达', content: '考查考生的语言能力，包括表达的准确性、流畅性、逻辑性、规范性和生动性等。', scope: '中外通用（外语类适用）' },
+  { region: '北京市', category: '景点讲解', title: '景点讲解', content: '考查考生对北京市主要景点的历史沿革、文化内涵、建筑特点等内容讲解的正确性，讲解是否详略得当、重点突出、条理清晰，以及具备一定的讲解技巧。\n天安门及天安门广场、故宫、天坛、颐和园、长城、明十三陵。', scope: '中外通用（外语类适用）' },
+  { region: '北京市', category: '综合能力', title: '综合能力', content: '考查考生对北京市的城市概况、主要景点知识、传统文化与民俗、经济社会发展等方面综合知识的掌握程度，以及导游应掌握的基本业务技能。\n城市概况：北京历史沿革、地理特点、城市规划与发展。\n传统文化与民俗：北京市的世界文化遗产、人类非物质文化遗产代表作、主要博物馆、红色教育基地、北京胡同及四合院、北京商业街及老字号。', scope: '中外通用（外语类适用）' },
+  { region: '北京市', category: '外语口译', title: '外语口译', content: '考查外语类考生在导游服务过程中，进行中文与外语之间口译的基本能力。', scope: '外语类专属或含外语特殊要求' },
+  { region: '北京市', category: '知识问答', title: '景点知识问答', content: '天安门及天安门广场、故宫、天坛、颐和园、长城、明十三陵、周口店北京人遗址、大运河、中轴线、恭王府、北海、景山、雍和宫、奥林匹克公园、孔庙和国子监。\n《北京市旅游条例》相关知识。\n时事政治（2024～2025年上半年）。', scope: '中外通用（外语类适用）' },
+  { region: '天津市', category: '景点讲解', title: '景点讲解', content: '考查考生对旅游景点、游览线、特色旅游资源的熟悉程度和运用导游讲解方法与技巧的能力。\n考查景点：天津旅游概况（中外文）；古文化街（中外文）；盘山（中外文）；五大道风情区；黄崖关长城；杨柳青古镇；渔阳古镇。\n经典游览线：市内经典游览线（从"天津之眼"摩天轮出发经古文化街、鼓楼、天大南开、天塔、文化中心、五大道、解放北路金融街、意风区至天津站）；海河游览线（永乐桥到大光明桥之间）；滨海经典游览线。\n特色旅游资源：红色记忆（平津战役纪念馆、周邓纪念馆、大沽口炮台遗址等）；现代工业旅游（海鸥表博物馆、长芦盐场、空客总装线等）。', scope: '中外通用（外语类适用）' },
+  { region: '天津市', category: '导游服务规范', title: '导游服务规范', content: '考查考生对导游服务规范、工作程序、服务质量要求等方面的掌握程度和应用能力。\n1. 地陪导游的服务规范。\n2. 全陪导游的服务规范。\n3. 定点导游的服务规范。\n4. 散客旅游的服务规范。\n5. 出境领队的服务规范。', scope: '中外通用（外语类适用）' },
+  { region: '天津市', category: '文明旅游', title: '文明旅游', content: '考查考生是否了解文明旅游的意义，熟悉相关的文明旅游公约，掌握应对个别旅游者的不文明言行的基本原则和处理方法。', scope: '中外通用（外语类适用）' },
+  { region: '天津市', category: '应变能力', title: '导游应变能力', content: '考查考生是否掌握旅游者特殊情况的处理技巧，是否掌握由不同原因造成旅游活动计划变更时应采取的措施及是否具备处理各种突发事件和旅游事故的能力。', scope: '中外通用（外语类适用）' },
+  { region: '天津市', category: '综合知识', title: '综合知识', content: '考查考生对时政、经济、文化、社会发展等方面综合知识、地方导游的综合知识以及旅游目的国（地区）/客源国（地区）的综合知识的了解、熟悉和掌握程度。', scope: '中外通用（外语类适用）' },
+  { region: '天津市', category: '语言表达', title: '语言表达与外语能力', content: '考查考生语言表达的能力及身体语言的运用能力；是否了解导游语言的功能和运用原则；能否运用外语进行导游讲解、回答问题及中外口语互译。', scope: '外语类专属或含外语特殊要求' },
+  { region: '天津市', category: '仪表礼仪', title: '仪表礼仪', content: '考查考生是否掌握并运用导游服务工作所应具备的礼节、礼仪知识；举止行为是否端庄大方；服饰、化妆是否得体。', scope: '中外通用（外语类适用）' },
+  { region: '河北省', category: '景点讲解', title: '景点讲解范围及要求', content: '考生从9个景点（含7个全省共讲景点和所在考区2个自选景点）中现场抽取一个进行讲解，时间6～7分钟。\n全省共讲景点：西柏坡、山海关、白洋淀、避暑山庄及周围寺庙、崇礼滑雪旅游度假区、白石山、清东陵。', scope: '中外通用（外语类适用）' },
+  { region: '河北省', category: '专题讲解', title: '专题讲解', content: '考生从以下题目中抽取一个进行讲解，时间3～4分钟。\n讲解题目：（1）河北历史文化；（2）河北长城文化；（3）河北红色文化；（4）河北自然风光；（5）河北风物特产；（6）河北非遗文化。', scope: '中外通用（外语类适用）' },
+  { region: '河北省', category: '口译', title: '口译及要求', content: '考生现场抽取"口译"试题卡进行口译。每位考生"中译外"和"外译中"的试题各不少于1个。', scope: '中外通用（外语类适用）' },
+  { region: '山西省', category: '专题讲解', title: '专题讲解', content: '共计5个专题知识，由电脑随机抽取1题进行讲解。准备时间1分钟，讲解时长3分钟。\n讲解内容：①山西概况 ②晋商文化 ③古建文化 ④非遗文化 ⑤红色文化', scope: '中外通用（外语类适用）' },
+  { region: '山西省', category: '导游服务能力', title: '导游服务能力', content: '电脑随机抽取1题，准备1分钟，答题时长2分钟。\n考查要点：全陪导游、地陪导游接待服务工作程序及各阶段工作要点。', scope: '中外通用（外语类适用）' },
+  { region: '山西省', category: '应变能力', title: '应变能力', content: '电脑随机抽取1题，准备1分钟，答题时长2分钟。\n考查要点：①游客个别要求的处理 ②突发事件和常见问题的处理。', scope: '中外通用（外语类适用）' },
+  { region: '山西省', category: '综合知识', title: '综合知识', content: '电脑随机抽取1题，准备1分钟，答题时长2分钟。\n考查要点：当前国际、国内和省内时政以及经济、社会、文旅融合等方面知识。', scope: '中外通用（外语类适用）' },
+  { region: '山西省', category: '口译', title: '口译环节', content: '电脑随机抽取"中译外"和"外译中"试题各1个，考生分别回答，每题准备1分钟，答题时长2分钟。\n外语类景区讲解范围：云冈石窟、五台山、平遥古城、洪洞大槐树、晋祠博物馆（5个景区随机抽取1个）。', scope: '外语类专属或含外语特殊要求' },
+  { region: '内蒙古自治区', category: '导游服务规范', title: '导游服务规范（占总分10%）', content: '考查考生掌握导游服务的要求和标准。\n考试内容：（1）准备工作（2）出发与迎接服务（3）交通服务（4）住宿服务（5）用餐服务（6）游览服务（7）购物服务与文化娱乐服务（8）送行服务及后续工作。', scope: '中外通用（外语类适用）' },
+  { region: '内蒙古自治区', category: '应变能力', title: '导游应变能力（占总分10%）', content: '考查考生是否掌握突发事件和常见问题处理的能力。', scope: '中外通用（外语类适用）' },
+  { region: '内蒙古自治区', category: '综合知识', title: '综合知识（占总分10%）', content: '考查考生对时政、经济、文化、社会发展等方面综合知识的了解、熟悉和掌握程度。', scope: '中外通用（外语类适用）' },
+  { region: '辽宁省', category: '景点讲解', title: '景点讲解', content: '主要考查考生导游讲解是否符合规范程序和讲解内容的正确性、全面性、条理性。\n抽选景点范围：沈阳故宫、辽宁省博物馆、"九一八"历史博物馆、老虎滩海洋公园、金石滩国家旅游度假区、鞍钢集团展览馆、抚顺雷锋纪念馆、五女山山城、鸭绿江断桥景区、辽沈战役纪念馆、红海滩国家风景廊道、九门口长城。', scope: '外语类专属或含外语特殊要求' },
+  { region: '辽宁省', category: '导游规范', title: '导游规范', content: '主要考查考生对导游服务规范及工作程序的掌握和应用。', scope: '中外通用（外语类适用）' },
+  { region: '辽宁省', category: '应变能力', title: '应变能力', content: '主要考查考生处理突发事件和常见问题的能力。', scope: '中外通用（外语类适用）' },
+  { region: '辽宁省', category: '综合知识', title: '综合知识', content: '主要考查考生对文化、旅游、时政、经济、社会发展等方面的综合知识是否全面了解。', scope: '中外通用（外语类适用）' },
+  { region: '辽宁省', category: '口译', title: '中外口译', content: '中外口译内容主要以文化旅游相关的短文为主，考生按照随机抽取的题目进行中外文口译。此部分内容仅外语类考生作答。', scope: '外语类专属或含外语特殊要求' },
+  { region: '吉林省', category: '语言表达', title: '语言表达', content: '主要考查考生的语言能力，包括语言表达的准确性、流畅性、逻辑性、生动性、感染力、说服力及身体语言的运用等。', scope: '中外通用（外语类适用）' },
+  { region: '吉林省', category: '景点讲解', title: '景点讲解', content: '主要考察考生导游讲解是否符合规范程序，城市概况和景点讲解是否正确、全面、熟练。\n外语类景点讲解：吉林省概况、伪满皇宫博物院、防川景区、吉林雾淞、吉林省非物质文化遗产。', scope: '中外通用（外语类适用）' },
+  { region: '吉林省', category: '导游服务规范', title: '导游服务规范', content: '主要考查考生对导游服务的术语和定义、服务能力要求、服务要求、入出境导游服务特别要求、突发事件和常见问题处理、导游服务质量评价与改进等内容的掌握和运用。', scope: '中外通用（外语类适用）' },
+  { region: '吉林省', category: '应变能力', title: '应变能力', content: '主要考查考生对旅游者个别要求的处理、应急问题的处置和旅游突发事件的处理能力的掌握和运用。', scope: '中外通用（外语类适用）' },
+  { region: '吉林省', category: '知识问答', title: '知识问答', content: '结合当前时政、经济、文化、历史及社会发展等方面情况，综合考查考生对本省历史文化知识、旅游地理常识、节日与民俗知识、饮食与民间工艺、文学、戏曲、书画知识及重要景点知识点的掌握程度。', scope: '中外通用（外语类适用）' },
+  { region: '吉林省', category: '口译', title: '口译测试', content: '主要考查考生在中文和外语之间口头互译的能力（外语类考生）。', scope: '外语类专属或含外语特殊要求' },
+  { region: '黑龙江省', category: '景点讲解', title: '景点讲解', content: '外语类景点讲解内容：（1）黑龙江省概况；（2）哈尔滨中央欧陆风情旅游区（中央大街）；（3）大庆铁人王进喜纪念馆景区；（4）雪乡旅游风景区；（5）太阳岛风景名胜区。', scope: '中外通用（外语类适用）' },
+  { region: '黑龙江省', category: '导游规范', title: '导游规范', content: '1. 地陪导游服务程序；2. 全陪导游服务程序；3. 景区景点导游服务程序；4. 散客导游服务程序；5. 《中华人民共和国旅游法》相关知识。', scope: '中外通用（外语类适用）' },
+  { region: '黑龙江省', category: '应变能力', title: '应变能力', content: '1. 旅游安全事故处理与预防；2. 急救、安全常识；3. 餐饮、住宿、娱乐、购物等方面个别要求的处理；4. 对"特殊"旅游者的服务等。', scope: '中外通用（外语类适用）' },
+  { region: '黑龙江省', category: '综合知识', title: '综合知识', content: '1. 时事政治；2. 文明旅游相关知识；3. 地方导游基础知识；4. 全国导游基础知识；5. 导游业务相关知识。', scope: '中外通用（外语类适用）' },
+  { region: '黑龙江省', category: '口译', title: '口译', content: '主要考查外语类考生在中文和外语之间口头互译的能力，充分反映考生的真实外语水平。', scope: '外语类专属或含外语特殊要求' },
+  { region: '上海市', category: '概况讲解', title: '概况讲解', content: '包括上海概况讲解和游览区概况讲解。英语、日语、俄语、法语、德语、西班牙语类：（1）上海概况讲解（10分）；（2）游览区概况讲解（10分）重点突出外滩、人民广场、东方明珠、豫园、玉佛寺五大游览区。', scope: '外语类专属或含外语特殊要求' },
+  { region: '上海市', category: '景点讲解', title: '景点讲解', content: '英语/日语/俄语/法语/德语/西班牙语类（2题，10分/题）：外滩、人民广场、东方明珠、豫园、玉佛寺五大游览区。', scope: '外语类专属或含外语特殊要求' },
+  { region: '上海市', category: '综合知识问答', title: '综合知识问答', content: '英语/日语/俄语/法语/德语/西班牙语类（1题，5分/题）："一江一河"、南京路步行街、徐家汇源、朱家角古镇、上海国际旅游度假区、石库门建筑等。', scope: '外语类专属或含外语特殊要求' },
+  { region: '上海市', category: '导游服务规范', title: '导游服务规范与应变能力', content: '包括导游服务接待程序、导游服务特殊问题处理及应变能力、导游服务技能等。', scope: '中外通用（外语类适用）' },
+  { region: '上海市', category: '礼貌礼仪', title: '礼貌礼仪', content: '考查考生的仪容仪表、行为举止和礼貌礼节。', scope: '中外通用（外语类适用）' },
+  { region: '上海市', category: '口译', title: '口译', content: '考查外语类考生在中文和外语之间口头互译的能力，充分反映考生真实外语水平。', scope: '外语类专属或含外语特殊要求' },
+  { region: '浙江省', category: '礼貌礼仪', title: '礼貌礼仪', content: '考查考生的仪容仪表、行为举止和礼貌礼节。', scope: '中外通用（外语类适用）' },
+  { region: '浙江省', category: '语言表达', title: '语言表达', content: '考查外语类考生语言表达的准确性、流畅性、逻辑性和生动性。', scope: '中外通用（外语类适用）' },
+  { region: '浙江省', category: '景点讲解', title: '景点讲解', content: '考查外语类考生对浙江省主要景点的讲解能力。', scope: '中外通用（外语类适用）' },
+  { region: '浙江省', category: '概况讲解', title: '概况讲解', content: '城市概况讲解2～3分钟，抽签景点讲解8～9分钟，讲解时间每少1分钟扣3分。', scope: '中外通用（外语类适用）' },
+  { region: '浙江省', category: '导游服务规范', title: '导游服务规范问答', content: '考查导游服务规范相关知识的掌握和运用。', scope: '中外通用（外语类适用）' },
+  { region: '浙江省', category: '应变能力', title: '应变能力问答', content: '考查考生处理突发事件和常见问题的能力。', scope: '中外通用（外语类适用）' },
+  { region: '浙江省', category: '综合知识', title: '综合知识问答', content: '考查考生对综合知识的掌握程度。', scope: '中外通用（外语类适用）' },
+  { region: '浙江省', category: '口译', title: '口译', content: '"中译外""外译中"各1题，分值占比合计为20%，每题限时3.5分钟。', scope: '外语类专属或含外语特殊要求' },
+  { region: '安徽省', category: '景点讲解', title: '景点讲解', content: '用所报考语种的语言进行景点讲解。', scope: '中外通用（外语类适用）' },
+  { region: '安徽省', category: '语言表达', title: '语言表达', content: '考查外语类考生的语言表达能力，全程用所报考语种进行考试。', scope: '中外通用（外语类适用）' },
+  { region: '安徽省', category: '导游规范', title: '导游规范', content: '导游规范问答，考查考生对导游服务规范的掌握程度。', scope: '中外通用（外语类适用）' },
+  { region: '安徽省', category: '应变能力', title: '应变能力', content: '应变能力问答，考查考生处理突发事件和常见问题的能力。', scope: '中外通用（外语类适用）' },
+  { region: '安徽省', category: '综合知识', title: '综合知识', content: '综合知识问答，考查考生对时政、经济、文化、社会发展等综合知识的掌握。', scope: '中外通用（外语类适用）' },
+  { region: '安徽省', category: '口译', title: '口译', content: '口译测试包括"中译外"和"外译中"。', scope: '外语类专属或含外语特殊要求' },
+  { region: '福建省', category: '景点讲解', title: '景点讲解', content: '考查考生对福建省主要景点的讲解能力。', scope: '中外通用（外语类适用）' },
+  { region: '福建省', category: '导游规范', title: '导游规范', content: '考查考生对导游服务规范的掌握和应用。', scope: '中外通用（外语类适用）' },
+  { region: '福建省', category: '应变能力', title: '应变能力', content: '考查考生处理突发事件和常见问题的能力。', scope: '中外通用（外语类适用）' },
+  { region: '福建省', category: '综合知识', title: '综合知识', content: '考查考生对综合知识的掌握程度。', scope: '中外通用（外语类适用）' },
+  { region: '福建省', category: '外语口译', title: '外语类口译', content: '考查外语类考生在中文和外语之间口头互译的能力，充分反映考生的真实外语水平。', scope: '外语类专属或含外语特殊要求' },
+  { region: '江西省', category: '景点讲解', title: '景点讲解', content: '外语类现场考试中景点讲解占55%。讲解约15分钟（江西文化专题4～5分钟，景区讲解10～11分钟）。', scope: '中外通用（外语类适用）' },
+  { region: '江西省', category: '口译', title: '口译', content: '口译占20%，口译测试约5分钟。', scope: '外语类专属或含外语特殊要求' },
+  { region: '江西省', category: '语言表达', title: '语言表达', content: '语言和仪表、礼仪占10%。', scope: '中外通用（外语类适用）' },
+  { region: '江西省', category: '导游服务规范', title: '导游服务规范', content: '导游服务规范（含文明旅游）问答占5%。', scope: '中外通用（外语类适用）' },
+  { region: '江西省', category: '应变能力', title: '应变能力', content: '应变能力（含文明旅游）问答占5%。', scope: '中外通用（外语类适用）' },
+  { region: '江西省', category: '综合知识', title: '综合知识', content: '综合知识问答占5%。知识问答约5分钟。', scope: '中外通用（外语类适用）' },
+  { region: '山东省', category: '景点讲解', title: '景点讲解', content: '用所考语种进行山东省省情、景点讲解（含景点知识问答）。', scope: '中外通用（外语类适用）' },
+  { region: '山东省', category: '导游规范', title: '导游规范', content: '考查考生对导游服务规范的掌握和应用。', scope: '中外通用（外语类适用）' },
+  { region: '山东省', category: '应变能力', title: '应变能力', content: '考查考生处理突发事件和常见问题的能力。', scope: '中外通用（外语类适用）' },
+  { region: '山东省', category: '综合知识', title: '综合知识', content: '考查考生对综合知识的掌握程度。', scope: '中外通用（外语类适用）' },
+  { region: '山东省', category: '口译', title: '口译', content: '"中译外""外译中"口译测试。', scope: '外语类专属或含外语特殊要求' },
+  { region: '河南省', category: '礼貌礼仪', title: '礼貌礼仪', content: '礼貌礼仪占5%。考查考生的仪容仪表、行为举止和礼貌礼节。', scope: '中外通用（外语类适用）' },
+  { region: '河南省', category: '语言表达', title: '语言表达', content: '语言表达占25%。考查外语类考生语言表达的准确性、流畅性、逻辑性和生动性。', scope: '中外通用（外语类适用）' },
+  { region: '河南省', category: '景点讲解', title: '景点讲解', content: '景点讲解占30%。外语类考生景点讲解范围（5个）：河南嵩山少林寺景区等。', scope: '中外通用（外语类适用）' },
+  { region: '河南省', category: '导游服务规范', title: '导游服务规范问答', content: '导游服务规范占10%。考查导游服务规范相关知识的掌握和运用。', scope: '中外通用（外语类适用）' },
+  { region: '河南省', category: '应变能力', title: '应变能力问答', content: '应变能力占5%。考查考生处理突发事件和常见问题的能力。', scope: '中外通用（外语类适用）' },
+  { region: '河南省', category: '综合知识', title: '综合知识问答', content: '综合知识占5%。考查考生对综合知识的掌握程度。', scope: '中外通用（外语类适用）' },
+  { region: '河南省', category: '口译', title: '口译', content: '口译占20%。考查外语类考生中译外和外译中口译能力。', scope: '外语类专属或含外语特殊要求' },
+  { region: '湖北省', category: '景点讲解', title: '景点讲解', content: '考查外语类考生对湖北省主要景点的讲解能力。外语类考生一般每人不少于25分钟。', scope: '中外通用（外语类适用）' },
+  { region: '湖北省', category: '导游规范', title: '导游规范', content: '考查考生对导游服务规范的掌握和应用。', scope: '中外通用（外语类适用）' },
+  { region: '湖北省', category: '应变能力', title: '应变能力', content: '考查考生处理突发事件和常见问题的能力。', scope: '中外通用（外语类适用）' },
+  { region: '湖北省', category: '综合知识', title: '综合知识', content: '考查考生对综合知识的掌握程度。', scope: '中外通用（外语类适用）' },
+  { region: '湖北省', category: '口译', title: '口译', content: '考查外语类考生在中文和外语之间口头互译的能力。', scope: '外语类专属或含外语特殊要求' },
+  { region: '湖南省', category: '讲解能力', title: '讲解能力', content: '外语类分值比例：湖南概况5%；景点讲解与景点知识问答占25%。备考旅游景区5个。', scope: '中外通用（外语类适用）' },
+  { region: '湖南省', category: '导游服务规范', title: '导游服务规范', content: '导游服务规范占10%。', scope: '中外通用（外语类适用）' },
+  { region: '湖南省', category: '应变能力', title: '应变能力', content: '应变能力占5%。', scope: '中外通用（外语类适用）' },
+  { region: '湖南省', category: '综合知识', title: '综合知识', content: '综合知识占5%。', scope: '中外通用（外语类适用）' },
+  { region: '湖南省', category: '口译', title: '口译', content: '口译占20%（其中，中译外10%，外译中10%）。礼貌礼仪占5%；语言表达占25%。', scope: '外语类专属或含外语特殊要求' },
+  { region: '广东省', category: '景点讲解', title: '景点讲解', content: '外语类考试景点讲解范围：丹霞山、开平碉楼与村落。', scope: '中外通用（外语类适用）' },
+  { region: '广东省', category: '导游规范', title: '导游规范', content: '考查考生对导游服务规范的掌握和应用。', scope: '中外通用（外语类适用）' },
+  { region: '广东省', category: '应变能力', title: '应变能力', content: '考查考生处理突发事件和常见问题的能力。', scope: '中外通用（外语类适用）' },
+  { region: '广东省', category: '综合知识', title: '综合知识', content: '考查考生对综合知识的掌握程度。', scope: '中外通用（外语类适用）' },
+  { region: '广东省', category: '口译', title: '口译', content: '考查外语类考生中译外和外译中口译能力。', scope: '外语类专属或含外语特殊要求' },
+  { region: '广西壮族自治区', category: '专题讲解', title: '专题线路讲解', content: '用所报考的语种进行专题线路讲解。', scope: '中外通用（外语类适用）' },
+  { region: '广西壮族自治区', category: '景点讲解', title: '旅游景区讲解', content: '用所报考的语种进行旅游景区讲解。', scope: '中外通用（外语类适用）' },
+  { region: '广西壮族自治区', category: '知识问答', title: '知识问答', content: '知识问答包括服务规范问答、应变能力问答、综合知识问答。', scope: '中外通用（外语类适用）' },
+  { region: '广西壮族自治区', category: '口译', title: '口译测试', content: '考查外语类考生中译外和外译中口译能力。', scope: '外语类专属或含外语特殊要求' },
+  { region: '海南省', category: '语言表达', title: '语言表达', content: '考查外语类考生的语言表达能力。', scope: '中外通用（外语类适用）' },
+  { region: '海南省', category: '景点讲解', title: '景点讲解', content: '考查外语类考生对海南主要景点的讲解能力。', scope: '中外通用（外语类适用）' },
+  { region: '海南省', category: '导游服务规范', title: '导游规范知识问答', content: '考查考生对导游服务规范的掌握和应用。', scope: '中外通用（外语类适用）' },
+  { region: '海南省', category: '应变能力', title: '应变能力', content: '考查考生处理突发事件和常见问题的能力。', scope: '中外通用（外语类适用）' },
+  { region: '海南省', category: '综合知识', title: '综合知识', content: '考查考生对综合知识的掌握程度。', scope: '中外通用（外语类适用）' },
+  { region: '海南省', category: '口译', title: '口译', content: '考查外语类考生在中文和外语之间口头互译的能力。', scope: '外语类专属或含外语特殊要求' },
+  { region: '重庆市', category: '景点讲解', title: '景点讲解', content: '外语类考生景点讲解范围与要求。', scope: '中外通用（外语类适用）' },
+  { region: '重庆市', category: '知识问答', title: '知识问答', content: '考查考生对综合知识的掌握程度。', scope: '中外通用（外语类适用）' },
+  { region: '重庆市', category: '口译', title: '口译', content: '考查外语类考生中译外和外译中口译能力。', scope: '外语类专属或含外语特殊要求' },
+  { region: '重庆市', category: '语言表达', title: '语言表达', content: '考查外语类考生的语言表达能力。', scope: '中外通用（外语类适用）' },
+  { region: '重庆市', category: '仪表礼仪', title: '仪表礼仪', content: '考查考生的仪容仪表和礼貌礼节。', scope: '中外通用（外语类适用）' },
+  { region: '四川省', category: '语言表达', title: '语言表达', content: '考查外语类考生的语言表达能力。', scope: '中外通用（外语类适用）' },
+  { region: '四川省', category: '景点讲解', title: '景点讲解', content: '考查外语类考生对四川主要景点的讲解能力。', scope: '中外通用（外语类适用）' },
+  { region: '四川省', category: '导游规范', title: '导游规范', content: '考查考生对导游服务规范的掌握和应用。', scope: '中外通用（外语类适用）' },
+  { region: '四川省', category: '应变能力', title: '应变能力知识', content: '考查考生处理突发事件和常见问题的能力。', scope: '中外通用（外语类适用）' },
+  { region: '四川省', category: '综合知识', title: '综合知识', content: '考查考生对综合知识的掌握程度。', scope: '中外通用（外语类适用）' },
+  { region: '四川省', category: '口译', title: '口译', content: '考查外语类考生在中文和外语之间的口译能力。', scope: '外语类专属或含外语特殊要求' },
+  { region: '贵州省', category: '景点讲解', title: '景点讲解', content: '考查外语类考生对贵州主要景点的讲解能力。', scope: '中外通用（外语类适用）' },
+  { region: '贵州省', category: '导游规范', title: '导游规范', content: '考查考生对导游服务规范的掌握和应用。', scope: '中外通用（外语类适用）' },
+  { region: '贵州省', category: '应变能力', title: '应变能力', content: '考查考生处理突发事件和常见问题的能力。', scope: '中外通用（外语类适用）' },
+  { region: '贵州省', category: '综合知识', title: '综合知识', content: '考查考生对综合知识的掌握程度。', scope: '中外通用（外语类适用）' },
+  { region: '贵州省', category: '口译', title: '口译', content: '考查外语类考生中译外和外译中口译能力。', scope: '外语类专属或含外语特殊要求' },
+  { region: '云南省', category: '礼貌礼仪', title: '礼貌礼仪', content: '考查考生的仪容仪表、行为举止和礼貌礼节。', scope: '中外通用（外语类适用）' },
+  { region: '云南省', category: '景点讲解', title: '景点讲解', content: '外语类考生景点讲解范围（模拟团型与讲解顺序参照中文类）。', scope: '中外通用（外语类适用）' },
+  { region: '云南省', category: '导游服务规范', title: '导游服务规范', content: '考查考生对导游服务规范的掌握和应用。', scope: '中外通用（外语类适用）' },
+  { region: '云南省', category: '应变能力', title: '应变能力', content: '考查考生处理突发事件和常见问题的能力。', scope: '中外通用（外语类适用）' },
+  { region: '云南省', category: '综合知识', title: '综合知识', content: '考查考生对综合知识的掌握程度。', scope: '中外通用（外语类适用）' },
+  { region: '云南省', category: '口译', title: '口译', content: '口译（外语类考生）考查中译外和外译中。', scope: '外语类专属或含外语特殊要求' },
+  { region: '西藏自治区', category: '景点讲解', title: '大美西藏文旅推介与景点讲解', content: '外语类考生需进行大美西藏文旅推介和景点讲解。', scope: '中外通用（外语类适用）' },
+  { region: '西藏自治区', category: '导游服务规范', title: '导游服务规范问答', content: '考查考生对导游服务规范的掌握和应用。', scope: '中外通用（外语类适用）' },
+  { region: '西藏自治区', category: '应变能力', title: '应变能力问答', content: '考查考生处理突发事件和常见问题的能力。', scope: '中外通用（外语类适用）' },
+  { region: '西藏自治区', category: '综合知识', title: '综合知识问答', content: '考查考生对综合知识的掌握程度。', scope: '中外通用（外语类适用）' },
+  { region: '西藏自治区', category: '口译', title: '口译', content: '口译（外语类考生）考查中译外和外译中能力。', scope: '外语类专属或含外语特殊要求' },
+  { region: '陕西省', category: '景点讲解', title: '景点讲解', content: '景点讲解占30%。考查外语类考生对陕西主要景点的讲解能力。', scope: '中外通用（外语类适用）' },
+  { region: '陕西省', category: '综合知识', title: '综合知识', content: '综合知识占5%。考查考生对综合知识的掌握程度。', scope: '中外通用（外语类适用）' },
+  { region: '陕西省', category: '导游规范', title: '导游规范', content: '导游规范占10%。考查考生对导游服务规范的掌握和应用。', scope: '中外通用（外语类适用）' },
+  { region: '陕西省', category: '应变能力', title: '应变能力', content: '应变能力占5%。考查考生处理突发事件和常见问题的能力。', scope: '中外通用（外语类适用）' },
+  { region: '陕西省', category: '口译', title: '口译', content: '口译占20%。外语类现场考试语言和仪态占30%。', scope: '外语类专属或含外语特殊要求' },
+  { region: '甘肃省', category: '礼貌礼仪', title: '礼貌礼仪', content: '考查考生的仪容仪表、行为举止和礼貌礼节。', scope: '中外通用（外语类适用）' },
+  { region: '甘肃省', category: '景点讲解', title: '景点讲解与地方美食推介', content: '考查外语类考生对甘肃主要景点的讲解能力以及甘肃美食推介能力。', scope: '中外通用（外语类适用）' },
+  { region: '甘肃省', category: '导游规范', title: '导游规范', content: '考查考生对导游服务规范的掌握和应用。', scope: '中外通用（外语类适用）' },
+  { region: '甘肃省', category: '应变能力', title: '应变能力', content: '考查考生处理突发事件和常见问题的能力。', scope: '中外通用（外语类适用）' },
+  { region: '甘肃省', category: '综合知识', title: '综合知识', content: '考查考生对综合知识的掌握程度。', scope: '中外通用（外语类适用）' },
+  { region: '甘肃省', category: '口译', title: '口译', content: '考查外语类考生使用中文和外语进行口头互译的基本能力。', scope: '外语类专属或含外语特殊要求' },
+  { region: '青海省', category: '景点讲解', title: '景点讲解', content: '景点讲解占30%。考查外语类考生对青海主要景点的讲解能力。', scope: '中外通用（外语类适用）' },
+  { region: '青海省', category: '综合知识', title: '综合知识', content: '综合知识占5%。考查考生对综合知识的掌握程度。', scope: '中外通用（外语类适用）' },
+  { region: '青海省', category: '导游规范', title: '导游规范', content: '导游服务规范占10%。考查考生对导游服务规范的掌握和应用。', scope: '中外通用（外语类适用）' },
+  { region: '青海省', category: '应变能力', title: '应变能力', content: '应变能力占5%。考查考生处理突发事件和常见问题的能力。', scope: '中外通用（外语类适用）' },
+  { region: '青海省', category: '口译', title: '口译', content: '口译占20%。考查外语类考生在中文和外语之间口头互译的能力。', scope: '外语类专属或含外语特殊要求' },
+  { region: '宁夏回族自治区', category: '语言表达', title: '语言表达', content: '语言表达占25%。考查外语类考生的语言表达能力。', scope: '中外通用（外语类适用）' },
+  { region: '宁夏回族自治区', category: '仪表礼仪', title: '仪表礼仪', content: '礼貌礼仪占5%。考查考生的仪容仪表和礼貌礼节。', scope: '中外通用（外语类适用）' },
+  { region: '宁夏回族自治区', category: '景点讲解', title: '沿途及景点讲解', content: '景点讲解占30%（沿途讲解占10%，景点讲解占20%）。每人讲解（沿途+景点）不少于25分钟。', scope: '中外通用（外语类适用）' },
+  { region: '宁夏回族自治区', category: '导游规范', title: '导游规范', content: '导游服务规范占10%。考查考生对导游服务规范的掌握和应用。', scope: '中外通用（外语类适用）' },
+  { region: '宁夏回族自治区', category: '应变能力', title: '应变能力', content: '应变能力占5%。考查考生处理突发事件和常见问题的能力。', scope: '中外通用（外语类适用）' },
+  { region: '宁夏回族自治区', category: '综合知识', title: '综合知识', content: '综合知识占5%。考查考生对综合知识的掌握程度。', scope: '中外通用（外语类适用）' },
+  { region: '宁夏回族自治区', category: '口译', title: '口译', content: '口译占20%。考查外语类考生在中文与外语之间口头互译的能力。', scope: '外语类专属或含外语特殊要求' },
+  { region: '新疆维吾尔自治区', category: '语言表达', title: '语言表达', content: '考查外语类考生的语言表达能力。', scope: '中外通用（外语类适用）' },
+  { region: '新疆维吾尔自治区', category: '礼貌礼仪', title: '礼貌礼仪', content: '考查考生的仪容仪表、行为举止和礼貌礼节。', scope: '中外通用（外语类适用）' },
+  { region: '新疆维吾尔自治区', category: '景点讲解', title: '景点讲解', content: '考查外语类考生对新疆主要景点的讲解能力。', scope: '中外通用（外语类适用）' },
+  { region: '新疆维吾尔自治区', category: '导游规范', title: '导游规范', content: '考查考生对导游服务规范的掌握和应用。', scope: '中外通用（外语类适用）' },
+  { region: '新疆维吾尔自治区', category: '应变能力', title: '应变能力', content: '考查考生处理突发事件和常见问题的能力。', scope: '中外通用（外语类适用）' },
+  { region: '新疆维吾尔自治区', category: '综合知识', title: '综合知识', content: '考查考生对综合知识的掌握程度。', scope: '中外通用（外语类适用）' },
+  { region: '新疆维吾尔自治区', category: '口译', title: '口译', content: '考查外语类考生在导游服务过程中，使用中文和外语之间口头互译的基本能力。', scope: '外语类专属或含外语特殊要求' },
+  { region: '新疆生产建设兵团', category: '语言表达', title: '语言表达', content: '考查外语类考生的语言表达能力。', scope: '中外通用（外语类适用）' },
+  { region: '新疆生产建设兵团', category: '景点讲解', title: '景点讲解', content: '考查外语类考生对兵团主要景点的讲解能力。', scope: '中外通用（外语类适用）' },
+  { region: '新疆生产建设兵团', category: '导游规范', title: '导游规范', content: '考查考生对导游服务规范的掌握和应用。', scope: '中外通用（外语类适用）' },
+  { region: '新疆生产建设兵团', category: '应变能力', title: '应变能力', content: '考查考生处理突发事件和常见问题的能力。', scope: '中外通用（外语类适用）' },
+  { region: '新疆生产建设兵团', category: '综合知识', title: '综合知识', content: '考查考生对综合知识的掌握程度。', scope: '中外通用（外语类适用）' },
+  { region: '新疆生产建设兵团', category: '口译', title: '口译', content: '考查外语类考生在导游服务过程中，使用中文和外语之间口头互译的基本能力。', scope: '外语类专属或含外语特殊要求' },
+];
+
+// ══════════════════════════════════════════════════════════
+// ResourceNode 考纲资料库
+// ══════════════════════════════════════════════════════════
+
+async function seedResourceLibrary(rootName: string) {
+  const root = await prisma.resourceNode.create({
+    data: {
+      name: rootName,
+      type: 'folder',
+      description: '基于《全国导游资格考试现场考试大纲》整理的外语类考纲资料库，涵盖全国31个省市自治区的面试要求、考试类别、评分标准和考点信息。',
+      sortOrder: 0,
+    },
+  });
+
+  // 01-全国通用要求
+  const reqFolder = await prisma.resourceNode.create({
+    data: { parentId: root.id, name: '01-全国通用要求', type: 'folder', description: '全国外语类现场考试的通用要求，适用于所有地区。', sortOrder: 1 },
+  });
+  for (let i = 0; i < nationalRequirements.length; i++) {
+    const item = nationalRequirements[i];
+    await prisma.resourceNode.create({ data: { parentId: reqFolder.id, name: item.name, type: 'document', description: item.description, sortOrder: i + 1 } });
+  }
+
+  // 02-各省考纲速览
+  const overviewFolder = await prisma.resourceNode.create({
+    data: { parentId: root.id, name: '02-各省考纲速览', type: 'folder', description: '各省份外语面试考试概览，包含考试类别、考试时间、分值比例等关键信息。', sortOrder: 2 },
+  });
+  for (let i = 0; i < regionOverviews.length; i++) {
+    const r = regionOverviews[i];
+    let description = `**页码范围**：${r.page}\n\n**主要类别**：${r.categories || '（参见分类考纲详情）'}\n\n**考试要求**：${r.excerpt}`;
+    if ((r as any).timeInfo) description += `\n\n**考试时间**：${(r as any).timeInfo}`;
+    if ((r as any).scoreInfo) description += `\n\n**分值信息**：${(r as any).scoreInfo}`;
+    await prisma.resourceNode.create({ data: { parentId: overviewFolder.id, name: `${r.region}考纲概览`, type: 'document', region: r.region, description, sortOrder: i + 1 } });
+  }
+
+  // 03-分类考纲详情
+  const detailFolder = await prisma.resourceNode.create({
+    data: { parentId: root.id, name: '03-分类考纲详情', type: 'folder', description: '按考试类别分组的详细考纲内容，适合针对性复习。', sortOrder: 3 },
+  });
+  let totalDocs = 0;
+  for (const catDef of categoryDefinitions) {
+    const items = categoryDetails.filter((d) => d.category === catDef.code);
+    if (items.length === 0) continue;
+    const catFolder = await prisma.resourceNode.create({
+      data: { parentId: detailFolder.id, name: catDef.name, type: 'folder', description: `${catDef.name}类考纲要求，共涵盖${items.length}个地区。`, sortOrder: catDef.sortOrder },
+    });
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      await prisma.resourceNode.create({ data: { parentId: catFolder.id, name: `${item.region}-${item.title}`, type: 'document', region: item.region, description: `**适用范围**：${item.scope}\n\n${item.content}`, sortOrder: i + 1 } });
+      totalDocs++;
+    }
+  }
+
+  const totalNodes = await prisma.resourceNode.count();
+  console.log(`    ↳ ${totalNodes} 条资源节点（${nationalRequirements.length}条全国通用 + ${regionOverviews.length}条省份概览 + ${totalDocs}条分类详情）`);
+}
+
 async function main() {
   await prisma.notificationRead.deleteMany();
   await prisma.notificationTarget.deleteMany();
@@ -34,6 +367,23 @@ async function main() {
   await prisma.order.deleteMany();
   await prisma.membershipPlan.deleteMany();
   await prisma.questionBank.deleteMany();
+
+  // 清空资料库 & 系统配置
+  await prisma.resourceNode.updateMany({ data: { parentId: null } });
+  await prisma.resourceNode.deleteMany();
+  await prisma.systemConfig.deleteMany();
+
+  console.log('  ✓ 已清空所有数据');
+
+  // ══════════════════════════════════════════════════════════
+  // 1. 系统配置默认值
+  // ══════════════════════════════════════════════════════════
+  await seedSystemConfigs();
+  console.log('  ✓ 系统配置已初始化');
+
+  // 2. 资料库目录结构
+  await seedResourceLibrary('全国导游资格外语面试考纲资料库');
+  console.log('  ✓ 资料库已填充');
 
   const bankGdEn = await prisma.questionBank.create({
     data: {
