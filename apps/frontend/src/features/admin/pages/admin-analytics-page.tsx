@@ -81,26 +81,25 @@ function StatCard({
   accent?: 'emerald' | 'blue' | 'amber' | 'violet' | 'rose';
 }) {
   const accentMap = {
-    emerald: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400',
-    blue: 'bg-blue-50 text-blue-600 dark:bg-blue-950 dark:text-blue-400',
-    amber: 'bg-amber-50 text-amber-600 dark:bg-amber-950 dark:text-amber-400',
-    violet: 'bg-violet-50 text-violet-600 dark:bg-violet-950 dark:text-violet-400',
-    rose: 'bg-rose-50 text-rose-600 dark:bg-rose-950 dark:text-rose-400',
+    emerald: 'bg-emerald-500/10 text-emerald-500',
+    blue: 'bg-blue-500/10 text-blue-500',
+    amber: 'bg-amber-500/10 text-amber-500',
+    violet: 'bg-violet-500/10 text-violet-500',
+    rose: 'bg-rose-500/10 text-rose-500',
   };
 
   return (
-    <Card>
-      <CardContent className="p-5">
-        <div className="flex items-start justify-between">
-          <div className="space-y-1.5">
-            <p className="text-xs text-muted-foreground">{label}</p>
-            <p className="text-2xl font-bold tracking-tight">{value}</p>
-            {sub && (
-              <p className="text-xs text-muted-foreground">{sub}</p>
-            )}
-          </div>
-          <div className={cn('flex h-10 w-10 items-center justify-center rounded-lg', accentMap[accent || 'blue'])}>
+    <Card className="shadow-none">
+      <CardContent className="p-4">
+        <div className="flex items-center gap-3">
+          <div className={cn('flex h-10 w-10 items-center justify-center rounded-xl', accentMap[accent || 'blue'])}>
             <Icon className="h-5 w-5" />
+          </div>
+          <div>
+            <p className="text-2xl font-bold">{value}</p>
+            <p className="text-xs text-muted-foreground">
+              {label}{sub && <span className="ml-1.5">{sub}</span>}
+            </p>
           </div>
         </div>
       </CardContent>
@@ -189,14 +188,9 @@ export function AdminAnalyticsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
-          <BarChart3 className="h-5 w-5 text-primary" />
-        </div>
-        <div>
-          <h1 className="text-xl font-bold tracking-tight">数据统计</h1>
-          <p className="text-xs text-muted-foreground">核心运营指标概览</p>
-        </div>
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">数据统计</h1>
+        <p className="text-sm text-muted-foreground">核心运营指标概览</p>
       </div>
 
       {/* ─── Metric Cards Row ─────────────────────────────── */}
@@ -240,28 +234,56 @@ export function AdminAnalyticsPage() {
 
       {/* ─── Secondary Stats ──────────────────────────────── */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card>
+        <Card className="shadow-none">
           <CardContent className="p-4">
-            <p className="text-xs text-muted-foreground">总练习量</p>
-            <p className="text-xl font-bold">{fmtInt(stats.totalPracticeCount)}</p>
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/10">
+                <FileText className="h-5 w-5 text-blue-500" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{fmtInt(stats.totalPracticeCount)}</p>
+                <p className="text-xs text-muted-foreground">总练习量</p>
+              </div>
+            </div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="shadow-none">
           <CardContent className="p-4">
-            <p className="text-xs text-muted-foreground">题目总数</p>
-            <p className="text-xl font-bold">{fmtInt(stats.questionItemCount)}</p>
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-500/10">
+                <BookOpen className="h-5 w-5 text-violet-500" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{fmtInt(stats.questionItemCount)}</p>
+                <p className="text-xs text-muted-foreground">题目总数</p>
+              </div>
+            </div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="shadow-none">
           <CardContent className="p-4">
-            <p className="text-xs text-muted-foreground">今日收入</p>
-            <p className="text-xl font-bold">{fmtMoney(stats.todayRevenue)}</p>
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/10">
+                <Calendar className="h-5 w-5 text-amber-500" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{fmtMoney(stats.todayRevenue)}</p>
+                <p className="text-xs text-muted-foreground">今日收入</p>
+              </div>
+            </div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="shadow-none">
           <CardContent className="p-4">
-            <p className="text-xs text-muted-foreground">题库总数</p>
-            <p className="text-xl font-bold">{fmtInt(stats.questionBankCount)}</p>
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10">
+                <BookOpen className="h-5 w-5 text-emerald-500" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{fmtInt(stats.questionBankCount)}</p>
+                <p className="text-xs text-muted-foreground">题库总数</p>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -269,7 +291,7 @@ export function AdminAnalyticsPage() {
       {/* ─── Trend Charts ─────────────────────────────────── */}
       <div className="grid gap-4 lg:grid-cols-2">
         {/* Revenue Trend */}
-        <Card>
+        <Card className="shadow-none">
           <CardHeader>
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <DollarSign className="h-4 w-4 text-amber-500" />
@@ -306,7 +328,7 @@ export function AdminAnalyticsPage() {
         </Card>
 
         {/* Practice Trend */}
-        <Card>
+        <Card className="shadow-none">
           <CardHeader>
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <Activity className="h-4 w-4 text-emerald-500" />
@@ -332,7 +354,7 @@ export function AdminAnalyticsPage() {
       </div>
 
       {/* ─── Top Banks Ranking ────────────────────────────── */}
-      <Card>
+      <Card className="shadow-none">
         <CardHeader>
           <CardTitle className="text-sm font-medium flex items-center gap-2">
             <BookOpen className="h-4 w-4 text-violet-500" />

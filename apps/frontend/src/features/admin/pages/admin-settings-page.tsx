@@ -180,16 +180,13 @@ export function AdminSettingsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
-            <Settings className="h-5 w-5 text-primary" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold tracking-tight">系统设置</h1>
-            <p className="text-xs text-muted-foreground">管理应用全局配置与参数</p>
-          </div>
-        </div>
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">系统设置</h1>
+        <p className="text-sm text-muted-foreground">管理应用全局配置与参数</p>
+      </div>
+
+      {/* Save button */}
+      <div className="flex items-center gap-3">
         <Button
           onClick={handleSave}
           disabled={saving || Object.keys(dirty).length === 0}
@@ -203,6 +200,11 @@ export function AdminSettingsPage() {
             </span>
           )}
         </Button>
+        <span className="text-xs text-muted-foreground">
+          {Object.keys(dirty).length > 0
+            ? `${Object.keys(dirty).length} 项待保存`
+            : '配置已是最新'}
+        </span>
       </div>
 
       {/* Toast */}
@@ -240,7 +242,7 @@ export function AdminSettingsPage() {
 
         {activeGroups.map((g) => (
           <TabsContent key={g.key} value={g.key} className="mt-4">
-            <Card>
+            <Card className="shadow-none">
               <CardHeader>
                 <CardTitle className="text-base">{g.label}</CardTitle>
                 <CardDescription>{g.desc}</CardDescription>
