@@ -290,6 +290,18 @@ model UserPreference {
   @@map("user_preference")
 }
 
+model SystemConfig {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String   @default("")
+  group       String   @default("basic")
+  label       String   @default("")
+  type        String   @default("string")
+  description String?
+  updatedAt   DateTime @updatedAt
+  @@map("system_config")
+}
+
 enum MembershipLevel {
   free
   standard

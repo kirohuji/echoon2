@@ -76,14 +76,12 @@ const menuItems: MenuItem[] = [
     label: '数据统计',
     icon: BarChart3,
     path: '/admin/analytics',
-    soon: true,
   },
   {
     key: 'settings',
     label: '系统设置',
     icon: Settings,
     path: '/admin/settings',
-    soon: true,
   },
 ]
 

@@ -3,6 +3,7 @@ import {
 } from '@nestjs/common';
 import type { Request } from 'express';
 import { AdminService } from './admin.service';
+import { AdminStatsService } from './admin-stats.service';
 import { PayService } from '../pay/pay.service';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import { UpdateUserRoleDto } from './dto/update-user-role.dto';
@@ -12,6 +13,7 @@ import { requireAuthSession } from '../auth/session.util';
 export class AdminController {
   constructor(
     private readonly adminService: AdminService,
+    private readonly adminStatsService: AdminStatsService,
     private readonly payService: PayService,
   ) {}
 
@@ -85,6 +87,14 @@ export class AdminController {
   async getOrderStats(@Req() req: Request) {
     await this.requireAdmin(req);
     return this.adminService.getOrderStats();
+  }
+
+  // ─── 数据看板 ──────────────────────────────────────────────
+
+  @Get('stats/dashboard')
+  async getDashboardStats(@Req() req: Request) {
+    await this.requireAdmin(req);
+    return this.adminStatsService.getDashboardStats();
   }
 
   // ─── 测试支付 ──────────────────────────────────────────────

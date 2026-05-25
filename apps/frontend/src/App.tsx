@@ -37,6 +37,8 @@ import { InvitePage } from '@/features/referral/pages/invite-page'
 import { AdminCouponsPage } from '@/features/admin/pages/admin-coupons-page'
 import { AdminFeedbacksPage } from '@/features/admin/pages/admin-feedbacks-page'
 import { AdminQuestionBankPage } from '@/features/admin/pages/admin-question-bank-page'
+import { AdminSettingsPage } from '@/features/admin/pages/admin-settings-page'
+import { AdminAnalyticsPage } from '@/features/admin/pages/admin-analytics-page'
 
 export default function App() {
   return (
@@ -55,6 +57,8 @@ export default function App() {
                 <Route path="coupons" element={<AdminCouponsPage />} />
                 <Route path="feedbacks" element={<AdminFeedbacksPage />} />
                 <Route path="question-bank" element={<AdminQuestionBankPage />} />
+                <Route path="settings" element={<AdminSettingsPage />} />
+                <Route path="analytics" element={<AdminAnalyticsPage />} />
               </Route>
 
               {/* 用户端 — RootLayout */}
